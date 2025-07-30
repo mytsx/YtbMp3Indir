@@ -154,14 +154,6 @@ class SplashScreen(QWidget):
             # Uygulama hazırsa animasyonu durdur
             if self.app_ready:
                 return
-                
-            colors = [
-                "rgba(76, 175, 80, 180)",   # Yeşil
-                "rgba(33, 150, 243, 180)",  # Mavi
-                "rgba(156, 39, 176, 180)",  # Mor
-                "rgba(255, 193, 7, 180)",   # Sarı
-                "rgba(255, 87, 34, 180)",   # Turuncu
-            ]
             
             for row in range(self.grid_size):
                 for col in range(self.grid_size):
@@ -170,11 +162,14 @@ class SplashScreen(QWidget):
                     dy = row - self.wave_center_y
                     distance = (dx * dx + dy * dy) ** 0.5
                     
-                    # Dalga içindeyse renk ver
+                    # Dalga içindeyse tamamen rastgele renk ver
                     if abs(distance - self.wave_radius) < 2:
-                        color_index = int(distance) % len(colors)
+                        # Tamamen rastgele RGB değerleri
+                        r = random.randint(50, 255)
+                        g = random.randint(50, 255)
+                        b = random.randint(50, 255)
                         self.boxes[row][col].setStyleSheet(f"""
-                            background-color: {colors[color_index]};
+                            background-color: rgba({r}, {g}, {b}, 180);
                             border-radius: 3px;
                         """)
                     else:
@@ -183,16 +178,16 @@ class SplashScreen(QWidget):
                             border-radius: 3px;
                         """)
             
-            self.wave_radius += 0.5
+            self.wave_radius += 0.8  # Daha hızlı büyüsün
             # Dalga ekranı geçince yeni rastgele nokta seç
-            if self.wave_radius > self.grid_size * 1.5:
+            if self.wave_radius > self.grid_size * 0.8:  # Daha kısa mesafede yenile
                 self.wave_radius = 0
                 self.wave_center_x = random.randint(0, self.grid_size - 1)
                 self.wave_center_y = random.randint(0, self.grid_size - 1)
                 
         self.color_animation_timer = QTimer()
         self.color_animation_timer.timeout.connect(update_wave)
-        self.color_animation_timer.start(100)  # Her 100ms'de güncelle
+        self.color_animation_timer.start(50)  # Her 50ms'de güncelle - daha hızlı
         
         
     def close_splash(self):

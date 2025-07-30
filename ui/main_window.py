@@ -299,3 +299,30 @@ class MP3YapMainWindow(QMainWindow):
         # İndirme sekmesine geç
         self.tab_widget.setCurrentIndex(0)
         QMessageBox.information(self, "Başarılı", "URL indirme listesine eklendi!")
+    
+    def closeEvent(self, event):
+        """Pencere kapatılırken animasyon göster"""
+        # Splash screen'i tekrar göster ama ters animasyonla
+        from ui.splash_screen import SplashScreen
+        from PyQt5.QtCore import QTimer
+        from PyQt5.QtWidgets import QApplication
+        
+        # Pencereyi gizle
+        self.hide()
+        
+        # Kapanış splash screen'i
+        splash = SplashScreen()
+        splash.update_status("Kapatılıyor...")
+        splash.show()
+        
+        # Direkt fade out animasyonu başlat
+        QTimer.singleShot(100, splash.animate_boxes_fade_out)
+        
+        # Animasyon bitince uygulamayı kapat
+        def quit_app():
+            QApplication.quit()
+        
+        splash.finished.connect(quit_app)
+        
+        # Event'i kabul et
+        event.accept()

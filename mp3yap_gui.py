@@ -17,19 +17,35 @@ from ui.splash_screen import SplashScreen
 
 def main():
     """Ana uygulama başlatıcı"""
+    print("[MP3YAP] Starting application...")
     app = QApplication(sys.argv)
     app.setApplicationName("MP3 Yap")
     
     # Splash screen'i göster
-    splash = SplashScreen()
-    splash.show()
+    print("[MP3YAP] Creating splash screen...")
+    try:
+        splash = SplashScreen()
+        splash.show()
+        print("[MP3YAP] Splash screen displayed")
+    except Exception as e:
+        print(f"[MP3YAP ERROR] Failed to create splash screen: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
     
     # Gerçek yükleme işlemleri
     def load_application():
-        # Modülleri import et (lazy loading)
-        splash.update_status("Modüller yükleniyor...")
-        from ui.main_window import MP3YapMainWindow
-        app.processEvents()
+        try:
+            # Modülleri import et (lazy loading)
+            print("[MP3YAP] Loading modules...")
+            splash.update_status("Modüller yükleniyor...")
+            from ui.main_window import MP3YapMainWindow
+            app.processEvents()
+        except Exception as e:
+            print(f"[MP3YAP ERROR] Failed to load modules: {e}")
+            import traceback
+            traceback.print_exc()
+            return
         
         # Veritabanını kontrol et
         splash.update_status("Veritabanı hazırlanıyor...")
@@ -63,10 +79,14 @@ def main():
         
         splash.finished.connect(show_main_window)
         
-        # Animasyonları başlat
-        QTimer.singleShot(100, splash.animate_boxes_fade_in)
-        QTimer.singleShot(900, splash.start_color_wave_animation)
-        QTimer.singleShot(2500, splash.animate_boxes_fade_out)
+        # Uygulama hazır, splash'i kapat
+        splash.update_status("Hazır!")
+        QTimer.singleShot(3500, splash.close)  # Desen oluştuktan sonra 1 saniye daha göster
+        QTimer.singleShot(3600, show_main_window)
+        
+    # Animasyonları başlat
+    QTimer.singleShot(50, splash.animate_boxes_fade_in)
+    QTimer.singleShot(300, splash.start_mathematical_pattern)  # Daha erken başlat
     
     # Yüklemeyi başlat
     QTimer.singleShot(100, load_application)

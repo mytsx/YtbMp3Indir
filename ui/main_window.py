@@ -3,8 +3,8 @@ import threading
 from PyQt5.QtWidgets import (QMainWindow, QTextEdit, QPushButton, 
                             QVBoxLayout, QHBoxLayout, QWidget, QLabel, 
                             QProgressBar, QMessageBox, QMenuBar, QMenu,
-                            QAction, QTabWidget)
-from PyQt5.QtGui import QDesktopServices
+                            QAction, QTabWidget, QGraphicsDropShadowEffect)
+from PyQt5.QtGui import QDesktopServices, QColor
 from PyQt5.QtCore import QUrl
 from core.downloader import Downloader, DownloadSignals
 from ui.settings_dialog import SettingsDialog
@@ -19,6 +19,13 @@ class MP3YapMainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("MP3 Yap - YouTube İndirici")
         self.setGeometry(100, 100, 800, 600)
+        
+        # Pencereye gölge efekti ekle
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(20)
+        shadow.setColor(QColor(0, 0, 0, 80))
+        shadow.setOffset(0, 0)
+        self.setGraphicsEffect(shadow)
         
         # Config
         self.config = Config()

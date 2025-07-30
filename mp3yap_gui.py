@@ -33,8 +33,13 @@ def main():
         traceback.print_exc()
         sys.exit(1)
     
+    # Ana pencere değişkeni
+    window = None
+    
     # Gerçek yükleme işlemleri
     def load_application():
+        nonlocal window
+        
         try:
             # Modülleri import et (lazy loading)
             print("[MP3YAP] Loading modules...")
@@ -73,16 +78,20 @@ def main():
         
         # Pencereyi göster
         def show_main_window():
-            window.show()
-            window.raise_()
-            window.activateWindow()
+            if window:
+                # Splash animasyonunu durdur
+                if hasattr(splash, 'color_animation_timer') and splash.color_animation_timer:
+                    splash.color_animation_timer.stop()
+                splash.hide()  # Splash'i gizle
+                splash.close()  # Splash'i kapat
+                window.show()
+                window.raise_()
+                window.activateWindow()
+                print("[MP3YAP] Main window displayed")
         
-        splash.finished.connect(show_main_window)
-        
-        # Uygulama hazır, splash'i kapat
+        # Uygulama hazır, splash'i kapat ve ana pencereyi göster
         splash.update_status("Hazır!")
-        QTimer.singleShot(3500, splash.close)  # Desen oluştuktan sonra 1 saniye daha göster
-        QTimer.singleShot(3600, show_main_window)
+        QTimer.singleShot(3500, show_main_window)
         
     # Animasyonları başlat
     QTimer.singleShot(50, splash.animate_boxes_fade_in)

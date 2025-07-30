@@ -1,6 +1,7 @@
 import sys
 import os
 import threading
+import shutil
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QTextEdit, QPushButton, 
                             QVBoxLayout, QHBoxLayout, QWidget, QLabel, QProgressBar, 
                             QMessageBox)
@@ -20,6 +21,11 @@ class Downloader:
         self.signals = signals
         self.is_running = False
         self.current_url = None
+        self.ffmpeg_available = self.check_ffmpeg()
+    
+    def check_ffmpeg(self):
+        """FFmpeg'in kurulu olup olmadığını kontrol et"""
+        return shutil.which('ffmpeg') is not None
     
     def download_progress_hook(self, d):
         """İndirme ilerlemesini takip eden fonksiyon"""
@@ -43,28 +49,43 @@ class Downloader:
         self.current_url = url
         self.signals.status_update.emit(f"İndiriliyor: {url}")
         
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192',
-            }],
-            'postprocessor_args': [
-                '-ar', '44100',
-                '-ac', '2',
-            ],
-            'outtmpl': os.path.join(output_path, '%(title)s.%(ext)s'),
-            'prefer_ffmpeg': True,
-            'ignoreerrors': True,
-            'noplaylist': False,  # Playlist'leri işlemeye izin ver
-            'progress_hooks': [self.download_progress_hook],
-        }
+        # yt-dlp seçenekleri
+        if self.ffmpeg_available:
+            # FFmpeg varsa MP3'e dönüştür
+            ydl_opts = {
+                'format': 'bestaudio/best',
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                }],
+                'outtmpl': os.path.join(output_path, '%(title)s.%(ext)s'),
+                'ignoreerrors': True,
+                'noplaylist': False,
+                'progress_hooks': [self.download_progress_hook],
+                'prefer_ffmpeg': True,
+            }
+        else:
+            # FFmpeg yoksa orijinal formatta indir
+            ydl_opts = {
+                'format': 'bestaudio/best',
+                'outtmpl': os.path.join(output_path, '%(title)s.%(ext)s'),
+                'ignoreerrors': True,
+                'noplaylist': False,
+                'progress_hooks': [self.download_progress_hook],
+            }
+            self.signals.status_update.emit("Uyarı: FFmpeg bulunamadı. Dosyalar orijinal formatta indirilecek.")
         
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([url])
-            self.signals.status_update.emit(f"İndirme tamamlandı: {url}")
+                info = ydl.extract_info(url, download=True)
+                if info and not self.ffmpeg_available:
+                    # FFmpeg yoksa kullanıcıyı bilgilendir
+                    title = info.get('title', 'Unknown')
+                    ext = info.get('ext', 'webm')
+                    self.signals.status_update.emit(f"İndirildi: {title}.{ext} (MP3 dönüşümü için FFmpeg gerekli)")
+                else:
+                    self.signals.status_update.emit(f"İndirme tamamlandı: {url}")
             return True
         except yt_dlp.DownloadError as e:
             self.signals.error.emit(url, str(e))

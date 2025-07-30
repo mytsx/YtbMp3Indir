@@ -1,142 +1,151 @@
 from PyQt5.QtWidgets import (QWidget, QGridLayout, QVBoxLayout, QLabel, 
                             QGraphicsOpacityEffect, QHBoxLayout)
-from PyQt5.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, pyqtSignal, QSize, QRect
-from PyQt5.QtGui import QFont
+from PyQt5.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, pyqtSignal, QSize
+from PyQt5.QtGui import QFont, QColor
 import random
 
 
 class SplashScreen(QWidget):
-    """Basit rastgele kutu animasyonlu splash screen"""
+    """Kutularla animasyonlu açılış ekranı"""
     
     finished = pyqtSignal()
     
     def __init__(self):
         super().__init__()
         
-        # Pencere ayarları - tamamen şeffaf
+        # Pencere ayarları
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
-        self.resize(600, 500)
+        self.resize(700, 500)
         
-        # Ana layout kullanmayacağız, absolute positioning kullanacağız
-        
-        # Grid container - şeffaf
-        self.grid_container = QWidget(self)
-        self.grid_container.setStyleSheet("background-color: transparent;")
-        self.grid_container.setGeometry(50, 50, 500, 400)  # Başlangıç pozisyonu
+        # Ana layout
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(50, 50, 50, 50)
         
         # Grid layout
-        self.grid_layout = QGridLayout(self.grid_container)
+        self.grid_layout = QGridLayout()
         self.grid_layout.setSpacing(5)
-        self.grid_layout.setContentsMargins(0, 0, 0, 0)
         
-        # Kutular için liste
+        # Kutular için listeler
         self.boxes = []
         self.box_animations = []
         
-        # 16x16 grid - dengeli çözünürlük  
-        self.grid_size = 16
-        self.box_size = 25
-        
+        # 8x8 grid oluştur
+        self.grid_size = 8
         for row in range(self.grid_size):
             box_row = []
             for col in range(self.grid_size):
-                # Tüm kutular aynı
                 box = QWidget()
-                box.setFixedSize(QSize(self.box_size, self.box_size))
+                box.setFixedSize(QSize(60, 60))
                 box.setStyleSheet("""
-                    background-color: rgba(0, 0, 0, 0);
-                    border: none;
+                    background-color: rgba(0, 0, 0, 80);
+                    border-radius: 5px;
                 """)
-                
                 self.grid_layout.addWidget(box, row, col)
                 box_row.append(box)
                 
-                # Opacity efekti
+                # Opacity efekti ekle
                 opacity_effect = QGraphicsOpacityEffect()
-                opacity_effect.setOpacity(0)  # Başlangıçta GÖRÜNMEZ
+                opacity_effect.setOpacity(0)
                 box.setGraphicsEffect(opacity_effect)
                 
-                # Animasyon
+                # Animasyon oluştur
                 animation = QPropertyAnimation(opacity_effect, b"opacity")
-                animation.setDuration(50)  # Çok hızlı fade in
+                animation.setDuration(300)
                 animation.setEasingCurve(QEasingCurve.InOutQuad)
                 self.box_animations.append(animation)
                 
             self.boxes.append(box_row)
         
-        # Status bar widget - ince bar şeklinde
-        self.status_widget = QWidget(self)
-        self.status_widget.setStyleSheet("""
-            QWidget {
-                background-color: rgba(0, 0, 0, 180);
-            }
-        """)
-        self.status_widget.setGeometry(50, 450, 500, 30)  # Başlangıçta altta
+        # Başlık
+        title_widget = QWidget()
+        title_widget.setFixedHeight(150)
+        title_layout = QVBoxLayout(title_widget)
         
-        # Status label
-        status_layout = QHBoxLayout(self.status_widget)
-        status_layout.setContentsMargins(20, 0, 20, 0)
+        self.title_label = QLabel("MP3 YAP")
+        self.title_label.setAlignment(Qt.AlignCenter)
+        title_font = QFont("Arial", 48, QFont.Bold)
+        self.title_label.setFont(title_font)
+        self.title_label.setStyleSheet("color: white;")
+        
+        self.subtitle_label = QLabel("YouTube MP3 İndirici")
+        self.subtitle_label.setAlignment(Qt.AlignCenter)
+        subtitle_font = QFont("Arial", 18)
+        self.subtitle_label.setFont(subtitle_font)
+        self.subtitle_label.setStyleSheet("color: rgba(255, 255, 255, 180);")
         
         self.status_label = QLabel("Başlatılıyor...")
         self.status_label.setAlignment(Qt.AlignCenter)
-        status_font = QFont("Arial", 11)
+        status_font = QFont("Arial", 12)
         self.status_label.setFont(status_font)
-        self.status_label.setStyleSheet("""
-            QLabel {
-                color: white;
-                background-color: transparent;
+        self.status_label.setStyleSheet("color: rgba(255, 255, 255, 150);")
+        
+        title_layout.addWidget(self.title_label)
+        title_layout.addWidget(self.subtitle_label)
+        title_layout.addWidget(self.status_label)
+        
+        # Developer info
+        dev_label = QLabel("Mehmet Yerli • mehmetyerli.com")
+        dev_label.setAlignment(Qt.AlignCenter)
+        dev_font = QFont("Arial", 10)
+        dev_label.setFont(dev_font)
+        dev_label.setStyleSheet("color: rgba(255, 255, 255, 120);")
+        
+        # Layout'ları birleştir
+        main_layout.addStretch()
+        main_layout.addLayout(self.grid_layout)
+        main_layout.addWidget(title_widget)
+        main_layout.addWidget(dev_label)
+        main_layout.addStretch()
+        
+        self.setLayout(main_layout)
+        
+        # Arka plan rengi
+        self.setStyleSheet("""
+            SplashScreen {
+                background-color: qlineargradient(
+                    x1: 0, y1: 0, x2: 1, y2: 1,
+                    stop: 0 #2E7D32,
+                    stop: 0.5 #1976D2,
+                    stop: 1 #6A1B9A
+                );
             }
         """)
-        
-        status_layout.addWidget(self.status_label)
         
         # Animasyon değişkenleri
         self.current_animation_index = 0
         self.animation_timer = None
         self.color_animation_timer = None
-        self.app_ready = False  # Uygulama hazır mı?
+        
+        # Uygulama hazır mı kontrolü için
+        self.app_ready = False
         
     def start(self):
         """Splash screen'i başlat"""
         self.show()
         
-        # Fade in animasyonu YAPMA - direkt rastgele animasyona geç
-        # self.animate_boxes_fade_in()  # BUNU YAPMA
+        # Kutuları fade in yap
+        self.animate_boxes_fade_in()
         
-        # Rastgele kutu animasyonu HEMEN başlat
-        QTimer.singleShot(100, self.start_random_animation)
-    
+        # Renk animasyonunu başlat
+        QTimer.singleShot(800, self.start_color_wave_animation)
+        
     def update_status(self, message):
         """Durum mesajını güncelle"""
         self.status_label.setText(message)
-    
+        
     def set_app_ready(self):
         """Uygulama hazır olduğunda çağrılır"""
         self.app_ready = True
-        # Animasyonu durdur ve pencereyi kapat
-        if hasattr(self, 'color_animation_timer') and self.color_animation_timer:
-            self.color_animation_timer.stop()
-        
-        # Son bir kez tüm kutuları renklendir
-        color_palettes = [
-            [(255, 0, 128), (0, 255, 255), (255, 255, 0), (128, 255, 0), (255, 0, 255)],
-            [(255, 182, 193), (176, 224, 230), (255, 218, 185), (221, 160, 221), (152, 251, 152)],
-            [(255, 69, 0), (50, 205, 50), (30, 144, 255), (255, 215, 0), (138, 43, 226)],
-            [(70, 130, 180), (64, 224, 208), (72, 209, 204), (95, 158, 160), (176, 196, 222)],
-            [(255, 99, 71), (255, 140, 0), (255, 165, 0), (255, 192, 203), (219, 112, 147)]
-        ]
-        palette = random.choice(color_palettes)
-        
-        self.color_all_boxes(palette)
-        # KUTULARI SİLMEDEN direkt kapat
-        QTimer.singleShot(200, self.close_splash)
+        self.update_status("Hazır!")
+        # Fade out animasyonunu başlat
+        QTimer.singleShot(300, self.animate_boxes_fade_out)
         
     def animate_boxes_fade_in(self):
-        """Kutuları sırayla fade in yap - sadece görünür olanlar için"""
+        """Kutuları sırayla fade in yap"""
         def show_next_box():
             if self.current_animation_index < len(self.box_animations):
-                # Sadece görünür kutular için animasyon yap
+                # Random sırayla göster
                 animation = self.box_animations[self.current_animation_index]
                 animation.setStartValue(0)
                 animation.setEndValue(1)
@@ -150,194 +159,73 @@ class SplashScreen(QWidget):
         
         self.animation_timer = QTimer()
         self.animation_timer.timeout.connect(show_next_box)
-        self.animation_timer.start(1)  # Her 1ms'de bir kutu - ultra hızlı
+        self.animation_timer.start(20)  # Her 20ms'de bir kutu
         
-    def start_random_animation(self):
-        """Ortadan dışarı doğru açılan animasyon"""
-        self.update_status("Yükleniyor...")
+    def start_color_wave_animation(self):
+        """Dalga şeklinde renk animasyonu"""
+        self.wave_position = 0
         
-        # Ortadan başla
-        center = self.grid_size // 2
-        
-        # Hangi satırların görünür olduğunu takip et
-        self.visible_rows = set()
-        self.animation_count = 0
-        # Her kutunun durumunu sakla
-        self.box_states = [["" for _ in range(self.grid_size)] for _ in range(self.grid_size)]
-        
-        # Başlangıçta tüm kutuları TRANSPARAN yap
-        for row in range(self.grid_size):
-            for col in range(self.grid_size):
-                # Tamamen şeffaf başlat
-                style = """
-                    background-color: rgba(0, 0, 0, 0);
-                    border-radius: 0px;
-                """
-                self.boxes[row][col].setStyleSheet(style)
-                self.box_states[row][col] = style
-        
-        # Farklı renk paletleri
-        color_palettes = [
-            # Neon
-            [(255, 0, 128), (0, 255, 255), (255, 255, 0), (128, 255, 0), (255, 0, 255)],
-            # Pastel
-            [(255, 182, 193), (176, 224, 230), (255, 218, 185), (221, 160, 221), (152, 251, 152)],
-            # Canlı
-            [(255, 69, 0), (50, 205, 50), (30, 144, 255), (255, 215, 0), (138, 43, 226)],
-            # Soğuk
-            [(70, 130, 180), (64, 224, 208), (72, 209, 204), (95, 158, 160), (176, 196, 222)],
-            # Sıcak
-            [(255, 99, 71), (255, 140, 0), (255, 165, 0), (255, 192, 203), (219, 112, 147)]
-        ]
-        
-        # Rastgele bir palet seç
-        current_palette = random.choice(color_palettes)
-        
-        # İlk görünür satırları ortada başlat ve göster
-        self.visible_rows.add(center)
-        self.visible_rows.add(center - 1)
-        
-        # Ortadaki satırları koyu renkle göster ve GÖRÜNÜR yap
-        for row in [center - 1, center]:
-            for col in range(self.grid_size):
-                style = """
-                    background-color: rgba(20, 20, 20, 100);
-                    border-radius: 0px;
-                """
-                self.boxes[row][col].setStyleSheet(style)
-                self.box_states[row][col] = style
-                # Opacity'yi 1 yap - GÖRÜNÜR
-                opacity = self.boxes[row][col].graphicsEffect()
-                if opacity:
-                    opacity.setOpacity(1)
-        
-        def random_box_animation():
-            nonlocal current_palette
-            
-            # TÜM kutular zaten görünür - show() yapmaya gerek yok
-            
-            # Her frame'de rastgele birkaç kutu renklendir - genişleme aşamasında
-            if len(self.visible_rows) < self.grid_size:
-                # Sadece "görünür" kabul edilen satırlarda renk değiştir (animasyon efekti için)
-                for _ in range(10):  # Her seferinde 10 kutu - daha hızlı renklendirme
-                    if self.visible_rows:
-                        row = random.choice(list(self.visible_rows))
-                        col = random.randint(0, self.grid_size - 1)
-                        
-                        # TAMAMEN RASTGELE RENKLER - palet kullanma
-                        r = random.randint(50, 255)
-                        g = random.randint(50, 255)
-                        b = random.randint(50, 255)
-                        
-                        style = f"""
-                            background-color: rgba({r}, {g}, {b}, 200);
-                            border-radius: 0px;
-                        """
-                        self.boxes[row][col].setStyleSheet(style)
-                        self.box_states[row][col] = style
+        def update_wave():
+            # Uygulama hazırsa animasyonu durdur
+            if self.app_ready:
+                return
                 
-                # Kutuları söndürme - hepsi renkli kalsın
+            colors = [
+                "rgba(76, 175, 80, 180)",   # Yeşil
+                "rgba(33, 150, 243, 180)",  # Mavi
+                "rgba(156, 39, 176, 180)",  # Mor
+                "rgba(255, 193, 7, 180)",   # Sarı
+                "rgba(255, 87, 34, 180)",   # Turuncu
+            ]
             
-            # Palet kullanmıyoruz artık - tamamen rastgele
+            for row in range(self.grid_size):
+                for col in range(self.grid_size):
+                    # Dalga efekti için mesafe hesapla
+                    distance = abs(row + col - self.wave_position)
+                    if distance < 3:
+                        color_index = distance % len(colors)
+                        self.boxes[row][col].setStyleSheet(f"""
+                            background-color: {colors[color_index]};
+                            border-radius: 5px;
+                        """)
+                    else:
+                        self.boxes[row][col].setStyleSheet("""
+                            background-color: rgba(0, 0, 0, 80);
+                            border-radius: 5px;
+                        """)
             
-            # Her 3 frame'de yeni satır ekle - hızlı ama görünür
-            self.animation_count += 1
-            if self.animation_count % 3 == 0 and len(self.visible_rows) < self.grid_size:
-                # Yukarı ve aşağı genişlet
-                min_visible = min(self.visible_rows)
-                max_visible = max(self.visible_rows)
+            self.wave_position += 1
+            if self.wave_position > self.grid_size * 2 + 6:
+                self.wave_position = 0
                 
-                # Üste doğru genişle
-                if min_visible > 0:
-                    new_row = min_visible - 1
-                    self.visible_rows.add(new_row)
-                    # Yeni satırdaki kutuları koyu renkle göster ve GÖRÜNÜR yap
-                    for col in range(self.grid_size):
-                        style = """
-                            background-color: rgba(20, 20, 20, 100);
-                            border-radius: 0px;
-                        """
-                        self.boxes[new_row][col].setStyleSheet(style)
-                        self.box_states[new_row][col] = style
-                        # Opacity'yi 1 yap - GÖRÜNÜR
-                        opacity = self.boxes[new_row][col].graphicsEffect()
-                        if opacity:
-                            opacity.setOpacity(1)
-                
-                # Alta doğru genişle
-                if max_visible < self.grid_size - 1:
-                    new_row = max_visible + 1
-                    self.visible_rows.add(new_row)
-                    # Yeni satırdaki kutuları koyu renkle göster ve GÖRÜNÜR yap
-                    for col in range(self.grid_size):
-                        style = """
-                            background-color: rgba(20, 20, 20, 100);
-                            border-radius: 0px;
-                        """
-                        self.boxes[new_row][col].setStyleSheet(style)
-                        self.box_states[new_row][col] = style
-                        # Opacity'yi 1 yap - GÖRÜNÜR
-                        opacity = self.boxes[new_row][col].graphicsEffect()
-                        if opacity:
-                            opacity.setOpacity(1)
-            
-            # Tüm satırlar görünür olduysa
-            if len(self.visible_rows) >= self.grid_size:
-                # Logaritmik hızla doldur
-                if not hasattr(self, 'fill_phase'):
-                    self.fill_phase = True
-                    self.fill_speed = 2  # Başlangıç hızı
-                
-                # Logaritmik artan hızla kutular renklendir
-                if self.fill_phase:
-                    # Hızı logaritmik artır (maksimuma ulaşana kadar)
-                    if self.fill_speed < 50:
-                        self.fill_speed = int(self.fill_speed * 1.15)  # %15 artış
-                    
-                    for _ in range(min(self.fill_speed, 50)):  # Max 50 kutu per frame
-                        row = random.randint(0, self.grid_size - 1)
-                        col = random.randint(0, self.grid_size - 1)
-                        
-                        # TAMAMEN RASTGELE RENKLER
-                        r = random.randint(50, 255)
-                        g = random.randint(50, 255)
-                        b = random.randint(50, 255)
-                        
-                        style = f"""
-                            background-color: rgba({r}, {g}, {b}, 200);
-                            border-radius: 0px;
-                        """
-                        self.boxes[row][col].setStyleSheet(style)
-                
-                # Uygulama hazır değilse renkleri değiştirmeye devam et
-                # Hiçbir zaman otomatik fade out yapma!
-        
         self.color_animation_timer = QTimer()
-        self.color_animation_timer.timeout.connect(random_box_animation)
-        self.color_animation_timer.start(40)  # Her 40ms'de bir güncelle - daha yavaş
-    
-    def color_all_boxes(self, palette):
-        """Tüm kutuları renklendir - koyu olanları da"""
-        for row in range(self.grid_size):
-            for col in range(self.grid_size):
-                # TAMAMEN RASTGELE RENKLER
-                r = random.randint(50, 255)
-                g = random.randint(50, 255)
-                b = random.randint(50, 255)
-                
-                style = f"""
-                    background-color: rgba({r}, {g}, {b}, 200);
-                    border-radius: 0px;
-                """
-                self.boxes[row][col].setStyleSheet(style)
-    
+        self.color_animation_timer.timeout.connect(update_wave)
+        self.color_animation_timer.start(100)  # Her 100ms'de güncelle
+        
     def animate_boxes_fade_out(self):
-        """Animasyonu durdur ve pencereyi kapat - KUTULARI SİLME!"""
+        """Kutuları fade out yap ve pencereyi kapat"""
         if self.color_animation_timer:
             self.color_animation_timer.stop()
+            
+        self.current_animation_index = 0
         
-        # KUTULARI FADE OUT YAPMA! Direkt pencereyi kapat
-        QTimer.singleShot(100, self.close_splash)
+        def hide_next_box():
+            if self.current_animation_index < len(self.box_animations):
+                animation = self.box_animations[self.current_animation_index]
+                animation.setStartValue(1)
+                animation.setEndValue(0)
+                animation.start()
+                self.current_animation_index += 1
+            else:
+                self.animation_timer.stop()
+                QTimer.singleShot(300, self.close_splash)
+                
+        # Animasyonları tekrar karıştır
+        random.shuffle(self.box_animations)
+        
+        self.animation_timer = QTimer()
+        self.animation_timer.timeout.connect(hide_next_box)
+        self.animation_timer.start(10)  # Daha hızlı kapat
         
     def close_splash(self):
         """Splash screen'i kapat"""

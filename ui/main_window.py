@@ -141,7 +141,7 @@ class MP3YapMainWindow(QMainWindow):
         
         # Butonlar
         button_layout = QHBoxLayout()
-        self.download_button = QPushButton("İndir")
+        self.download_button = QPushButton("▶ İndir")
         self.download_button.clicked.connect(self.start_download)  # type: ignore
         self.download_button.setStyleSheet("""
             QPushButton {
@@ -164,8 +164,33 @@ class MP3YapMainWindow(QMainWindow):
             }
         """)
         
+        # İptal butonu
+        self.cancel_button = QPushButton("⏹ İptal")
+        self.cancel_button.clicked.connect(self.cancel_download)  # type: ignore
+        self.cancel_button.setEnabled(False)
+        self.cancel_button.setStyleSheet("""
+            QPushButton {
+                padding: 5px 20px;
+                background-color: #f44336;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover:enabled {
+                background-color: #da190b;
+            }
+            QPushButton:pressed:enabled {
+                background-color: #ba000d;
+            }
+            QPushButton:disabled {
+                background-color: #cccccc;
+                color: #666666;
+            }
+        """)
+        
         # Kuyruğa ekle butonu
-        self.add_to_queue_button = QPushButton("Kuyruğa Ekle")
+        self.add_to_queue_button = QPushButton("➕ Kuyruğa Ekle")
         self.add_to_queue_button.clicked.connect(self.add_to_queue)  # type: ignore
         self.add_to_queue_button.setStyleSheet("""
             QPushButton {
@@ -184,23 +209,61 @@ class MP3YapMainWindow(QMainWindow):
             }
         """)
         
-        # Klasörü aç butonu
-        self.open_folder_button = QPushButton("Klasörü Aç")
-        self.open_folder_button.clicked.connect(self.open_output_folder)  # type: ignore
-        self.open_folder_button.setEnabled(False)
-        self.open_folder_button.setStyleSheet("""
+        # Temizle butonu
+        self.clear_button = QPushButton("🗑 Temizle")
+        self.clear_button.clicked.connect(self.clear_urls)  # type: ignore
+        self.clear_button.setStyleSheet("""
             QPushButton {
-                padding: 5px 15px;
+                padding: 5px 20px;
+                background-color: #FF9800;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-weight: bold;
             }
-            QPushButton:disabled {
-                color: #999;
+            QPushButton:hover {
+                background-color: #F57C00;
+            }
+            QPushButton:pressed {
+                background-color: #E65100;
             }
         """)
         
+        # Klasörü aç butonu
+        self.open_folder_button = QPushButton("📁 Klasörü Aç")
+        self.open_folder_button.clicked.connect(self.open_output_folder)  # type: ignore
+        self.open_folder_button.setStyleSheet("""
+            QPushButton {
+                padding: 5px 20px;
+                background-color: #9C27B0;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover:enabled {
+                background-color: #7B1FA2;
+            }
+            QPushButton:pressed:enabled {
+                background-color: #6A1B9A;
+            }
+            QPushButton:disabled {
+                background-color: #cccccc;
+                color: #666666;
+            }
+        """)
+        
+        # Sol taraf - ana işlemler
         button_layout.addWidget(self.download_button)
+        button_layout.addWidget(self.cancel_button)
         button_layout.addWidget(self.add_to_queue_button)
-        button_layout.addWidget(self.open_folder_button)
+        
+        # Boşluk
         button_layout.addStretch()
+        
+        # Sağ taraf - yardımcı işlemler
+        button_layout.addWidget(self.clear_button)
+        button_layout.addWidget(self.open_folder_button)
         
         # Layout'a widget'ları ekle
         layout.addWidget(url_label)
@@ -221,9 +284,9 @@ class MP3YapMainWindow(QMainWindow):
             QMessageBox.warning(self, "Uyarı", "Lütfen en az bir URL girin!")
             return
         
-        # Butonları devre dışı bırak
+        # Butonları güncelle
         self.download_button.setEnabled(False)
-        self.open_folder_button.setEnabled(False)
+        self.cancel_button.setEnabled(True)
         
         # İndirme thread'ini başlat
         output_path = self.config.get('output_path', 'music')
@@ -311,7 +374,7 @@ class MP3YapMainWindow(QMainWindow):
         # Eğer tüm indirmeler tamamlandıysa butonları güncelle
         if status == "🎉 Tüm indirmeler tamamlandı!" or status == "İndirme durduruldu":
             self.download_button.setEnabled(True)
-            self.open_folder_button.setEnabled(True)
+            self.cancel_button.setEnabled(False)
             # Geçmiş sekmesini güncelle
             if hasattr(self, 'history_widget'):
                 self.history_widget.load_history()
@@ -395,7 +458,26 @@ class MP3YapMainWindow(QMainWindow):
                 self.current_queue_item['id'], 'failed', error
             )
     
+    def cancel_download(self):
+        """İndirmeyi iptal et"""
+        # Downloader'ı durdur
+        if hasattr(self, 'downloader'):
+            self.downloader.stop()
+        
+        # Butonları güncelle
+        self.download_button.setEnabled(True)
+        self.cancel_button.setEnabled(False)
+        self.status_label.setText("İndirme iptal edildi")
+            
+    def clear_urls(self):
+        """URL metin alanını temizle"""
+        self.url_text.clear()
+        self.status_label.setText("URL listesi temizlendi")
+    
     def closeEvent(self, a0):
         """Pencere kapatılırken"""
-        # Direkt kapat
+        # Aktif indirme varsa durdur
+        if hasattr(self, 'downloader') and self.downloader.is_running:
+            self.downloader.stop()
+        # Pencereyi kapat
         a0.accept()

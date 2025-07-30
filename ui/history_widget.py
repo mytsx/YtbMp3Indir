@@ -1,7 +1,8 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,
                             QTableWidgetItem, QPushButton, QLineEdit, QLabel,
                             QHeaderView, QMessageBox)
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, QUrl
+from PyQt5.QtGui import QDesktopServices
 from database.manager import DatabaseManager
 from datetime import datetime
 
@@ -89,6 +90,8 @@ class HistoryWidget(QWidget):
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(1, QHeaderView.Stretch)  # Başlık sütunu genişlesin
         header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(5, QHeaderView.Fixed)  # İşlemler sütunu sabit genişlik
+        self.table.setColumnWidth(5, 100)  # İşlemler sütunu genişliği
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         
@@ -130,13 +133,39 @@ class HistoryWidget(QWidget):
             # İşlemler butonu
             actions_widget = QWidget()
             actions_layout = QHBoxLayout()
-            actions_layout.setContentsMargins(0, 0, 0, 0)
+            actions_layout.setContentsMargins(5, 2, 5, 2)
+            actions_layout.setSpacing(2)
+            
+            # Tarayıcıda aç butonu
+            browser_btn = QPushButton()
+            browser_btn.setText("🌐")  # Globe emoji
+            browser_btn.setToolTip("Tarayıcıda Aç")
+            browser_btn.setFixedSize(28, 28)
+            browser_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #2196F3;
+                    color: white;
+                    border: 1px solid #1976D2;
+                    border-radius: 4px;
+                    font-size: 16px;
+                    padding: 2px;
+                }
+                QPushButton:hover {
+                    background-color: #1976D2;
+                    border-color: #0D47A1;
+                }
+                QPushButton:pressed {
+                    background-color: #0D47A1;
+                }
+            """)
+            browser_btn.clicked.connect(lambda checked, url=record['url']: self.open_in_browser(url))
+            actions_layout.addWidget(browser_btn)
             
             # Tekrar indir butonu
             redownload_btn = QPushButton()
             redownload_btn.setText("↻")  # Reload symbol
             redownload_btn.setToolTip("Tekrar İndir")
-            redownload_btn.setFixedSize(32, 32)
+            redownload_btn.setFixedSize(28, 28)
             redownload_btn.setStyleSheet("""
                 QPushButton {
                     background-color: #4CAF50;
@@ -162,7 +191,7 @@ class HistoryWidget(QWidget):
             delete_btn = QPushButton()
             delete_btn.setText("×")  # Simple X character
             delete_btn.setToolTip("Geçmişten Sil")
-            delete_btn.setFixedSize(32, 32)
+            delete_btn.setFixedSize(28, 28)
             delete_btn.setStyleSheet("""
                 QPushButton {
                     background-color: #f44336;
@@ -211,6 +240,10 @@ class HistoryWidget(QWidget):
     def redownload(self, url):
         """URL'yi tekrar indir"""
         self.redownload_signal.emit(url)
+    
+    def open_in_browser(self, url):
+        """URL'yi tarayıcıda aç"""
+        QDesktopServices.openUrl(QUrl(url))
     
     def delete_record(self, record_id):
         """Kaydı sil"""

@@ -139,41 +139,57 @@ class SplashScreen(QWidget):
         self.animation_timer.start(20)  # Her 20ms'de bir kutu
         
     def start_color_wave_animation(self):
-        """Dalga şeklinde renk animasyonu"""
-        self.wave_position = 0
+        """Matematiksel formülle renk animasyonu"""
+        self.time_step = 0
+        self.fibonacci = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144]
+        self.golden_ratio = 1.618033988749895
         
-        def update_wave():
-            colors = [
-                "rgba(76, 175, 80, 180)",   # Yeşil
-                "rgba(33, 150, 243, 180)",  # Mavi
-                "rgba(156, 39, 176, 180)",  # Mor
-                "rgba(255, 193, 7, 180)",   # Sarı
-                "rgba(255, 87, 34, 180)",   # Turuncu
-            ]
+        def update_colors():
+            import math
             
             for row in range(self.grid_size):
                 for col in range(self.grid_size):
-                    # Dalga efekti için mesafe hesapla
-                    distance = abs(row + col - self.wave_position)
-                    if distance < 3:
-                        color_index = distance % len(colors)
-                        self.boxes[row][col].setStyleSheet(f"""
-                            background-color: {colors[color_index]};
-                            border-radius: 0px;
-                        """)
-                    else:
-                        self.boxes[row][col].setStyleSheet("""
-                            background-color: rgba(0, 0, 0, 80);
-                            border-radius: 0px;
-                        """)
+                    box = self.boxes[row][col]
+                    
+                    # Her kutu için benzersiz değer
+                    box_id = row * self.grid_size + col
+                    
+                    # Fibonacci modülasyonu
+                    fib_index = box_id % len(self.fibonacci)
+                    fib_value = self.fibonacci[fib_index]
+                    
+                    # Altın oran ile açı hesaplama
+                    angle = (box_id * self.golden_ratio * self.time_step) % 360
+                    
+                    # Mandelbrot benzeri fraktal formül
+                    x = (col - self.grid_size/2) / (self.grid_size/4)
+                    y = (row - self.grid_size/2) / (self.grid_size/4)
+                    z = math.sqrt(x*x + y*y)
+                    
+                    # Sin ve cos ile periyodik değişim
+                    r = int(127 + 127 * math.sin(angle * math.pi / 180 + fib_value * 0.1))
+                    g = int(127 + 127 * math.cos(angle * math.pi / 180 + z * 2))
+                    b = int(127 + 127 * math.sin((angle + 120) * math.pi / 180 + self.time_step * 0.1))
+                    
+                    # Renkleri sınırla
+                    r = max(50, min(255, r))
+                    g = max(50, min(255, g))
+                    b = max(50, min(255, b))
+                    
+                    # Opacity için de matematiksel formül
+                    opacity = int(100 + 80 * math.sin(self.time_step * 0.05 + box_id * 0.1))
+                    opacity = max(80, min(200, opacity))
+                    
+                    box.setStyleSheet(f"""
+                        background-color: rgba({r}, {g}, {b}, {opacity});
+                        border-radius: 0px;
+                    """)
             
-            self.wave_position += 1
-            if self.wave_position > self.grid_size * 2 + 6:
-                self.wave_position = 0
+            self.time_step += 1
                 
         self.color_animation_timer = QTimer()
-        self.color_animation_timer.timeout.connect(update_wave)
-        self.color_animation_timer.start(100)  # Her 100ms'de güncelle
+        self.color_animation_timer.timeout.connect(update_colors)
+        self.color_animation_timer.start(50)  # Her 50ms'de güncelle
         
     def animate_boxes_fade_out(self):
         """Kutuları fade out yap ve pencereyi kapat"""

@@ -89,9 +89,19 @@ def main():
                 window.activateWindow()
                 # print("[MP3YAP] Main window displayed")
         
-        # Uygulama hazır, splash'i kapat ve ana pencereyi göster
+        # Uygulama hazır, splash'i bilgilendir
         splash.update_status("Hazır!")
-        QTimer.singleShot(3000, show_main_window)  # 3 saniye bekle
+        splash.set_app_ready()  # Logaritmik doldurma başlat
+        
+        # Ana pencereyi göster
+        def final_show():
+            if window:
+                window.show()
+                window.raise_()
+                window.activateWindow()
+        
+        # Splash finished sinyalini dinle
+        splash.finished.connect(final_show)
         
     # Splash başladığında animasyonlar otomatik başlayacak
     

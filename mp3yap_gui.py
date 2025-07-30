@@ -4,7 +4,7 @@ import threading
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QTextEdit, QPushButton, 
                             QVBoxLayout, QHBoxLayout, QWidget, QLabel, QProgressBar, 
                             QMessageBox)
-from PyQt5.QtCore import pyqtSignal, QObject, Qt
+from PyQt5.QtCore import pyqtSignal, QObject
 import yt_dlp
 
 # Sinyal sınıfı - indirme ilerlemesini GUI'ye iletmek için
@@ -66,9 +66,16 @@ class Downloader:
                 ydl.download([url])
             self.signals.status_update.emit(f"İndirme tamamlandı: {url}")
             return True
-        except Exception as e:
+        except yt_dlp.DownloadError as e:
             self.signals.error.emit(url, str(e))
             self.signals.status_update.emit(f"İndirme hatası: {e}")
+            return False
+        except KeyboardInterrupt:
+            self.signals.status_update.emit("İndirme kullanıcı tarafından durduruldu")
+            return False
+        except Exception as e:
+            self.signals.error.emit(url, str(e))
+            self.signals.status_update.emit(f"Beklenmeyen hata: {e}")
             return False
 
     def download_all(self, urls, output_path):
@@ -103,6 +110,9 @@ class MP3YapApp(QMainWindow):
         super().__init__()
         self.setWindowTitle("MP3 Yap - YouTube İndirici")
         self.setMinimumSize(600, 400)
+        
+        # Thread referansı
+        self.download_thread = None
         
         # Sinyaller
         self.signals = DownloadSignals()
@@ -187,7 +197,10 @@ class MP3YapApp(QMainWindow):
             os.makedirs(output_dir, exist_ok=True)
             self.status_label.setText(f"İndirme klasörü: {output_dir}")
             QMessageBox.information(self, "Bilgi", f"İndirilen dosyalar şu klasöre kaydedilecek:\n{output_dir}")
-        except Exception as e:
+        except PermissionError as e:
+            QMessageBox.warning(self, "Hata", f"Klasör oluşturma izni yok: {e}")
+            return
+        except OSError as e:
             QMessageBox.warning(self, "Hata", f"İndirme klasörü oluşturulamadı: {e}")
             return
         

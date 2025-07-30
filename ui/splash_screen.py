@@ -644,115 +644,115 @@ class SplashScreen(QWidget):
     def koch_snowflake_pattern(self):
         """Koch kar tanesi fraktalı - Matematiksel kar tanesi"""
         try:
-            center_x = self.grid_size / 2
-            center_y = self.grid_size / 2
+            center_x = int(self.grid_size / 2)
+            center_y = int(self.grid_size / 2)
             
             # Koyu mavi kar gecesi arka planı
             for row in range(self.grid_size):
                 for col in range(self.grid_size):
                     self.boxes[row][col].setStyleSheet("""
-                        background-color: rgba(10, 20, 40, 220);
+                        background-color: rgba(5, 10, 25, 240);
                         border-radius: 0px;
                     """)
             
-            # Kar tanesi noktalarını sakla
-            snowflake_points = []
-            
-            # Koch kar tanesi algoritması - sadece noktaları hesapla
-            def calculate_koch_points(x1, y1, x2, y2, depth):
-                if depth == 0:
-                    # Çizgi üzerindeki noktaları ekle
-                    steps = int(math.sqrt((x2-x1)**2 + (y2-y1)**2))
-                    for i in range(steps):
-                        t = i / float(max(1, steps))
-                        x = x1 + t * (x2 - x1)
-                        y = y1 + t * (y2 - y1)
-                        snowflake_points.append((int(x), int(y)))
-                else:
-                    # Koch algoritması
-                    dx = x2 - x1
-                    dy = y2 - y1
+            # Kar tanesi çizim fonksiyonu - Bresenham algoritması
+            def draw_line(x0, y0, x1, y1, color=(255, 255, 255)):
+                """İki nokta arasında çizgi çiz"""
+                points = []
+                dx = abs(x1 - x0)
+                dy = abs(y1 - y0)
+                sx = 1 if x0 < x1 else -1
+                sy = 1 if y0 < y1 else -1
+                err = dx - dy
+                
+                while True:
+                    points.append((x0, y0))
                     
-                    # 4 nokta hesapla
-                    x_a = x1 + dx / 3
-                    y_a = y1 + dy / 3
-                    
-                    x_b = x1 + 2 * dx / 3
-                    y_b = y1 + 2 * dy / 3
-                    
-                    # Üçgenin tepe noktası
-                    angle = -math.pi / 3
-                    dx_small = (x_b - x_a)
-                    dy_small = (y_b - y_a)
-                    
-                    x_c = x_a + dx_small * math.cos(angle) - dy_small * math.sin(angle)
-                    y_c = y_a + dx_small * math.sin(angle) + dy_small * math.cos(angle)
-                    
-                    # Recursive çağrılar
-                    calculate_koch_points(x1, y1, x_a, y_a, depth - 1)
-                    calculate_koch_points(x_a, y_a, x_c, y_c, depth - 1)
-                    calculate_koch_points(x_c, y_c, x_b, y_b, depth - 1)
-                    calculate_koch_points(x_b, y_b, x2, y2, depth - 1)
-            
-            # 6 köşeli kar tanesi
-            radius = self.grid_size * 0.35
-            rotation = self.time_step * 0.01
-            depth = 2  # Daha az derinlik
-            
-            # 6 köşe noktası
-            vertices = []
-            for i in range(6):
-                angle = (2 * math.pi * i / 6) + rotation
-                x = center_x + radius * math.cos(angle)
-                y = center_y + radius * math.sin(angle)
-                vertices.append((x, y))
-            
-            # Her kenar için Koch eğrisi hesapla
-            for i in range(6):
-                next_i = (i + 1) % 6
-                calculate_koch_points(vertices[i][0], vertices[i][1],
-                                    vertices[next_i][0], vertices[next_i][1], depth)
-            
-            # Hesaplanan noktaları kutulara dönüştür
-            drawn = set()
-            for x, y in snowflake_points:
-                # 3x3 alan boyası (kalınlık için)
-                for dx in range(-1, 2):
-                    for dy in range(-1, 2):
-                        grid_x = x + dx
-                        grid_y = y + dy
+                    if x0 == x1 and y0 == y1:
+                        break
                         
-                        if 0 <= grid_x < self.grid_size and 0 <= grid_y < self.grid_size:
-                            if (grid_x, grid_y) not in drawn:
-                                drawn.add((grid_x, grid_y))
-                                
-                                # Beyaz kar tanesi
-                                # Hafif mavimsi beyaz tonları
-                                pulse = math.sin(self.time_step * 0.05 + grid_x * 0.1 + grid_y * 0.1)
-                                brightness = 0.85 + 0.15 * pulse
-                                
-                                # Beyaz tonları (hafif mavi tonu ile)
-                                r = min(255, int(240 * brightness))
-                                g = min(255, int(245 * brightness))
-                                b = min(255, int(255 * brightness))
-                                
-                                self.boxes[grid_y][grid_x].setStyleSheet(f"""
-                                    background-color: rgba({r}, {g}, {b}, 250);
+                    e2 = 2 * err
+                    if e2 > -dy:
+                        err -= dy
+                        x0 += sx
+                    if e2 < dx:
+                        err += dx
+                        y0 += sy
+                
+                return points
+            
+            # 6 kollu kar tanesi çiz
+            rotation = self.time_step * 0.01
+            
+            # Ana kollar (6 adet)
+            main_length = int(self.grid_size * 0.4)
+            for i in range(6):
+                angle = (math.pi * 2 * i / 6) + rotation
+                
+                # Ana kol
+                end_x = int(center_x + main_length * math.cos(angle))
+                end_y = int(center_y + main_length * math.sin(angle))
+                
+                # Ana kolu çiz
+                main_points = draw_line(center_x, center_y, end_x, end_y)
+                
+                # Ana kol üzerindeki noktaları beyazla
+                for x, y in main_points:
+                    if 0 <= x < self.grid_size and 0 <= y < self.grid_size:
+                        # Parlak beyaz
+                        self.boxes[y][x].setStyleSheet("""
+                            background-color: rgba(255, 255, 255, 255);
+                            border-radius: 0px;
+                        """)
+                
+                # Yan dallar ekle
+                for j in range(2, 5):  # 3 yan dal
+                    branch_start = j * len(main_points) // 6
+                    if branch_start < len(main_points):
+                        branch_x, branch_y = main_points[branch_start]
+                        branch_length = main_length // (j + 1)
+                        
+                        # Sol dal
+                        left_angle = angle - math.pi / 4  # 45 derece sol
+                        left_end_x = int(branch_x + branch_length * math.cos(left_angle))
+                        left_end_y = int(branch_y + branch_length * math.sin(left_angle))
+                        
+                        left_points = draw_line(branch_x, branch_y, left_end_x, left_end_y)
+                        for x, y in left_points:
+                            if 0 <= x < self.grid_size and 0 <= y < self.grid_size:
+                                self.boxes[y][x].setStyleSheet("""
+                                    background-color: rgba(240, 245, 255, 250);
                                     border-radius: 0px;
                                 """)
+                        
+                        # Sağ dal
+                        right_angle = angle + math.pi / 4  # 45 derece sağ
+                        right_end_x = int(branch_x + branch_length * math.cos(right_angle))
+                        right_end_y = int(branch_y + branch_length * math.sin(right_angle))
+                        
+                        right_points = draw_line(branch_x, branch_y, right_end_x, right_end_y)
+                        for x, y in right_points:
+                            if 0 <= x < self.grid_size and 0 <= y < self.grid_size:
+                                self.boxes[y][x].setStyleSheet("""
+                                    background-color: rgba(240, 245, 255, 250);
+                                    border-radius: 0px;
+                                """)
+            
+            # Merkeze parlak nokta
+            for dx in range(-1, 2):
+                for dy in range(-1, 2):
+                    cx, cy = center_x + dx, center_y + dy
+                    if 0 <= cx < self.grid_size and 0 <= cy < self.grid_size:
+                        self.boxes[cy][cx].setStyleSheet("""
+                            background-color: rgba(255, 255, 255, 255);
+                            border-radius: 0px;
+                        """)
             
             self.time_step += 1
             
         except Exception as e:
             print(f"Koch snowflake error: {e}")
-            # Hata durumunda basit kar tanesi
-            for row in range(self.grid_size):
-                for col in range(self.grid_size):
-                    if (row + col) % 2 == 0:
-                        self.boxes[row][col].setStyleSheet("""
-                            background-color: rgba(200, 200, 255, 200);
-                            border-radius: 0px;
-                        """)
+            traceback.print_exc()
             self.time_step += 1
         
     def animate_boxes_fade_out(self):

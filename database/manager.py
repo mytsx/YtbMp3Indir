@@ -35,7 +35,24 @@ class DatabaseManager:
                 )
             ''')
             
-            # İndeks oluştur
+            # İndirme kuyruğu tablosu
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS download_queue (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    url TEXT NOT NULL,
+                    video_title TEXT,
+                    format TEXT DEFAULT 'mp3',
+                    priority INTEGER DEFAULT 0,
+                    status TEXT DEFAULT 'pending',
+                    added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    started_at DATETIME,
+                    completed_at DATETIME,
+                    error_message TEXT,
+                    position INTEGER
+                )
+            ''')
+            
+            # İndeksler
             cursor.execute('''
                 CREATE INDEX IF NOT EXISTS idx_downloaded_at 
                 ON download_history(downloaded_at DESC)
@@ -44,6 +61,16 @@ class DatabaseManager:
             cursor.execute('''
                 CREATE INDEX IF NOT EXISTS idx_video_title 
                 ON download_history(video_title)
+            ''')
+            
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_queue_status 
+                ON download_queue(status)
+            ''')
+            
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_queue_position 
+                ON download_queue(position)
             ''')
             
             conn.commit()
@@ -149,3 +176,124 @@ class DatabaseManager:
             cursor.execute('DELETE FROM download_history')
             conn.commit()
             return cursor.rowcount
+    
+    # Kuyruk yönetimi metodları
+    
+    def add_to_queue(self, url: str, video_title: Optional[str] = None, 
+                     format: str = 'mp3', priority: int = 0) -> int:
+        """Kuyruğa yeni indirme ekle"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Mevcut maksimum pozisyonu bul
+            cursor.execute('SELECT MAX(position) FROM download_queue')
+            max_pos = cursor.fetchone()[0]
+            next_pos = (max_pos or 0) + 1
+            
+            cursor.execute('''
+                INSERT INTO download_queue 
+                (url, video_title, format, priority, position)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (url, video_title, format, priority, next_pos))
+            
+            conn.commit()
+            return cursor.lastrowid or 0
+    
+    def get_queue_items(self, status: Optional[str] = None) -> List[Dict]:
+        """Kuyruktaki öğeleri getir"""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            if status:
+                cursor.execute('''
+                    SELECT * FROM download_queue 
+                    WHERE status = ?
+                    ORDER BY priority DESC, position ASC
+                ''', (status,))
+            else:
+                cursor.execute('''
+                    SELECT * FROM download_queue 
+                    ORDER BY priority DESC, position ASC
+                ''')
+            
+            return [dict(row) for row in cursor.fetchall()]
+    
+    def update_queue_status(self, queue_id: int, status: str, 
+                           error_message: Optional[str] = None) -> bool:
+        """Kuyruk öğesinin durumunu güncelle"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            if status == 'downloading':
+                cursor.execute('''
+                    UPDATE download_queue 
+                    SET status = ?, started_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                ''', (status, queue_id))
+            elif status == 'completed':
+                cursor.execute('''
+                    UPDATE download_queue 
+                    SET status = ?, completed_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                ''', (status, queue_id))
+            elif status == 'failed':
+                cursor.execute('''
+                    UPDATE download_queue 
+                    SET status = ?, error_message = ?
+                    WHERE id = ?
+                ''', (status, error_message, queue_id))
+            else:
+                cursor.execute('''
+                    UPDATE download_queue 
+                    SET status = ?
+                    WHERE id = ?
+                ''', (status, queue_id))
+            
+            conn.commit()
+            return cursor.rowcount > 0
+    
+    def update_queue_position(self, queue_id: int, new_position: int) -> bool:
+        """Kuyruk öğesinin pozisyonunu güncelle"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE download_queue 
+                SET position = ?
+                WHERE id = ?
+            ''', (new_position, queue_id))
+            conn.commit()
+            return cursor.rowcount > 0
+    
+    def remove_from_queue(self, queue_id: int) -> bool:
+        """Kuyruktan öğe sil"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM download_queue WHERE id = ?', (queue_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+    
+    def clear_queue(self, status: Optional[str] = None) -> int:
+        """Kuyruğu temizle"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            if status:
+                cursor.execute('DELETE FROM download_queue WHERE status = ?', (status,))
+            else:
+                cursor.execute('DELETE FROM download_queue')
+            conn.commit()
+            return cursor.rowcount
+    
+    def get_next_queue_item(self) -> Optional[Dict]:
+        """Sıradaki indirme öğesini getir"""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT * FROM download_queue 
+                WHERE status = 'pending'
+                ORDER BY priority DESC, position ASC
+                LIMIT 1
+            ''')
+            row = cursor.fetchone()
+            return dict(row) if row else None

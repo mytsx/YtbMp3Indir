@@ -9,6 +9,7 @@ from PyQt5.QtCore import QUrl
 from core.downloader import Downloader, DownloadSignals
 from ui.settings_dialog import SettingsDialog
 from ui.history_widget import HistoryWidget
+from ui.queue_widget import QueueWidget
 from utils.config import Config
 
 
@@ -107,6 +108,11 @@ class MP3YapMainWindow(QMainWindow):
         self.history_widget.redownload_signal.connect(self.add_url_to_download)
         self.tab_widget.addTab(self.history_widget, "Geçmiş")
         
+        # Kuyruk sekmesi
+        self.queue_widget = QueueWidget()
+        self.queue_widget.start_download.connect(self.process_queue_item)
+        self.tab_widget.addTab(self.queue_widget, "Kuyruk")
+        
         # Ana widget olarak tab widget'ı ayarla
         self.setCentralWidget(self.tab_widget)
     
@@ -158,6 +164,26 @@ class MP3YapMainWindow(QMainWindow):
             }
         """)
         
+        # Kuyruğa ekle butonu
+        self.add_to_queue_button = QPushButton("Kuyruğa Ekle")
+        self.add_to_queue_button.clicked.connect(self.add_to_queue)  # type: ignore
+        self.add_to_queue_button.setStyleSheet("""
+            QPushButton {
+                padding: 5px 20px;
+                background-color: #2196F3;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+            QPushButton:pressed {
+                background-color: #0D47A1;
+            }
+        """)
+        
         # Klasörü aç butonu
         self.open_folder_button = QPushButton("Klasörü Aç")
         self.open_folder_button.clicked.connect(self.open_output_folder)  # type: ignore
@@ -172,6 +198,7 @@ class MP3YapMainWindow(QMainWindow):
         """)
         
         button_layout.addWidget(self.download_button)
+        button_layout.addWidget(self.add_to_queue_button)
         button_layout.addWidget(self.open_folder_button)
         button_layout.addStretch()
         
@@ -300,7 +327,75 @@ class MP3YapMainWindow(QMainWindow):
         self.tab_widget.setCurrentIndex(0)
         QMessageBox.information(self, "Başarılı", "URL indirme listesine eklendi!")
     
-    def closeEvent(self, event):
+    def add_to_queue(self):
+        """URL'leri kuyruğa ekle"""
+        urls = self.url_text.toPlainText().strip().split('\n')
+        urls = [url.strip() for url in urls if url.strip()]
+        
+        if not urls:
+            QMessageBox.warning(self, "Uyarı", "Lütfen en az bir URL girin!")
+            return
+        
+        # URL'leri kuyruğa ekle
+        added_count = 0
+        for url in urls:
+            try:
+                self.queue_widget.add_to_queue(url)
+                added_count += 1
+            except Exception as e:
+                print(f"URL eklenirken hata: {e}")
+        
+        if added_count > 0:
+            QMessageBox.information(self, "Başarılı", 
+                                  f"{added_count} URL kuyruğa eklendi!")
+            self.url_text.clear()
+            # Kuyruk sekmesine geç
+            self.tab_widget.setCurrentIndex(2)
+    
+    def process_queue_item(self, queue_item):
+        """Kuyruktan gelen öğeyi işle"""
+        # İndirme durumunu güncelle
+        self.queue_widget.update_download_status(queue_item['id'], 'downloading')
+        
+        # Downloader'ı hazırla
+        self.current_queue_item = queue_item
+        
+        # Sinyal bağlantılarını güncelle (kuyruk için)
+        try:
+            self.signals.finished.disconnect()
+            self.signals.error.disconnect()
+        except:
+            pass
+        
+        self.signals.finished.connect(self.queue_download_finished)
+        self.signals.error.connect(self.queue_download_error)
+        
+        # İndirmeyi başlat
+        output_dir = self.config.get('output_directory', 'music')
+        download_thread = threading.Thread(
+            target=self.downloader.download_all,
+            args=([queue_item['url']], output_dir)
+        )
+        download_thread.start()
+    
+    def queue_download_finished(self, filename):
+        """Kuyruk indirmesi tamamlandığında"""
+        if hasattr(self, 'current_queue_item'):
+            self.queue_widget.update_download_status(
+                self.current_queue_item['id'], 'completed'
+            )
+            # Geçmişi güncelle
+            if hasattr(self, 'history_widget'):
+                self.history_widget.load_history()
+    
+    def queue_download_error(self, filename, error):
+        """Kuyruk indirmesinde hata oluştuğunda"""
+        if hasattr(self, 'current_queue_item'):
+            self.queue_widget.update_download_status(
+                self.current_queue_item['id'], 'failed', error
+            )
+    
+    def closeEvent(self, a0):
         """Pencere kapatılırken"""
         # Direkt kapat
-        event.accept()
+        a0.accept()

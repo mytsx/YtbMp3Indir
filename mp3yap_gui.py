@@ -25,7 +25,7 @@ def main():
     # print("[MP3YAP] Creating splash screen...")
     try:
         splash = SplashScreen()
-        splash.show()
+        splash.start()  # start metodunu çağır
         # print("[MP3YAP] Splash screen displayed")
     except Exception as e:
         print(f"[MP3YAP ERROR] Failed to create splash screen: {e}")
@@ -93,9 +93,7 @@ def main():
         splash.update_status("Hazır!")
         QTimer.singleShot(3000, show_main_window)  # 3 saniye bekle
         
-    # Animasyonları başlat
-    QTimer.singleShot(10, splash.animate_boxes_fade_in)
-    QTimer.singleShot(50, splash.start_mathematical_pattern)  # Çok erken başlat
+    # Splash başladığında animasyonlar otomatik başlayacak
     
     # Yüklemeyi başlat
     QTimer.singleShot(1000, load_application)  # 1 saniye beklet ki animasyon görünsün

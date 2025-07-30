@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QTextEdit, QPushButton,
                             QMessageBox)
 from PyQt5.QtCore import pyqtSignal, QObject
 import yt_dlp
+import static_ffmpeg
 
 # Sinyal sınıfı - indirme ilerlemesini GUI'ye iletmek için
 class DownloadSignals(QObject):
@@ -21,10 +22,18 @@ class Downloader:
         self.signals = signals
         self.is_running = False
         self.current_url = None
-        self.ffmpeg_available = self.check_ffmpeg()
+        # Static FFmpeg'i yükle ve kullan
+        try:
+            static_ffmpeg.add_paths()
+            self.ffmpeg_available = True
+            self.signals.status_update.emit("FFmpeg hazır (static-ffmpeg kullanılıyor)")
+        except Exception as e:
+            self.ffmpeg_available = self.check_system_ffmpeg()
+            if not self.ffmpeg_available:
+                self.signals.status_update.emit(f"FFmpeg yüklenemedi: {str(e)}")
     
-    def check_ffmpeg(self):
-        """FFmpeg'in kurulu olup olmadığını kontrol et"""
+    def check_system_ffmpeg(self):
+        """Sistem FFmpeg'ini kontrol et"""
         return shutil.which('ffmpeg') is not None
     
     def download_progress_hook(self, d):
@@ -79,11 +88,13 @@ class Downloader:
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
-                if info and not self.ffmpeg_available:
-                    # FFmpeg yoksa kullanıcıyı bilgilendir
+                if info:
                     title = info.get('title', 'Unknown')
-                    ext = info.get('ext', 'webm')
-                    self.signals.status_update.emit(f"İndirildi: {title}.{ext} (MP3 dönüşümü için FFmpeg gerekli)")
+                    if not self.ffmpeg_available:
+                        ext = info.get('ext', 'webm')
+                        self.signals.status_update.emit(f"İndirildi: {title}.{ext} (MP3 dönüşümü için FFmpeg gerekli)")
+                    else:
+                        self.signals.status_update.emit(f"İndirme tamamlandı: {title}.mp3")
                 else:
                     self.signals.status_update.emit(f"İndirme tamamlandı: {url}")
             return True

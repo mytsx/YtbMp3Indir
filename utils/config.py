@@ -15,7 +15,10 @@ class Config:
         'language': 'tr',
         'max_simultaneous_downloads': 3,
         'auto_open_folder': False,
-        'save_history': True
+        'save_history': True,
+        'history_days': 0,  # 0 = süresiz
+        'playlist_limit': 0,  # 0 = limitsiz
+        'auto_retry': True
     }
     
     def __init__(self, config_file: str = 'config.json'):

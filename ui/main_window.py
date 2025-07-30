@@ -2,10 +2,14 @@ import os
 import threading
 from PyQt5.QtWidgets import (QMainWindow, QTextEdit, QPushButton, 
                             QVBoxLayout, QHBoxLayout, QWidget, QLabel, 
-                            QProgressBar, QMessageBox)
+                            QProgressBar, QMessageBox, QMenuBar, QMenu,
+                            QAction, QTabWidget)
 from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtCore import QUrl
 from core.downloader import Downloader, DownloadSignals
+from ui.settings_dialog import SettingsDialog
+from ui.history_widget import HistoryWidget
+from utils.config import Config
 
 
 class MP3YapMainWindow(QMainWindow):
@@ -15,6 +19,9 @@ class MP3YapMainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("MP3 Yap - YouTube İndirici")
         self.setGeometry(100, 100, 800, 600)
+        
+        # Config
+        self.config = Config()
         
         # Instance attributes initialization
         self.url_text: QTextEdit
@@ -29,6 +36,9 @@ class MP3YapMainWindow(QMainWindow):
         self.signals = DownloadSignals()
         self.downloader = Downloader(self.signals)
         
+        # Menü çubuğu
+        self.setup_menu()
+        
         # Arayüz kurulumu
         self.setup_ui()
         
@@ -38,11 +48,65 @@ class MP3YapMainWindow(QMainWindow):
         self.signals.error.connect(self.download_error)
         self.signals.status_update.connect(self.update_status)
     
+    def setup_menu(self):
+        """Menü çubuğunu oluştur"""
+        menubar = self.menuBar()
+        
+        # Dosya menüsü
+        file_menu = menubar.addMenu('Dosya')
+        
+        # URL'leri içe aktar
+        import_action = QAction('URL\'leri İçe Aktar...', self)
+        import_action.setShortcut('Ctrl+I')
+        import_action.triggered.connect(self.import_urls)
+        file_menu.addAction(import_action)
+        
+        file_menu.addSeparator()
+        
+        # Çıkış
+        exit_action = QAction('Çıkış', self)
+        exit_action.setShortcut('Ctrl+Q')
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+        
+        # Ayarlar menüsü
+        settings_menu = menubar.addMenu('Ayarlar')
+        
+        # Tercihler
+        pref_action = QAction('Tercihler...', self)
+        pref_action.setShortcut('Ctrl+,')
+        pref_action.triggered.connect(self.show_settings)
+        settings_menu.addAction(pref_action)
+        
+        # Yardım menüsü
+        help_menu = menubar.addMenu('Yardım')
+        
+        # Hakkında
+        about_action = QAction('Hakkında', self)
+        about_action.triggered.connect(self.show_about)
+        help_menu.addAction(about_action)
+    
     def setup_ui(self):
         """Kullanıcı arayüzünü oluştur"""
-        # Ana widget ve layout
-        main_widget = QWidget()
-        main_layout = QVBoxLayout()
+        # Ana widget olarak tab widget kullan
+        self.tab_widget = QTabWidget()
+        
+        # İndirme sekmesi
+        download_tab = self.create_download_tab()
+        self.tab_widget.addTab(download_tab, "İndirme")
+        
+        # Geçmiş sekmesi
+        self.history_widget = HistoryWidget()
+        self.history_widget.redownload_signal.connect(self.add_url_to_download)
+        self.tab_widget.addTab(self.history_widget, "Geçmiş")
+        
+        # Ana widget olarak tab widget'ı ayarla
+        self.setCentralWidget(self.tab_widget)
+    
+    def create_download_tab(self):
+        """İndirme sekmesini oluştur"""
+        widget = QWidget()
+        layout = QVBoxLayout()
         
         # URL giriş alanı
         url_label = QLabel("İndirilecek YouTube URL'lerini buraya yapıştırın:")
@@ -67,7 +131,7 @@ class MP3YapMainWindow(QMainWindow):
         self.download_button = QPushButton("İndir")
         self.download_button.clicked.connect(self.start_download)  # type: ignore
         
-        # Klasörü aç butonu (YENİ!)
+        # Klasörü aç butonu
         self.open_folder_button = QPushButton("📁 Klasörü Aç")
         self.open_folder_button.clicked.connect(self.open_output_folder)  # type: ignore
         self.open_folder_button.setEnabled(False)
@@ -77,15 +141,14 @@ class MP3YapMainWindow(QMainWindow):
         button_layout.addStretch()
         
         # Layout'a widget'ları ekle
-        main_layout.addWidget(url_label)
-        main_layout.addWidget(self.url_text)
-        main_layout.addLayout(status_layout)
-        main_layout.addLayout(progress_layout)
-        main_layout.addLayout(button_layout)
+        layout.addWidget(url_label)
+        layout.addWidget(self.url_text)
+        layout.addLayout(status_layout)
+        layout.addLayout(progress_layout)
+        layout.addLayout(button_layout)
         
-        # Ana widget'ı ayarla
-        main_widget.setLayout(main_layout)
-        self.setCentralWidget(main_widget)
+        widget.setLayout(layout)
+        return widget
     
     def start_download(self):
         """İndirme işlemini başlat"""
@@ -101,24 +164,68 @@ class MP3YapMainWindow(QMainWindow):
         self.open_folder_button.setEnabled(False)
         
         # İndirme thread'ini başlat
-        output_path = os.path.join(os.getcwd(), "music")
+        output_path = self.config.get('output_path', 'music')
+        if not os.path.isabs(output_path):
+            output_path = os.path.join(os.getcwd(), output_path)
         
         def download_thread():
             self.downloader.download_all(urls, output_path)
             # İndirme bitince butonları etkinleştir
             self.download_button.setEnabled(True)
             self.open_folder_button.setEnabled(True)
+            # Ayarlara göre klasörü aç
+            if self.config.get('auto_open_folder', False):
+                self.open_output_folder()
         
         thread = threading.Thread(target=download_thread)
         thread.start()
     
     def open_output_folder(self):
         """İndirilen dosyaların bulunduğu klasörü aç"""
-        output_path = os.path.join(os.getcwd(), "music")
+        output_path = self.config.get('output_path', 'music')
+        if not os.path.isabs(output_path):
+            output_path = os.path.join(os.getcwd(), output_path)
+            
         if os.path.exists(output_path):
             QDesktopServices.openUrl(QUrl.fromLocalFile(output_path))
         else:
             QMessageBox.information(self, "Bilgi", "Henüz hiç dosya indirilmemiş!")
+    
+    def show_settings(self):
+        """Ayarlar penceresini göster"""
+        dialog = SettingsDialog(self)
+        if dialog.exec_():
+            # Ayarlar değişmiş olabilir, gerekli güncellemeleri yap
+            pass
+    
+    def show_about(self):
+        """Hakkında dialogunu göster"""
+        QMessageBox.about(self, "MP3 Yap Hakkında",
+            "<h3>MP3 Yap - YouTube İndirici</h3>"
+            "<p>Sürüm 2.0</p>"
+            "<p>YouTube videolarını MP3 formatında indirmek için modern ve kullanıcı dostu bir araç.</p>"
+            "<p><b>Geliştirici:</b> MP3Yap Team</p>"
+            "<p><b>Lisans:</b> Açık Kaynak</p>")
+    
+    def import_urls(self):
+        """URL'leri metin dosyasından içe aktar"""
+        from PyQt5.QtWidgets import QFileDialog
+        filename, _ = QFileDialog.getOpenFileName(
+            self, 
+            "URL Dosyası Seç", 
+            "", 
+            "Metin Dosyaları (*.txt);;Tüm Dosyalar (*.*)"
+        )
+        
+        if filename:
+            try:
+                with open(filename, 'r', encoding='utf-8') as f:
+                    urls = f.read()
+                    self.url_text.setPlainText(urls)
+                    QMessageBox.information(self, "Başarılı", 
+                        f"{len(urls.strip().split())} URL başarıyla yüklendi!")
+            except Exception as e:
+                QMessageBox.critical(self, "Hata", f"Dosya okunamadı: {str(e)}")
     
     def update_progress(self, filename, percent, text):
         """İlerleme çubuğunu güncelle"""
@@ -142,3 +249,17 @@ class MP3YapMainWindow(QMainWindow):
         if status == "🎉 Tüm indirmeler tamamlandı!" or status == "İndirme durduruldu":
             self.download_button.setEnabled(True)
             self.open_folder_button.setEnabled(True)
+            # Geçmiş sekmesini güncelle
+            if hasattr(self, 'history_widget'):
+                self.history_widget.load_history()
+    
+    def add_url_to_download(self, url):
+        """Geçmişten URL'yi indirme listesine ekle"""
+        current_text = self.url_text.toPlainText().strip()
+        if current_text:
+            self.url_text.setPlainText(current_text + '\n' + url)
+        else:
+            self.url_text.setPlainText(url)
+        # İndirme sekmesine geç
+        self.tab_widget.setCurrentIndex(0)
+        QMessageBox.information(self, "Başarılı", "URL indirme listesine eklendi!")

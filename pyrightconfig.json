@@ -1,0 +1,18 @@
+{
+    "pythonVersion": "3.13",
+    "pythonPlatform": "Darwin",
+    "exclude": [
+        "**/node_modules",
+        "**/__pycache__",
+        "**/.venv"
+    ],
+    "reportMissingImports": false,
+    "reportMissingTypeStubs": false,
+    "executionEnvironments": [
+        {
+            "root": ".",
+            "pythonVersion": "3.13",
+            "pythonPlatform": "Darwin"
+        }
+    ]
+}

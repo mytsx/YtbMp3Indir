@@ -26,7 +26,6 @@ class Downloader:
         try:
             static_ffmpeg.add_paths()
             self.ffmpeg_available = True
-            self.signals.status_update.emit("FFmpeg hazır (static-ffmpeg kullanılıyor)")
         except Exception as e:
             self.ffmpeg_available = self.check_system_ffmpeg()
             if not self.ffmpeg_available:
@@ -36,6 +35,15 @@ class Downloader:
         """Sistem FFmpeg'ini kontrol et"""
         return shutil.which('ffmpeg') is not None
     
+    def postprocessor_hook(self, d):
+        """Dönüştürme işlemi için hook"""
+        if d['status'] == 'started':
+            self.signals.status_update.emit(f"🔄 MP3'e dönüştürülüyor...")
+        elif d['status'] == 'processing':
+            self.signals.status_update.emit(f"🔄 Dönüştürme devam ediyor...")
+        elif d['status'] == 'finished':
+            self.signals.status_update.emit(f"✨ Dönüştürme tamamlandı!")
+    
     def download_progress_hook(self, d):
         """İndirme ilerlemesini takip eden fonksiyon"""
         if d['status'] == 'downloading':
@@ -43,12 +51,17 @@ class Downloader:
             if 'total_bytes' in d and d['total_bytes'] > 0:
                 percent = d['downloaded_bytes'] / d['total_bytes'] * 100
                 self.signals.progress.emit(filename, percent, f"%{percent:.1f}")
+                self.signals.status_update.emit(f"📥 İndiriliyor: {filename} - %{percent:.1f}")
             else:
                 mb_downloaded = d['downloaded_bytes']/1024/1024
                 self.signals.progress.emit(filename, -1, f"{mb_downloaded:.1f} MB")
+                self.signals.status_update.emit(f"📥 İndiriliyor: {filename} - {mb_downloaded:.1f} MB")
         elif d['status'] == 'finished':
             filename = os.path.basename(d['filename'])
-            self.signals.finished.emit(filename)
+            if filename.endswith('.webm') or filename.endswith('.m4a') or filename.endswith('.opus'):
+                self.signals.status_update.emit(f"✅ İndirme tamamlandı, MP3'e dönüştürülüyor...")
+            else:
+                self.signals.finished.emit(filename)
         elif d['status'] == 'error':
             filename = os.path.basename(d.get('filename', 'Bilinmeyen dosya'))
             self.signals.error.emit(filename, str(d.get('error', 'Bilinmeyen hata')))
@@ -56,7 +69,7 @@ class Downloader:
     def process_url(self, url, output_path):
         """URL'yi işler ve MP3 olarak indirir"""
         self.current_url = url
-        self.signals.status_update.emit(f"İndiriliyor: {url}")
+        self.signals.status_update.emit(f"🔗 Bağlantı kontrol ediliyor: {url}")
         
         # yt-dlp seçenekleri
         if self.ffmpeg_available:
@@ -68,6 +81,7 @@ class Downloader:
                     'preferredcodec': 'mp3',
                     'preferredquality': '192',
                 }],
+                'postprocessor_hooks': [self.postprocessor_hook],
                 'outtmpl': os.path.join(output_path, '%(title)s.%(ext)s'),
                 'ignoreerrors': True,
                 'noplaylist': False,
@@ -92,11 +106,12 @@ class Downloader:
                     title = info.get('title', 'Unknown')
                     if not self.ffmpeg_available:
                         ext = info.get('ext', 'webm')
-                        self.signals.status_update.emit(f"İndirildi: {title}.{ext} (MP3 dönüşümü için FFmpeg gerekli)")
+                        self.signals.status_update.emit(f"✅ İndirildi: {title}.{ext} (MP3 dönüşümü için FFmpeg gerekli)")
                     else:
-                        self.signals.status_update.emit(f"İndirme tamamlandı: {title}.mp3")
+                        self.signals.status_update.emit(f"✅ İşlem tamamlandı: {title}.mp3")
+                        self.signals.finished.emit(f"{title}.mp3")
                 else:
-                    self.signals.status_update.emit(f"İndirme tamamlandı: {url}")
+                    self.signals.status_update.emit(f"✅ İndirme tamamlandı")
             return True
         except yt_dlp.DownloadError as e:
             self.signals.error.emit(url, str(e))
@@ -134,7 +149,7 @@ class Downloader:
                 break
         
         self.is_running = False
-        self.signals.status_update.emit("Tüm indirmeler tamamlandı")
+        self.signals.status_update.emit("🎉 Tüm indirmeler tamamlandı!")
 
     def stop(self):
         """İndirmeyi durdur"""

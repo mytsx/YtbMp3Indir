@@ -1,34 +1,78 @@
-# MP3 Yap - YouTube İndirici
+# MP3 Yap - YouTube İndirici 🎵
 
-Bu uygulama, YouTube videolarını MP3 formatında indirmenizi sağlayan basit bir arayüz sunar.
+YouTube videolarını MP3 formatında indirmenizi sağlayan modern ve kullanıcı dostu bir masaüstü uygulaması.
 
-## Özellikler
+## ✨ Özellikler
 
-- YouTube URL'lerini toplu olarak indirme
-- İndirme ilerlemesini görsel olarak takip etme
-- İndirilen dosyaları "music" klasörüne kaydetme
+- 🎥 YouTube video ve playlist desteği
+- 📥 Toplu indirme özelliği (birden fazla URL aynı anda)
+- 🔄 Gerçek zamanlı indirme ve dönüştürme durumu takibi
+- 🎵 Otomatik MP3 dönüştürme (192 kbps kalitede)
+- 📁 Otomatik "music" klasörü oluşturma
+- 🖥️ Modern PyQt5 arayüzü
+- 🚀 FFmpeg otomatik kurulum (static-ffmpeg ile)
 
-## Kullanım
+## 🛠️ Gereksinimler
 
-1. Uygulamayı başlatın: `MP3Yap.bat` dosyasına çift tıklayarak veya `dist\MP3Yap.exe` dosyasını çalıştırarak
-2. İndirmek istediğiniz YouTube URL'lerini metin alanına yapıştırın (her URL yeni bir satırda olmalıdır)
-3. "İndir" butonuna tıklayın
-4. İndirme ilerlemesini takip edin
-5. İndirilen MP3 dosyaları "music" klasöründe olacaktır
+- Python 3.11 veya üzeri (Python 3.13 ile uyumsuz)
+- Aşağıdaki Python kütüphaneleri:
+  - PyQt5
+  - yt-dlp
+  - static-ffmpeg
 
-## Gereksinimler
+## 📦 Kurulum
 
-- Python 3.6 veya üzeri
-- PyQt5
-- yt-dlp
-
-## Kurulum
-
+### 1. Depoyu klonlayın:
 ```bash
-pip install PyQt5 yt-dlp
+git clone https://github.com/kullaniciadi/mp3yap.git
+cd mp3yap
 ```
 
-## Notlar
+### 2. Bağımlılıkları yükleyin:
+```bash
+pip install -r requirements.txt
+```
 
-- Uygulama, playlist URL'lerini de destekler ve tüm videoları indirir
-- İndirilen dosyalar, video başlığına göre adlandırılır
+veya manuel olarak:
+```bash
+pip install PyQt5==5.15.11 yt-dlp==2025.7.21 static-ffmpeg==2.13
+```
+
+## 🚀 Kullanım
+
+### Uygulamayı başlatın:
+```bash
+python mp3yap_gui.py
+```
+
+### Kullanım adımları:
+1. 📋 YouTube URL'lerini metin alanına yapıştırın (her URL yeni satırda)
+2. 🖱️ "İndir" butonuna tıklayın
+3. 📊 İndirme ve dönüştürme ilerlemesini takip edin
+4. 📁 İndirilen MP3 dosyaları `music/` klasöründe bulunacaktır
+
+## 🔔 Durum Mesajları
+
+Uygulama, işlem durumunu emoji'lerle gösterir:
+- 🔗 Bağlantı kontrol ediliyor
+- 📥 İndiriliyor
+- ✅ İndirme tamamlandı
+- 🔄 MP3'e dönüştürülüyor
+- ✨ Dönüştürme tamamlandı
+- 🎉 Tüm indirmeler tamamlandı
+
+## 📝 Notlar
+
+- İlk çalıştırmada FFmpeg otomatik olarak indirilir (~70MB)
+- Playlist URL'leri desteklenir (tüm videolar indirilir)
+- Dosya adları otomatik olarak güvenli karakterlere dönüştürülür
+- İndirme sırasında uygulama donmaz (thread kullanımı)
+
+## 🐛 Bilinen Sorunlar
+
+- Python 3.13 ile uyumsuzluk (pydub kütüphanesi nedeniyle)
+- FFmpeg ilk kurulumda internet bağlantısı gerektirir
+
+## 📄 Lisans
+
+Bu proje açık kaynaklıdır ve kişisel kullanım içindir.

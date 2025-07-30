@@ -16,30 +16,37 @@ class SplashScreen(QWidget):
         # Pencere ayarları
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
-        self.resize(700, 500)
+        self.resize(600, 500)
         
         # Ana layout
-        main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(50, 50, 50, 50)
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(50, 50, 50, 0)  # Alt margin 0
+        main_layout.setSpacing(0)  # Grid ve status bar arasında boşluk olmasın
+        
+        # Grid container - şeffaf
+        grid_container = QWidget()
+        grid_container.setStyleSheet("background-color: transparent;")
         
         # Grid layout
-        self.grid_layout = QGridLayout()
-        self.grid_layout.setSpacing(5)
+        self.grid_layout = QGridLayout(grid_container)
+        self.grid_layout.setSpacing(3)
         
         # Kutular için listeler
         self.boxes = []
         self.box_animations = []
         
-        # 8x8 grid oluştur
-        self.grid_size = 8
+        # 10x10 grid oluştur - daha küçük kutular
+        self.grid_size = 10
+        box_size = 40
+        
         for row in range(self.grid_size):
             box_row = []
             for col in range(self.grid_size):
                 box = QWidget()
-                box.setFixedSize(QSize(60, 60))
+                box.setFixedSize(QSize(box_size, box_size))
                 box.setStyleSheet("""
                     background-color: rgba(0, 0, 0, 80);
-                    border-radius: 5px;
+                    border-radius: 3px;
                 """)
                 self.grid_layout.addWidget(box, row, col)
                 box_row.append(box)
@@ -57,60 +64,35 @@ class SplashScreen(QWidget):
                 
             self.boxes.append(box_row)
         
-        # Başlık
-        title_widget = QWidget()
-        title_widget.setFixedHeight(150)
-        title_layout = QVBoxLayout(title_widget)
+        # Status bar widget - ince bar şeklinde
+        self.status_widget = QWidget()
+        self.status_widget.setStyleSheet("""
+            QWidget {
+                background-color: rgba(0, 0, 0, 180);
+            }
+        """)
+        self.status_widget.setFixedHeight(30)
         
-        self.title_label = QLabel("MP3 YAP")
-        self.title_label.setAlignment(Qt.AlignCenter)
-        title_font = QFont("Arial", 48, QFont.Bold)
-        self.title_label.setFont(title_font)
-        self.title_label.setStyleSheet("color: white;")
-        
-        self.subtitle_label = QLabel("YouTube MP3 İndirici")
-        self.subtitle_label.setAlignment(Qt.AlignCenter)
-        subtitle_font = QFont("Arial", 18)
-        self.subtitle_label.setFont(subtitle_font)
-        self.subtitle_label.setStyleSheet("color: rgba(255, 255, 255, 180);")
+        # Status label
+        status_layout = QHBoxLayout(self.status_widget)
+        status_layout.setContentsMargins(20, 0, 20, 0)
         
         self.status_label = QLabel("Başlatılıyor...")
         self.status_label.setAlignment(Qt.AlignCenter)
-        status_font = QFont("Arial", 12)
+        status_font = QFont("Arial", 11)
         self.status_label.setFont(status_font)
-        self.status_label.setStyleSheet("color: rgba(255, 255, 255, 150);")
-        
-        title_layout.addWidget(self.title_label)
-        title_layout.addWidget(self.subtitle_label)
-        title_layout.addWidget(self.status_label)
-        
-        # Developer info
-        dev_label = QLabel("Mehmet Yerli • mehmetyerli.com")
-        dev_label.setAlignment(Qt.AlignCenter)
-        dev_font = QFont("Arial", 10)
-        dev_label.setFont(dev_font)
-        dev_label.setStyleSheet("color: rgba(255, 255, 255, 120);")
-        
-        # Layout'ları birleştir
-        main_layout.addStretch()
-        main_layout.addLayout(self.grid_layout)
-        main_layout.addWidget(title_widget)
-        main_layout.addWidget(dev_label)
-        main_layout.addStretch()
-        
-        self.setLayout(main_layout)
-        
-        # Arka plan rengi
-        self.setStyleSheet("""
-            SplashScreen {
-                background-color: qlineargradient(
-                    x1: 0, y1: 0, x2: 1, y2: 1,
-                    stop: 0 #2E7D32,
-                    stop: 0.5 #1976D2,
-                    stop: 1 #6A1B9A
-                );
+        self.status_label.setStyleSheet("""
+            QLabel {
+                color: white;
+                background-color: transparent;
             }
         """)
+        
+        status_layout.addWidget(self.status_label)
+        
+        # Ana layout'a ekle
+        main_layout.addWidget(grid_container)
+        main_layout.addWidget(self.status_widget)
         
         # Animasyon değişkenleri
         self.current_animation_index = 0
@@ -138,8 +120,8 @@ class SplashScreen(QWidget):
         """Uygulama hazır olduğunda çağrılır"""
         self.app_ready = True
         self.update_status("Hazır!")
-        # Fade out animasyonunu başlat
-        QTimer.singleShot(300, self.animate_boxes_fade_out)
+        # Fade out yok - direkt kapat
+        QTimer.singleShot(500, self.close_splash)
         
     def animate_boxes_fade_in(self):
         """Kutuları sırayla fade in yap"""
@@ -162,8 +144,11 @@ class SplashScreen(QWidget):
         self.animation_timer.start(20)  # Her 20ms'de bir kutu
         
     def start_color_wave_animation(self):
-        """Dalga şeklinde renk animasyonu"""
-        self.wave_position = 0
+        """Dalga şeklinde renk animasyonu - rastgele noktadan başlar"""
+        # Rastgele başlangıç noktası
+        self.wave_center_x = random.randint(0, self.grid_size - 1)
+        self.wave_center_y = random.randint(0, self.grid_size - 1)
+        self.wave_radius = 0
         
         def update_wave():
             # Uygulama hazırsa animasyonu durdur
@@ -180,52 +165,35 @@ class SplashScreen(QWidget):
             
             for row in range(self.grid_size):
                 for col in range(self.grid_size):
-                    # Dalga efekti için mesafe hesapla
-                    distance = abs(row + col - self.wave_position)
-                    if distance < 3:
-                        color_index = distance % len(colors)
+                    # Merkeze olan mesafeyi hesapla
+                    dx = col - self.wave_center_x
+                    dy = row - self.wave_center_y
+                    distance = (dx * dx + dy * dy) ** 0.5
+                    
+                    # Dalga içindeyse renk ver
+                    if abs(distance - self.wave_radius) < 2:
+                        color_index = int(distance) % len(colors)
                         self.boxes[row][col].setStyleSheet(f"""
                             background-color: {colors[color_index]};
-                            border-radius: 5px;
+                            border-radius: 3px;
                         """)
                     else:
                         self.boxes[row][col].setStyleSheet("""
                             background-color: rgba(0, 0, 0, 80);
-                            border-radius: 5px;
+                            border-radius: 3px;
                         """)
             
-            self.wave_position += 1
-            if self.wave_position > self.grid_size * 2 + 6:
-                self.wave_position = 0
+            self.wave_radius += 0.5
+            # Dalga ekranı geçince yeni rastgele nokta seç
+            if self.wave_radius > self.grid_size * 1.5:
+                self.wave_radius = 0
+                self.wave_center_x = random.randint(0, self.grid_size - 1)
+                self.wave_center_y = random.randint(0, self.grid_size - 1)
                 
         self.color_animation_timer = QTimer()
         self.color_animation_timer.timeout.connect(update_wave)
         self.color_animation_timer.start(100)  # Her 100ms'de güncelle
         
-    def animate_boxes_fade_out(self):
-        """Kutuları fade out yap ve pencereyi kapat"""
-        if self.color_animation_timer:
-            self.color_animation_timer.stop()
-            
-        self.current_animation_index = 0
-        
-        def hide_next_box():
-            if self.current_animation_index < len(self.box_animations):
-                animation = self.box_animations[self.current_animation_index]
-                animation.setStartValue(1)
-                animation.setEndValue(0)
-                animation.start()
-                self.current_animation_index += 1
-            else:
-                self.animation_timer.stop()
-                QTimer.singleShot(300, self.close_splash)
-                
-        # Animasyonları tekrar karıştır
-        random.shuffle(self.box_animations)
-        
-        self.animation_timer = QTimer()
-        self.animation_timer.timeout.connect(hide_next_box)
-        self.animation_timer.start(10)  # Daha hızlı kapat
         
     def close_splash(self):
         """Splash screen'i kapat"""

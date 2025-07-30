@@ -232,53 +232,73 @@ class SplashScreen(QWidget):
             
             center = self.grid_size // 2
             
-            # Önce tüm kutuları koyu yap
+            # Tamamen rastgele arka plan rengi
+            bg_r = random.randint(10, 50)
+            bg_g = random.randint(10, 50)
+            bg_b = random.randint(10, 50)
+            
+            # Önce tüm kutuları koyu arka plan yap
             for row in range(self.grid_size):
                 for col in range(self.grid_size):
-                    self.boxes[row][col].setStyleSheet("""
-                        background-color: rgba(20, 20, 20, 150);
+                    self.boxes[row][col].setStyleSheet(f"""
+                        background-color: rgba({bg_r}, {bg_g}, {bg_b}, 200);
                         border-radius: 0px;
                     """)
             
-            # Ulam spirali oluştur
+            # Ulam spirali oluştur - düzgün spiral algoritması
             x, y = center, center
-            dx, dy = 0, -1  # Yukarı başla
+            dx, dy = 1, 0  # Sağa başla
             num = 1
+            steps = 1
+            step_count = 0
+            direction_changes = 0
             
-            for _ in range(self.grid_size * self.grid_size):
+            # Spiral boyunca ilerle
+            for i in range(min(self.grid_size * self.grid_size, 500)):  # Maksimum 500 sayı kontrol et
                 if 0 <= x < self.grid_size and 0 <= y < self.grid_size:
                     if is_prime(num):
-                        # Asal sayılar için animasyonlu renk
+                        # Tamamen rastgele parlak renkler
+                        r = random.randint(150, 255)
+                        g = random.randint(150, 255)
+                        b = random.randint(150, 255)
+                        
+                        # Animasyon efekti
                         phase = (num * 0.1 + self.time_step * 0.05) % (2 * math.pi)
                         brightness = 0.7 + 0.3 * math.sin(phase)
                         
-                        # Renk paletinden renk al
-                        if num < 100:
-                            r, g, b = self.color_palette['primary']
-                        elif num < 300:
-                            r, g, b = self.color_palette['secondary']
-                        else:
-                            r, g, b = self.color_palette['accent']
-                        
-                        # Parlaklık uygula
                         r = min(255, int(r * brightness))
                         g = min(255, int(g * brightness))
                         b = min(255, int(b * brightness))
                         
                         self.boxes[y][x].setStyleSheet(f"""
-                            background-color: rgba({r}, {g}, {b}, 220);
+                            background-color: rgba({r}, {g}, {b}, 240);
                             border-radius: 0px;
                         """)
                 
-                # Spiral hareketi
-                if x == center + dx and y == center + dy:
-                    dx, dy = -dy, dx  # 90 derece dön
+                # Bir adım ilerle
                 x += dx
                 y += dy
+                step_count += 1
+                
+                # Yön değiştirme kontrolü
+                if step_count == steps:
+                    step_count = 0
+                    direction_changes += 1
+                    
+                    # 90 derece saat yönünde dön
+                    dx, dy = -dy, dx
+                    
+                    # Her iki yön değişiminde adım sayısını artır
+                    if direction_changes % 2 == 0:
+                        steps += 1
+                
                 num += 1
                 
-                if abs(x - center) > self.grid_size // 2 and abs(y - center) > self.grid_size // 2:
-                    break
+                # Grid dışına çıktıysak dur
+                if x < 0 or x >= self.grid_size or y < 0 or y >= self.grid_size:
+                    # Merkeze yakın bir noktada devam etmeyi dene
+                    if abs(x - center) > self.grid_size // 2 + 2 or abs(y - center) > self.grid_size // 2 + 2:
+                        break
             
             self.time_step += 1
         except Exception as e:

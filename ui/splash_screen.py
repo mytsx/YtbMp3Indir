@@ -113,21 +113,17 @@ class SplashScreen(QWidget):
         
     def generate_random_palette(self):
         """Her desen için rastgele renk paleti oluştur"""
-        palettes = [
-            # Soğuk tonlar
-            {'primary': (100, 150, 255), 'secondary': (150, 200, 255), 'accent': (255, 255, 255)},
-            # Sıcak tonlar
-            {'primary': (255, 150, 100), 'secondary': (255, 200, 150), 'accent': (255, 255, 200)},
-            # Yeşil tonlar
-            {'primary': (100, 255, 150), 'secondary': (150, 255, 200), 'accent': (200, 255, 150)},
-            # Mor tonlar
-            {'primary': (200, 100, 255), 'secondary': (255, 150, 255), 'accent': (255, 200, 255)},
-            # Neon tonlar
-            {'primary': (255, 0, 150), 'secondary': (0, 255, 255), 'accent': (255, 255, 0)},
-            # Pastel tonlar
-            {'primary': (255, 182, 193), 'secondary': (176, 224, 230), 'accent': (255, 218, 185)},
-        ]
-        return random.choice(palettes)
+        # Tamamen rastgele RGB değerleri
+        return {
+            'primary': (random.randint(50, 255), random.randint(50, 255), random.randint(50, 255)),
+            'secondary': (random.randint(50, 255), random.randint(50, 255), random.randint(50, 255)),
+            'accent': (random.randint(100, 255), random.randint(100, 255), random.randint(100, 255)),
+            'background': (random.randint(0, 50), random.randint(0, 50), random.randint(0, 50))
+        }
+        
+    def get_random_color(self):
+        """Tamamen rastgele bir renk döndür"""
+        return (random.randint(50, 255), random.randint(50, 255), random.randint(50, 255))
         
     def start(self):
         """Splash screen'i başlat"""
@@ -296,11 +292,12 @@ class SplashScreen(QWidget):
         center_y = self.grid_size / 2
         golden_ratio = 1.618033988749895
         
-        # Arka planı temizle
+        # Rastgele arka plan rengi
+        bg_r, bg_g, bg_b = self.color_palette['background']
         for row in range(self.grid_size):
             for col in range(self.grid_size):
-                self.boxes[row][col].setStyleSheet("""
-                    background-color: rgba(10, 15, 25, 180);
+                self.boxes[row][col].setStyleSheet(f"""
+                    background-color: rgba({bg_r}, {bg_g}, {bg_b}, 180);
                     border-radius: 0px;
                 """)
         
@@ -416,21 +413,21 @@ class SplashScreen(QWidget):
                         grid_y = int(curr_y + dy)
                         
                         if 0 <= grid_x < self.grid_size and 0 <= grid_y < self.grid_size:
-                            # Derinliğe göre renk - doğal ağaç renkleri
+                            # Derinliğe göre rastgele renkler
                             if depth > 3:  # Gövde
-                                r = 101 + int(20 * math.sin(self.time_step * 0.02))
-                                g = 67 + int(10 * math.sin(self.time_step * 0.02))
-                                b = 33
+                                base_r, base_g, base_b = self.color_palette['primary']
                             elif depth > 1:  # Dallar
-                                r = 139 + int(20 * math.sin(self.time_step * 0.03 + depth))
-                                g = 90 + int(30 * math.sin(self.time_step * 0.03 + depth))
-                                b = 43
+                                base_r, base_g, base_b = self.color_palette['secondary']
                             else:  # Yapraklar
-                                # Yeşil yapraklar, animasyonlu
-                                phase = self.time_step * 0.05 + x * 0.1 + y * 0.1
-                                r = 34 + int(30 * math.sin(phase))
-                                g = 139 + int(60 * math.sin(phase))
-                                b = 34 + int(20 * math.sin(phase))
+                                base_r, base_g, base_b = self.color_palette['accent']
+                            
+                            # Animasyon için parlaklık
+                            phase = self.time_step * 0.05 + x * 0.1 + y * 0.1
+                            brightness = 0.7 + 0.3 * math.sin(phase)
+                            
+                            r = int(base_r * brightness)
+                            g = int(base_g * brightness)
+                            b = int(base_b * brightness)
                             
                             opacity = 200 + int(55 * math.sin(depth * 0.5))
                             self.boxes[grid_y][grid_x].setStyleSheet(f"""
@@ -513,25 +510,21 @@ class SplashScreen(QWidget):
                 else:
                     brightness = 0
                 
-                # HSV'den RGB'ye dönüşüm
-                h_i = int(hue / 60)
-                f = hue / 60 - h_i
-                p = brightness * 0.3
-                q = brightness * (1 - 0.7 * f)
-                t_hsv = brightness * (1 - 0.7 * (1 - f))
-                
-                if h_i == 0:
-                    r, g, b = brightness, t_hsv, p
-                elif h_i == 1:
-                    r, g, b = q, brightness, p
-                elif h_i == 2:
-                    r, g, b = p, brightness, t_hsv
-                elif h_i == 3:
-                    r, g, b = p, q, brightness
-                elif h_i == 4:
-                    r, g, b = t_hsv, p, brightness
+                # Rastgele renk paleti kullan
+                # Modulus'a göre farklı renkler
+                color_index = int(modulus * 10) % 3
+                if color_index == 0:
+                    base_r, base_g, base_b = self.color_palette['primary']
+                elif color_index == 1:
+                    base_r, base_g, base_b = self.color_palette['secondary']
                 else:
-                    r, g, b = brightness, p, q
+                    base_r, base_g, base_b = self.color_palette['accent']
+                
+                # Parlaklık faktörü
+                brightness_factor = brightness / 255.0
+                r = base_r * brightness_factor
+                g = base_g * brightness_factor
+                b = base_b * brightness_factor
                 
                 # Kontur çizgileri için ek efekt
                 contour = int(modulus * 10) % 2
@@ -592,17 +585,14 @@ class SplashScreen(QWidget):
             grid_y = int(y)
             
             if 0 <= grid_x < self.grid_size and 0 <= grid_y < self.grid_size:
-                # Çiçek merkezi için renk - indekse göre
-                # İç kısımlar daha koyu (tohum), dış kısımlar açık (yaprak)
-                if i < num_points * 0.2:  # Merkez - koyu kahve/siyah tohumlar
-                    base_r, base_g, base_b = 40, 25, 10
-                elif i < num_points * 0.5:  # Orta - turuncu/sarı geçiş
-                    progress = (i - num_points * 0.2) / (num_points * 0.3)
-                    base_r = int(40 + 215 * progress)  # 40'tan 255'e
-                    base_g = int(25 + 165 * progress)  # 25'ten 190'a
-                    base_b = 10
-                else:  # Dış yapraklar - sarı
-                    base_r, base_g, base_b = 255, 215, 0
+                # Çiçek merkezi için rastgele renkler
+                # Her bölge için farklı renk
+                if i < num_points * 0.2:  # Merkez
+                    base_r, base_g, base_b = self.color_palette['primary']
+                elif i < num_points * 0.5:  # Orta
+                    base_r, base_g, base_b = self.color_palette['secondary']
+                else:  # Dış yapraklar
+                    base_r, base_g, base_b = self.color_palette['accent']
                 
                 # Animasyon için parlaklık değişimi
                 pulse = math.sin(i * 0.1 + self.time_step * 0.05)
@@ -657,11 +647,11 @@ class SplashScreen(QWidget):
             center_x = self.grid_size / 2
             center_y = self.grid_size / 2
             
-            # Koyu gece arka planı
+            # Koyu mavi kar gecesi arka planı
             for row in range(self.grid_size):
                 for col in range(self.grid_size):
                     self.boxes[row][col].setStyleSheet("""
-                        background-color: rgba(10, 15, 30, 200);
+                        background-color: rgba(10, 20, 40, 220);
                         border-radius: 0px;
                     """)
             
@@ -736,16 +726,15 @@ class SplashScreen(QWidget):
                             if (grid_x, grid_y) not in drawn:
                                 drawn.add((grid_x, grid_y))
                                 
-                                # Renk paleti kullan
-                                r, g, b = self.color_palette['accent']
-                                
-                                # Animasyonlu parlaklık
+                                # Beyaz kar tanesi
+                                # Hafif mavimsi beyaz tonları
                                 pulse = math.sin(self.time_step * 0.05 + grid_x * 0.1 + grid_y * 0.1)
-                                brightness = 0.7 + 0.3 * pulse
+                                brightness = 0.85 + 0.15 * pulse
                                 
-                                r = min(255, int(r * brightness))
-                                g = min(255, int(g * brightness))
-                                b = min(255, int(b * brightness))
+                                # Beyaz tonları (hafif mavi tonu ile)
+                                r = min(255, int(240 * brightness))
+                                g = min(255, int(245 * brightness))
+                                b = min(255, int(255 * brightness))
                                 
                                 self.boxes[grid_y][grid_x].setStyleSheet(f"""
                                     background-color: rgba({r}, {g}, {b}, 250);

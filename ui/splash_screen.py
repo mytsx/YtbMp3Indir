@@ -1,55 +1,63 @@
 from PyQt5.QtWidgets import (QWidget, QGridLayout, QVBoxLayout, QLabel, 
-                            QGraphicsOpacityEffect, QHBoxLayout)
+                            QGraphicsOpacityEffect)
 from PyQt5.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, pyqtSignal, QSize
-from PyQt5.QtGui import QFont, QColor
+from PyQt5.QtGui import QFont
 import random
 
 
 class SplashScreen(QWidget):
-    """Kutularla animasyonlu açılış ekranı"""
+    """Sadece kutulardan oluşan minimal splash screen"""
     
     finished = pyqtSignal()
     
     def __init__(self):
         super().__init__()
         
-        # Pencere ayarları
+        # Pencere ayarları - tamamen şeffaf
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
-        self.resize(700, 500)
+        self.resize(600, 500)
         
         # Ana layout
-        main_layout = QVBoxLayout()
+        main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(50, 50, 50, 50)
         
-        # Grid layout
-        self.grid_layout = QGridLayout()
-        self.grid_layout.setSpacing(5)
+        # Grid container - şeffaf
+        grid_container = QWidget()
+        grid_container.setStyleSheet("background-color: transparent;")
         
-        # Kutular için listeler
+        # Grid layout
+        self.grid_layout = QGridLayout(grid_container)
+        self.grid_layout.setSpacing(10)
+        
+        # Kutular için liste
         self.boxes = []
         self.box_animations = []
         
-        # 8x8 grid oluştur
+        # 8x8 grid
         self.grid_size = 8
+        box_size = 50
+        
         for row in range(self.grid_size):
             box_row = []
             for col in range(self.grid_size):
+                # Tüm kutular aynı
                 box = QWidget()
-                box.setFixedSize(QSize(60, 60))
+                box.setFixedSize(QSize(box_size, box_size))
                 box.setStyleSheet("""
                     background-color: rgba(0, 0, 0, 80);
-                    border-radius: 5px;
+                    border-radius: 0px;
                 """)
+                
                 self.grid_layout.addWidget(box, row, col)
                 box_row.append(box)
                 
-                # Opacity efekti ekle
+                # Opacity efekti
                 opacity_effect = QGraphicsOpacityEffect()
                 opacity_effect.setOpacity(0)
                 box.setGraphicsEffect(opacity_effect)
                 
-                # Animasyon oluştur
+                # Animasyon
                 animation = QPropertyAnimation(opacity_effect, b"opacity")
                 animation.setDuration(300)
                 animation.setEasingCurve(QEasingCurve.InOutQuad)
@@ -57,60 +65,8 @@ class SplashScreen(QWidget):
                 
             self.boxes.append(box_row)
         
-        # Başlık
-        title_widget = QWidget()
-        title_widget.setFixedHeight(150)
-        title_layout = QVBoxLayout(title_widget)
-        
-        self.title_label = QLabel("MP3 YAP")
-        self.title_label.setAlignment(Qt.AlignCenter)
-        title_font = QFont("Arial", 48, QFont.Bold)
-        self.title_label.setFont(title_font)
-        self.title_label.setStyleSheet("color: white;")
-        
-        self.subtitle_label = QLabel("YouTube MP3 İndirici")
-        self.subtitle_label.setAlignment(Qt.AlignCenter)
-        subtitle_font = QFont("Arial", 18)
-        self.subtitle_label.setFont(subtitle_font)
-        self.subtitle_label.setStyleSheet("color: rgba(255, 255, 255, 180);")
-        
-        self.status_label = QLabel("Başlatılıyor...")
-        self.status_label.setAlignment(Qt.AlignCenter)
-        status_font = QFont("Arial", 12)
-        self.status_label.setFont(status_font)
-        self.status_label.setStyleSheet("color: rgba(255, 255, 255, 150);")
-        
-        title_layout.addWidget(self.title_label)
-        title_layout.addWidget(self.subtitle_label)
-        title_layout.addWidget(self.status_label)
-        
-        # Developer info
-        dev_label = QLabel("Mehmet Yerli • mehmetyerli.com")
-        dev_label.setAlignment(Qt.AlignCenter)
-        dev_font = QFont("Arial", 10)
-        dev_label.setFont(dev_font)
-        dev_label.setStyleSheet("color: rgba(255, 255, 255, 120);")
-        
-        # Layout'ları birleştir
-        main_layout.addStretch()
-        main_layout.addLayout(self.grid_layout)
-        main_layout.addWidget(title_widget)
-        main_layout.addWidget(dev_label)
-        main_layout.addStretch()
-        
-        self.setLayout(main_layout)
-        
-        # Arka plan rengi
-        self.setStyleSheet("""
-            SplashScreen {
-                background-color: qlineargradient(
-                    x1: 0, y1: 0, x2: 1, y2: 1,
-                    stop: 0 #2E7D32,
-                    stop: 0.5 #1976D2,
-                    stop: 1 #6A1B9A
-                );
-            }
-        """)
+        # Ana layout'a ekle
+        main_layout.addWidget(grid_container)
         
         # Animasyon değişkenleri
         self.current_animation_index = 0
@@ -121,16 +77,10 @@ class SplashScreen(QWidget):
         """Splash screen'i başlat"""
         self.show()
         
-        # Kutuları fade in yap
+        # Kutuları animasyonla göster
         self.animate_boxes_fade_in()
         
-        # Durum mesajlarını güncelle
-        QTimer.singleShot(500, lambda: self.status_label.setText("Modüller yükleniyor..."))
-        QTimer.singleShot(1000, lambda: self.status_label.setText("Ayarlar kontrol ediliyor..."))
-        QTimer.singleShot(1500, lambda: self.status_label.setText("Veritabanı hazırlanıyor..."))
-        QTimer.singleShot(2000, lambda: self.status_label.setText("Arayüz oluşturuluyor..."))
-        
-        # Renk animasyonunu başlat
+        # Renk dalgası animasyonu
         QTimer.singleShot(800, self.start_color_wave_animation)
         
         # 3 saniye sonra kapat
@@ -177,12 +127,12 @@ class SplashScreen(QWidget):
                         color_index = distance % len(colors)
                         self.boxes[row][col].setStyleSheet(f"""
                             background-color: {colors[color_index]};
-                            border-radius: 5px;
+                            border-radius: 0px;
                         """)
                     else:
                         self.boxes[row][col].setStyleSheet("""
                             background-color: rgba(0, 0, 0, 80);
-                            border-radius: 5px;
+                            border-radius: 0px;
                         """)
             
             self.wave_position += 1

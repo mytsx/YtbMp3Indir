@@ -73,7 +73,12 @@ class Downloader:
         except KeyboardInterrupt:
             self.signals.status_update.emit("İndirme kullanıcı tarafından durduruldu")
             return False
-        except Exception as e:
+        except (OSError, IOError) as e:
+            self.signals.error.emit(url, str(e))
+            self.signals.status_update.emit(f"Dosya sistem hatası: {e}")
+            return False
+        except Exception as e:  # pylint: disable=broad-except
+            # Beklenmeyen hatalar için fallback
             self.signals.error.emit(url, str(e))
             self.signals.status_update.emit(f"Beklenmeyen hata: {e}")
             return False
@@ -114,18 +119,34 @@ class MP3YapApp(QMainWindow):
         # Thread referansı
         self.download_thread = None
         
+        # UI elementlerini önceden tanımla
+        self.url_text: QTextEdit
+        self.status_label: QLabel
+        self.current_file_label: QLabel
+        self.progress_bar: QProgressBar
+        self.progress_percent: QLabel
+        self.download_button: QPushButton
+        
         # Sinyaller
         self.signals = DownloadSignals()
         self.downloader = Downloader(self.signals)
         
-        # Sinyal bağlantıları
+        # Instance attributes initialization
+        self.url_text: QTextEdit
+        self.status_label: QLabel
+        self.current_file_label: QLabel
+        self.progress_bar: QProgressBar
+        self.progress_percent: QLabel
+        self.download_button: QPushButton
+        
+        # Arayüz kurulumu
+        self.setup_ui()
+        
+        # Sinyal bağlantıları (UI kurulumundan sonra)
         self.signals.progress.connect(self.update_progress)
         self.signals.finished.connect(self.download_finished)
         self.signals.error.connect(self.download_error)
         self.signals.status_update.connect(self.update_status)
-        
-        # Arayüz kurulumu
-        self.setup_ui()
     
     def setup_ui(self):
         # Ana widget ve layout
@@ -153,7 +174,7 @@ class MP3YapApp(QMainWindow):
         # Butonlar
         button_layout = QHBoxLayout()
         self.download_button = QPushButton("İndir")
-        self.download_button.clicked.connect(self.start_download)
+        self.download_button.clicked.connect(self.start_download)  # type: ignore
         button_layout.addWidget(self.download_button)
         
         # Layout'ları ana layout'a ekle

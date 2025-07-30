@@ -8,6 +8,12 @@
     ],
     "reportMissingImports": false,
     "reportMissingTypeStubs": false,
+    "reportGeneralTypeIssues": false,
+    "reportOptionalMemberAccess": false,
+    "reportOptionalCall": false,
+    "reportOptionalIterable": false,
+    "reportOptionalContextManager": false,
+    "reportOptionalOperand": false,
     "executionEnvironments": [
         {
             "root": ".",

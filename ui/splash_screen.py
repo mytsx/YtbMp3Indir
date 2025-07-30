@@ -39,7 +39,7 @@ class SplashScreen(QWidget):
         self.boxes = []
         self.box_animations = []
         
-        # 16x16 grid - daha yüksek çözünürlük
+        # 16x16 grid - dengeli çözünürlük  
         self.grid_size = 16
         box_size = 25
         
@@ -160,25 +160,24 @@ class SplashScreen(QWidget):
         
         self.animation_timer = QTimer()
         self.animation_timer.timeout.connect(show_next_box)
-        self.animation_timer.start(3)  # Her 3ms'de bir kutu - çok hızlı
+        self.animation_timer.start(1)  # Her 1ms'de bir kutu - ultra hızlı
         
     def start_mathematical_pattern(self):
         """Matematiksel desen animasyonu"""
         # Desen seçimi (her açılışta farklı)
-        pattern_type = int(self.pattern_seed) % 6
+        pattern_type = int(self.pattern_seed) % 5
         
         patterns = {
             0: self.prime_spiral_pattern,      # Asal sayı spirali
             1: self.golden_spiral_pattern,     # Altın spiral
             2: self.fractal_tree_pattern,      # Fraktal ağaç
             3: self.euler_curve_pattern,       # Euler eğrisi
-            4: self.fibonacci_flower_pattern,  # Fibonacci çiçeği
-            5: self.koch_snowflake_pattern     # Koch kar tanesi fraktalı
+            4: self.fibonacci_flower_pattern   # Fibonacci çiçeği
         }
         
         self.active_pattern = patterns[pattern_type]
         self.pattern_name = ["Asal Spiral", "Altın Spiral", "Fraktal Ağaç", 
-                           "Euler Eğrisi", "Fibonacci Çiçeği", "Koch Kar Tanesi"][pattern_type]
+                           "Euler Eğrisi", "Fibonacci Çiçeği"][pattern_type]
         
         # Her desen için yeni renk paleti
         self.color_palette = self.generate_random_palette()
@@ -188,14 +187,11 @@ class SplashScreen(QWidget):
         
         def safe_pattern_update():
             try:
-                print(f"[SPLASH] Running pattern: {self.pattern_name}, Time step: {self.time_step}")
+                # print(f"[SPLASH] Running pattern: {self.pattern_name}, Time step: {self.time_step}")  # Loglama kapatıldı
                 self.active_pattern()
             except Exception as e:
-                print(f"[SPLASH ERROR] Pattern '{self.pattern_name}' failed at time_step {self.time_step}")
-                print(f"[SPLASH ERROR] Exception type: {type(e).__name__}")
-                print(f"[SPLASH ERROR] Exception message: {str(e)}")
-                print(f"[SPLASH ERROR] Full traceback:")
-                traceback.print_exc()
+                # Hata durumunda da loglama yok
+                pass
                 
                 # Hata durumunda basit bir animasyon göster
                 try:
@@ -213,11 +209,11 @@ class SplashScreen(QWidget):
                     print(f"[SPLASH CRITICAL] Even fallback animation failed: {fallback_error}")
                     traceback.print_exc()
                 
-                self.time_step += 1
+                self.time_step += 3  # Dengeli ilerleme
         
         self.color_animation_timer = QTimer()
         self.color_animation_timer.timeout.connect(safe_pattern_update)
-        self.color_animation_timer.start(20)  # Her 20ms'de güncelle - çok hızlı
+        self.color_animation_timer.start(20)  # 50 FPS - dengeli performans
         
     def prime_spiral_pattern(self):
         """Ulam spirali - Asal sayıların spiral deseni"""
@@ -237,13 +233,14 @@ class SplashScreen(QWidget):
             bg_g = random.randint(10, 50)
             bg_b = random.randint(10, 50)
             
-            # Önce tüm kutuları koyu arka plan yap
-            for row in range(self.grid_size):
-                for col in range(self.grid_size):
-                    self.boxes[row][col].setStyleSheet(f"""
-                        background-color: rgba({bg_r}, {bg_g}, {bg_b}, 200);
-                        border-radius: 0px;
-                    """)
+            # İlk frame'de tüm kutuları ayarla
+            if self.time_step == 0:
+                for row in range(self.grid_size):
+                    for col in range(self.grid_size):
+                        self.boxes[row][col].setStyleSheet(f"""
+                            background-color: rgba({bg_r}, {bg_g}, {bg_b}, 200);
+                            border-radius: 0px;
+                        """)
             
             # Ulam spirali oluştur - düzgün spiral algoritması
             x, y = center, center
@@ -253,14 +250,15 @@ class SplashScreen(QWidget):
             step_count = 0
             direction_changes = 0
             
-            # Spiral boyunca ilerle
-            for i in range(min(self.grid_size * self.grid_size, 500)):  # Maksimum 500 sayı kontrol et
+            # Tüm spirali çiz
+            for i in range(256):
                 if 0 <= x < self.grid_size and 0 <= y < self.grid_size:
                     if is_prime(num):
-                        # Tamamen rastgele parlak renkler
-                        r = random.randint(150, 255)
-                        g = random.randint(150, 255)
-                        b = random.randint(150, 255)
+                        # Time step'e göre değişen renkler
+                        base_hue = (num * 10 + self.time_step * 5) % 360
+                        r = int(127 + 127 * math.sin(base_hue * math.pi / 180))
+                        g = int(127 + 127 * math.sin((base_hue + 120) * math.pi / 180))
+                        b = int(127 + 127 * math.sin((base_hue + 240) * math.pi / 180))
                         
                         # Animasyon efekti
                         phase = (num * 0.1 + self.time_step * 0.05) % (2 * math.pi)
@@ -300,41 +298,45 @@ class SplashScreen(QWidget):
                     if abs(x - center) > self.grid_size // 2 + 2 or abs(y - center) > self.grid_size // 2 + 2:
                         break
             
-            self.time_step += 1
+            self.time_step += 3  # Dengeli ilerleme
         except Exception as e:
             print(f"[SPIRAL ERROR] Prime spiral failed: {e}")
             traceback.print_exc()
-            self.time_step += 1
+            self.time_step += 3  # Dengeli ilerleme
         
     def golden_spiral_pattern(self):
         """Altın spiral - Fibonacci ve altın oran"""
+        # Merkez sabit
         center_x = self.grid_size / 2
         center_y = self.grid_size / 2
         golden_ratio = 1.618033988749895
         
-        # Rastgele arka plan rengi
-        bg_r, bg_g, bg_b = self.color_palette['background']
-        for row in range(self.grid_size):
-            for col in range(self.grid_size):
-                self.boxes[row][col].setStyleSheet(f"""
-                    background-color: rgba({bg_r}, {bg_g}, {bg_b}, 180);
-                    border-radius: 0px;
-                """)
+        # İlk frame'de arka planı ayarla
+        if self.time_step == 0:
+            bg_r, bg_g, bg_b = self.color_palette['background']
+            for row in range(self.grid_size):
+                for col in range(self.grid_size):
+                    self.boxes[row][col].setStyleSheet(f"""
+                        background-color: rgba({bg_r}, {bg_g}, {bg_b}, 180);
+                        border-radius: 0px;
+                    """)
         
         # Altın spiral çiz
         # b = ln(φ) / (π/2)
         b = math.log(golden_ratio) / (math.pi / 2)
         
-        # Spiral üzerinde birçok nokta çiz
-        for i in range(500):  # Daha fazla nokta
+        # Spiral üzerinde noktalar - time_step'e göre daha fazla nokta
+        max_points = min(100 + self.time_step * 2, 300)
+        for i in range(max_points):
             theta = i * 0.1  # Açı artışı
             
             # Altın spiral denklemi: r = a * e^(b*theta)
-            r = 0.5 * math.exp(b * theta)
+            r = 0.3 * math.exp(b * theta)
             
             # Kartezyen koordinatlara çevir
-            x = center_x + r * math.cos(theta + self.time_step * 0.02)
-            y = center_y + r * math.sin(theta + self.time_step * 0.02)
+            rotation = self.time_step * 0.01
+            x = center_x + r * math.cos(theta + rotation)
+            y = center_y + r * math.sin(theta + rotation)
             
             # Grid koordinatları
             grid_x = int(x)
@@ -342,50 +344,17 @@ class SplashScreen(QWidget):
             
             # Grid içinde mi kontrol et
             if 0 <= grid_x < self.grid_size and 0 <= grid_y < self.grid_size:
-                # Spiral üzerindeki noktayı parlat
-                hue = (theta * 180 / math.pi + self.time_step * 2) % 360
-                
-                # HSV'den RGB'ye
-                c = 1.0
-                x_hsv = c * (1 - abs((hue / 60) % 2 - 1))
-                m = 0
-                
-                if hue < 60:
-                    r_norm, g_norm, b_norm = c, x_hsv, 0
-                elif hue < 120:
-                    r_norm, g_norm, b_norm = x_hsv, c, 0
-                elif hue < 180:
-                    r_norm, g_norm, b_norm = 0, c, x_hsv
-                elif hue < 240:
-                    r_norm, g_norm, b_norm = 0, x_hsv, c
-                elif hue < 300:
-                    r_norm, g_norm, b_norm = x_hsv, 0, c
-                else:
-                    r_norm, g_norm, b_norm = c, 0, x_hsv
-                
-                # Parlaklık
-                brightness = 200 + int(55 * math.sin(i * 0.1 + self.time_step * 0.05))
-                r_color = int(brightness * r_norm)
-                g_color = int(brightness * g_norm)
-                b_color = int(brightness * b_norm)
+                # Altın renkler
+                gold_factor = (i / max_points)
+                r_color = int(255 * (0.8 + 0.2 * gold_factor))
+                g_color = int(215 * (0.7 + 0.3 * gold_factor))
+                b_color = int(100 * gold_factor)
                 
                 self.boxes[grid_y][grid_x].setStyleSheet(f"""
                     background-color: rgba({r_color}, {g_color}, {b_color}, 250);
                     border-radius: 0px;
                 """)
                 
-                # Çevresindeki kutulara da yumuşak geçiş ekle
-                for dy in [-1, 0, 1]:
-                    for dx in [-1, 0, 1]:
-                        ny, nx = grid_y + dy, grid_x + dx
-                        if 0 <= nx < self.grid_size and 0 <= ny < self.grid_size and (dx != 0 or dy != 0):
-                            current_style = self.boxes[ny][nx].styleSheet()
-                            if 'rgba(10, 15, 25' in current_style:  # Sadece arka plan kutularını güncelle
-                                fade = 0.3
-                                self.boxes[ny][nx].setStyleSheet(f"""
-                                    background-color: rgba({int(r_color*fade)}, {int(g_color*fade)}, {int(b_color*fade)}, 150);
-                                    border-radius: 0px;
-                                """)
             
             # Spiral dışına çıktıysa dur
             if r > self.grid_size * 0.7:
@@ -395,18 +364,24 @@ class SplashScreen(QWidget):
         
     def fractal_tree_pattern(self):
         """Fraktal ağaç deseni - L-sistem"""
-        center_x = self.grid_size // 2
+        # Rastgele başlangıç pozisyonu
+        center_x = self.grid_size // 2 + random.randint(-5, 5)
         bottom_y = self.grid_size - 1
         
-        # Gece gökyüzü arka planı
-        for row in range(self.grid_size):
-            for col in range(self.grid_size):
-                # Üst kısımlar daha koyu (gece gökyüzü)
-                darkness = 10 + int(row * 20 / self.grid_size)
-                self.boxes[row][col].setStyleSheet(f"""
-                    background-color: rgba({darkness}, {darkness}, {darkness + 10}, 180);
-                    border-radius: 0px;
-                """)
+        # İlk frame'de rastgele gece gökyüzü arka planı
+        if self.time_step == 0:
+            bg_base = random.randint(5, 25)
+            for row in range(self.grid_size):
+                for col in range(self.grid_size):
+                    # Üst kısımlar daha koyu (gece gökyüzü)
+                    darkness = bg_base + int(row * 20 / self.grid_size)
+                    r = darkness + random.randint(-5, 5)
+                    g = darkness + random.randint(-5, 5) 
+                    b = darkness + random.randint(0, 15)
+                    self.boxes[row][col].setStyleSheet(f"""
+                        background-color: rgba({r}, {g}, {b}, 200);
+                        border-radius: 0px;
+                    """)
         
         # Fraktal ağaç parametreleri
         branches_drawn = []  # Çizilen dalları sakla
@@ -480,29 +455,36 @@ class SplashScreen(QWidget):
         
         # Ana gövdeyi başlat
         initial_length = self.grid_size * 0.35  # Ekrana göre ölçekle
-        draw_branch(center_x, bottom_y, math.pi / 2, initial_length, 6, 4)
+        base_angle = math.pi / 2 + random.uniform(-0.2, 0.2)
+        # Depth'i time_step'e göre artır
+        max_depth = min(4 + self.time_step // 50, 6)
+        draw_branch(center_x, bottom_y, base_angle, initial_length, max_depth, 4)
         
         self.time_step += 1
         
     def euler_curve_pattern(self):
         """Euler eğrisi - e^(i*theta) karmaşık sayı deseni"""
-        center_x = self.grid_size / 2
-        center_y = self.grid_size / 2
-        scale = 4.0 / self.grid_size  # Grid boyutuna göre ölçekle
+        # Rastgele merkez ve ölçek
+        center_x = self.grid_size / 2 + random.uniform(-3, 3)
+        center_y = self.grid_size / 2 + random.uniform(-3, 3)
+        scale = random.uniform(3.0, 5.0) / self.grid_size  # Grid boyutuna göre ölçekle
+        phase_offset = random.uniform(0, 2 * math.pi)
         
-        for row in range(self.grid_size):
-            for col in range(self.grid_size):
+        # Her piksel hesapla
+        step = 1
+        for row in range(0, self.grid_size, step):
+            for col in range(0, self.grid_size, step):
                 # Karmaşık düzlem koordinatları (-2 ile 2 arasında)
                 z_real = (col - center_x) * scale
                 z_imag = (row - center_y) * scale
                 
                 # Animasyonlu karmaşık fonksiyon
                 # f(z) = e^(i*z*t) burada t = time_step
-                t = self.time_step * 0.02
+                t = self.time_step * 0.005  # Çok daha yavaş
                 
-                # z * t hesapla
-                zt_real = z_real * math.cos(t) - z_imag * math.sin(t)
-                zt_imag = z_real * math.sin(t) + z_imag * math.cos(t)
+                # z * t hesapla (rastgele faz kaymasıyla)
+                zt_real = z_real * math.cos(t + phase_offset) - z_imag * math.sin(t + phase_offset)
+                zt_imag = z_real * math.sin(t + phase_offset) + z_imag * math.cos(t + phase_offset)
                 
                 # e^(i*z*t) hesapla
                 # e^(i*(a+bi)) = e^(-b) * e^(i*a)
@@ -522,13 +504,12 @@ class SplashScreen(QWidget):
                 # Renklendirme - karmaşık faz görünümü
                 hue = (argument * 180 / math.pi + 180) % 360
                 
-                # Parlaklık - modüle göre, periyodik yapıda
-                # Log ölçekleme daha iyi görsel sonuç verir
+                # Parlaklık - modüle göre, daha yumuşak
                 if modulus > 0:
                     log_modulus = math.log(modulus + 1)
-                    brightness = int(127 + 127 * math.sin(log_modulus * 5))
+                    brightness = int(150 + 105 * math.sin(log_modulus * 2))  # Daha az varyasyon
                 else:
-                    brightness = 0
+                    brightness = 150
                 
                 # Rastgele renk paleti kullan
                 # Modulus'a göre farklı renkler
@@ -551,34 +532,43 @@ class SplashScreen(QWidget):
                 if contour == 0:
                     r, g, b = int(r * 0.7), int(g * 0.7), int(b * 0.7)
                 
-                opacity = 200 + int(55 * math.sin(modulus + self.time_step * 0.1))
+                opacity = 220  # Sabit opacity
                 
-                self.boxes[row][col].setStyleSheet(f"""
-                    background-color: rgba({int(r)}, {int(g)}, {int(b)}, {opacity});
-                    border-radius: 0px;
-                """)
+                # Bu kutu ve çevresindekiler için aynı rengi kullan
+                for dr in range(step):
+                    for dc in range(step):
+                        r_idx = row + dr
+                        c_idx = col + dc
+                        if r_idx < self.grid_size and c_idx < self.grid_size:
+                            self.boxes[r_idx][c_idx].setStyleSheet(f"""
+                                background-color: rgba({int(r)}, {int(g)}, {int(b)}, {opacity});
+                                border-radius: 0px;
+                            """)
         
         self.time_step += 1
         
     def fibonacci_flower_pattern(self):
         """Fibonacci çiçeği - Doğadaki spiral düzen"""
-        center_x = self.grid_size / 2
-        center_y = self.grid_size / 2
-        golden_angle = 137.5077640500378  # Altın açı (derece)
+        # Rastgele merkez ve parametreler
+        center_x = self.grid_size / 2 + random.uniform(-2, 2)
+        center_y = self.grid_size / 2 + random.uniform(-2, 2)
+        golden_angle = 137.5077640500378 + random.uniform(-5, 5)  # Altın açı varyasyonu
+        rotation_base = random.uniform(0, 2 * math.pi)
         
-        # Koyu mavi-mor arka plan (gece bahçesi)
-        for row in range(self.grid_size):
-            for col in range(self.grid_size):
-                # Merkeze yaklaştıkça hafif aydınlık
-                dx = col - center_x
-                dy = row - center_y
-                dist = math.sqrt(dx*dx + dy*dy) / (self.grid_size * 0.7)
-                dist = max(0, min(1, dist))  # 0-1 arasında sınırla
-                darkness = max(10, min(25, 10 + int(15 * (1 - dist))))
-                self.boxes[row][col].setStyleSheet(f"""
-                    background-color: rgba({darkness}, {darkness + 5}, {darkness + 15}, 200);
-                    border-radius: 0px;
-                """)
+        # İlk frame'de koyu mavi-mor arka plan (gece bahçesi)
+        if self.time_step == 0:
+            for row in range(self.grid_size):
+                for col in range(self.grid_size):
+                    # Merkeze yaklaştıkça hafif aydınlık
+                    dx = col - center_x
+                    dy = row - center_y
+                    dist = math.sqrt(dx*dx + dy*dy) / (self.grid_size * 0.7)
+                    dist = max(0, min(1, dist))  # 0-1 arasında sınırla
+                    darkness = max(10, min(25, 10 + int(15 * (1 - dist))))
+                    self.boxes[row][col].setStyleSheet(f"""
+                        background-color: rgba({darkness}, {darkness + 5}, {darkness + 15}, 200);
+                        border-radius: 0px;
+                    """)
         
         # Daha fazla nokta için grid boyutuna göre ölçekle
         num_points = min(200, self.grid_size * self.grid_size // 4)  # Maksimum 200 nokta
@@ -587,7 +577,7 @@ class SplashScreen(QWidget):
         # Her nokta bir tohum/çiçek yaprağı temsil eder
         for i in range(num_points):
             # Fibonacci spiral düzeni
-            angle = i * golden_angle * math.pi / 180
+            angle = i * golden_angle * math.pi / 180 + rotation_base
             # Doğrusal olmayan büyüme - doğadaki gibi
             radius = scale * math.sqrt(i) * 0.8
             
@@ -605,22 +595,25 @@ class SplashScreen(QWidget):
             grid_y = int(y)
             
             if 0 <= grid_x < self.grid_size and 0 <= grid_y < self.grid_size:
-                # Çiçek merkezi için rastgele renkler
-                # Her bölge için farklı renk
-                if i < num_points * 0.2:  # Merkez
-                    base_r, base_g, base_b = self.color_palette['primary']
-                elif i < num_points * 0.5:  # Orta
-                    base_r, base_g, base_b = self.color_palette['secondary']
-                else:  # Dış yapraklar
-                    base_r, base_g, base_b = self.color_palette['accent']
+                # Sabit renkler - her çiçek farklı ama yanıp sönmez
+                seed = int(self.pattern_seed * 100) % 1000
+                if i < num_points * 0.2:  # Merkez - sarı/turuncu
+                    base_r = 200 + (seed % 55)
+                    base_g = 150 + (seed % 50)
+                    base_b = 50 + (seed % 50)
+                elif i < num_points * 0.5:  # Orta - pembe/mor
+                    base_r = 150 + (seed % 105)
+                    base_g = 100 + (seed % 100)
+                    base_b = 150 + (seed % 105)
+                else:  # Dış yapraklar - yeşil/mavi
+                    base_r = 100 + (seed % 100)
+                    base_g = 150 + (seed % 105)
+                    base_b = 100 + (seed % 100)
                 
-                # Animasyon için parlaklık değişimi
-                pulse = math.sin(i * 0.1 + self.time_step * 0.05)
-                brightness_factor = 0.7 + 0.3 * pulse
-                
-                r = min(255, max(0, int(base_r * brightness_factor)))
-                g = min(255, max(0, int(base_g * brightness_factor)))
-                b = min(255, max(0, int(base_b * brightness_factor)))
+                # Fade yok, direkt renkler
+                r = base_r
+                g = base_g
+                b = base_b
                 
                 # Spiral desenini vurgula
                 spiral_highlight = math.sin(angle * 13)  # 13 spiral kolu
@@ -629,7 +622,7 @@ class SplashScreen(QWidget):
                     g = min(255, int(g * 1.2))
                     b = min(255, int(b * 1.1))
                 
-                opacity = min(255, max(0, 220 + int(35 * pulse)))
+                opacity = 240  # Sabit opacity
                 
                 # Ana nokta
                 self.boxes[grid_y][grid_x].setStyleSheet(f"""
@@ -660,120 +653,6 @@ class SplashScreen(QWidget):
                                 """)
         
         self.time_step += 1
-        
-    def koch_snowflake_pattern(self):
-        """Koch kar tanesi fraktalı - Matematiksel kar tanesi"""
-        try:
-            center_x = int(self.grid_size / 2)
-            center_y = int(self.grid_size / 2)
-            
-            # Koyu mavi kar gecesi arka planı
-            for row in range(self.grid_size):
-                for col in range(self.grid_size):
-                    self.boxes[row][col].setStyleSheet("""
-                        background-color: rgba(5, 10, 25, 240);
-                        border-radius: 0px;
-                    """)
-            
-            # Kar tanesi çizim fonksiyonu - Bresenham algoritması
-            def draw_line(x0, y0, x1, y1, color=(255, 255, 255)):
-                """İki nokta arasında çizgi çiz"""
-                points = []
-                dx = abs(x1 - x0)
-                dy = abs(y1 - y0)
-                sx = 1 if x0 < x1 else -1
-                sy = 1 if y0 < y1 else -1
-                err = dx - dy
-                
-                while True:
-                    points.append((x0, y0))
-                    
-                    if x0 == x1 and y0 == y1:
-                        break
-                        
-                    e2 = 2 * err
-                    if e2 > -dy:
-                        err -= dy
-                        x0 += sx
-                    if e2 < dx:
-                        err += dx
-                        y0 += sy
-                
-                return points
-            
-            # 6 kollu kar tanesi çiz
-            rotation = self.time_step * 0.01
-            
-            # Ana kollar (6 adet)
-            main_length = int(self.grid_size * 0.4)
-            for i in range(6):
-                angle = (math.pi * 2 * i / 6) + rotation
-                
-                # Ana kol
-                end_x = int(center_x + main_length * math.cos(angle))
-                end_y = int(center_y + main_length * math.sin(angle))
-                
-                # Ana kolu çiz
-                main_points = draw_line(center_x, center_y, end_x, end_y)
-                
-                # Ana kol üzerindeki noktaları beyazla
-                for x, y in main_points:
-                    if 0 <= x < self.grid_size and 0 <= y < self.grid_size:
-                        # Parlak beyaz
-                        self.boxes[y][x].setStyleSheet("""
-                            background-color: rgba(255, 255, 255, 255);
-                            border-radius: 0px;
-                        """)
-                
-                # Yan dallar ekle
-                for j in range(2, 5):  # 3 yan dal
-                    branch_start = j * len(main_points) // 6
-                    if branch_start < len(main_points):
-                        branch_x, branch_y = main_points[branch_start]
-                        branch_length = main_length // (j + 1)
-                        
-                        # Sol dal
-                        left_angle = angle - math.pi / 4  # 45 derece sol
-                        left_end_x = int(branch_x + branch_length * math.cos(left_angle))
-                        left_end_y = int(branch_y + branch_length * math.sin(left_angle))
-                        
-                        left_points = draw_line(branch_x, branch_y, left_end_x, left_end_y)
-                        for x, y in left_points:
-                            if 0 <= x < self.grid_size and 0 <= y < self.grid_size:
-                                self.boxes[y][x].setStyleSheet("""
-                                    background-color: rgba(240, 245, 255, 250);
-                                    border-radius: 0px;
-                                """)
-                        
-                        # Sağ dal
-                        right_angle = angle + math.pi / 4  # 45 derece sağ
-                        right_end_x = int(branch_x + branch_length * math.cos(right_angle))
-                        right_end_y = int(branch_y + branch_length * math.sin(right_angle))
-                        
-                        right_points = draw_line(branch_x, branch_y, right_end_x, right_end_y)
-                        for x, y in right_points:
-                            if 0 <= x < self.grid_size and 0 <= y < self.grid_size:
-                                self.boxes[y][x].setStyleSheet("""
-                                    background-color: rgba(240, 245, 255, 250);
-                                    border-radius: 0px;
-                                """)
-            
-            # Merkeze parlak nokta
-            for dx in range(-1, 2):
-                for dy in range(-1, 2):
-                    cx, cy = center_x + dx, center_y + dy
-                    if 0 <= cx < self.grid_size and 0 <= cy < self.grid_size:
-                        self.boxes[cy][cx].setStyleSheet("""
-                            background-color: rgba(255, 255, 255, 255);
-                            border-radius: 0px;
-                        """)
-            
-            self.time_step += 1
-            
-        except Exception as e:
-            print(f"Koch snowflake error: {e}")
-            traceback.print_exc()
-            self.time_step += 1
         
     def animate_boxes_fade_out(self):
         """Kutuları fade out yap ve pencereyi kapat"""

@@ -17,16 +17,16 @@ from ui.splash_screen import SplashScreen
 
 def main():
     """Ana uygulama başlatıcı"""
-    print("[MP3YAP] Starting application...")
+    # print("[MP3YAP] Starting application...")
     app = QApplication(sys.argv)
     app.setApplicationName("MP3 Yap")
     
     # Splash screen'i göster
-    print("[MP3YAP] Creating splash screen...")
+    # print("[MP3YAP] Creating splash screen...")
     try:
         splash = SplashScreen()
         splash.show()
-        print("[MP3YAP] Splash screen displayed")
+        # print("[MP3YAP] Splash screen displayed")
     except Exception as e:
         print(f"[MP3YAP ERROR] Failed to create splash screen: {e}")
         import traceback
@@ -42,7 +42,7 @@ def main():
         
         try:
             # Modülleri import et (lazy loading)
-            print("[MP3YAP] Loading modules...")
+            # print("[MP3YAP] Loading modules...")
             splash.update_status("Modüller yükleniyor...")
             from ui.main_window import MP3YapMainWindow
             app.processEvents()
@@ -87,18 +87,18 @@ def main():
                 window.show()
                 window.raise_()
                 window.activateWindow()
-                print("[MP3YAP] Main window displayed")
+                # print("[MP3YAP] Main window displayed")
         
         # Uygulama hazır, splash'i kapat ve ana pencereyi göster
         splash.update_status("Hazır!")
-        QTimer.singleShot(3500, show_main_window)
+        QTimer.singleShot(3000, show_main_window)  # 3 saniye bekle
         
     # Animasyonları başlat
-    QTimer.singleShot(50, splash.animate_boxes_fade_in)
-    QTimer.singleShot(300, splash.start_mathematical_pattern)  # Daha erken başlat
+    QTimer.singleShot(10, splash.animate_boxes_fade_in)
+    QTimer.singleShot(50, splash.start_mathematical_pattern)  # Çok erken başlat
     
     # Yüklemeyi başlat
-    QTimer.singleShot(100, load_application)
+    QTimer.singleShot(1000, load_application)  # 1 saniye beklet ki animasyon görünsün
     
     # Uygulamayı çalıştır
     sys.exit(app.exec_())

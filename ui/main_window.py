@@ -232,7 +232,8 @@ class MP3YapMainWindow(QMainWindow):
             "<h3>MP3 Yap - YouTube İndirici</h3>"
             "<p>Sürüm 2.0</p>"
             "<p>YouTube videolarını MP3 formatında indirmek için modern ve kullanıcı dostu bir araç.</p>"
-            "<p><b>Geliştirici:</b> MP3Yap Team</p>"
+            "<p><b>Geliştirici:</b> Mehmet Yerli</p>"
+            "<p><b>Web:</b> <a href='https://mehmetyerli.com'>mehmetyerli.com</a></p>"
             "<p><b>Lisans:</b> Açık Kaynak</p>")
     
     def import_urls(self):

@@ -31,18 +31,51 @@ class HistoryWidget(QWidget):
         self.search_input.textChanged.connect(self.search_history)
         search_layout.addWidget(self.search_input)
         
-        self.refresh_button = QPushButton("🔄 Yenile")
+        self.refresh_button = QPushButton("↻ Yenile")
         self.refresh_button.clicked.connect(self.load_history)
+        self.refresh_button.setStyleSheet("""
+            QPushButton {
+                padding: 5px 10px;
+                background-color: #2196F3;
+                color: white;
+                border: 1px solid #1976D2;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+        """)
         search_layout.addWidget(self.refresh_button)
         
-        self.clear_button = QPushButton("🗑️ Geçmişi Temizle")
+        self.clear_button = QPushButton("🗑 Geçmişi Temizle")
         self.clear_button.clicked.connect(self.clear_history)
+        self.clear_button.setStyleSheet("""
+            QPushButton {
+                padding: 5px 10px;
+                background-color: #ff5252;
+                color: white;
+                border: 1px solid #d32f2f;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #d32f2f;
+            }
+        """)
         search_layout.addWidget(self.clear_button)
         
         layout.addLayout(search_layout)
         
         # İstatistikler
         self.stats_label = QLabel()
+        self.stats_label.setStyleSheet("""
+            QLabel {
+                padding: 10px;
+                background-color: #f5f5f5;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+        """)
         layout.addWidget(self.stats_label)
         
         # Tablo
@@ -100,16 +133,55 @@ class HistoryWidget(QWidget):
             actions_layout.setContentsMargins(0, 0, 0, 0)
             
             # Tekrar indir butonu
-            redownload_btn = QPushButton("🔄")
+            redownload_btn = QPushButton()
+            redownload_btn.setText("↻")  # Reload symbol
             redownload_btn.setToolTip("Tekrar İndir")
-            redownload_btn.setMaximumWidth(30)
+            redownload_btn.setFixedSize(32, 32)
+            redownload_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #4CAF50;
+                    color: white;
+                    border: 1px solid #45a049;
+                    border-radius: 4px;
+                    font-size: 18px;
+                    font-weight: bold;
+                    padding: 2px;
+                }
+                QPushButton:hover {
+                    background-color: #45a049;
+                    border-color: #388e3c;
+                }
+                QPushButton:pressed {
+                    background-color: #388e3c;
+                }
+            """)
             redownload_btn.clicked.connect(lambda checked, url=record['url']: self.redownload(url))
             actions_layout.addWidget(redownload_btn)
             
             # Sil butonu
-            delete_btn = QPushButton("🗑️")
+            delete_btn = QPushButton()
+            delete_btn.setText("×")  # Simple X character
             delete_btn.setToolTip("Geçmişten Sil")
-            delete_btn.setMaximumWidth(30)
+            delete_btn.setFixedSize(32, 32)
+            delete_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #f44336;
+                    color: white;
+                    border: 1px solid #d32f2f;
+                    border-radius: 4px;
+                    font-size: 20px;
+                    font-weight: bold;
+                    padding: 0px;
+                    padding-bottom: 2px;
+                }
+                QPushButton:hover {
+                    background-color: #d32f2f;
+                    border-color: #c62828;
+                }
+                QPushButton:pressed {
+                    background-color: #c62828;
+                }
+            """)
             delete_btn.clicked.connect(lambda checked, id=record['id']: self.delete_record(id))
             actions_layout.addWidget(delete_btn)
             
@@ -129,9 +201,9 @@ class HistoryWidget(QWidget):
         stats = self.db_manager.get_statistics()
         
         stats_text = (
-            f"📊 Toplam: {stats['total_downloads']} dosya | "
-            f"💾 {stats['total_size_mb']:.1f} MB | "
-            f"📅 Bugün: {stats['today_downloads']} dosya"
+            f"Toplam: {stats['total_downloads']} dosya | "
+            f"Boyut: {stats['total_size_mb']:.1f} MB | "
+            f"Bugün: {stats['today_downloads']} dosya"
         )
         
         self.stats_label.setText(stats_text)

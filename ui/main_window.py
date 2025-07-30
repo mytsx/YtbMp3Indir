@@ -130,11 +130,39 @@ class MP3YapMainWindow(QMainWindow):
         button_layout = QHBoxLayout()
         self.download_button = QPushButton("İndir")
         self.download_button.clicked.connect(self.start_download)  # type: ignore
+        self.download_button.setStyleSheet("""
+            QPushButton {
+                padding: 5px 20px;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+            QPushButton:pressed {
+                background-color: #388e3c;
+            }
+            QPushButton:disabled {
+                background-color: #cccccc;
+                color: #666666;
+            }
+        """)
         
         # Klasörü aç butonu
-        self.open_folder_button = QPushButton("📁 Klasörü Aç")
+        self.open_folder_button = QPushButton("Klasörü Aç")
         self.open_folder_button.clicked.connect(self.open_output_folder)  # type: ignore
         self.open_folder_button.setEnabled(False)
+        self.open_folder_button.setStyleSheet("""
+            QPushButton {
+                padding: 5px 15px;
+            }
+            QPushButton:disabled {
+                color: #999;
+            }
+        """)
         
         button_layout.addWidget(self.download_button)
         button_layout.addWidget(self.open_folder_button)

@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (QWidget, QGridLayout, QVBoxLayout, QLabel, 
-                            QGraphicsOpacityEffect)
+                            QGraphicsOpacityEffect, QHBoxLayout)
 from PyQt5.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, pyqtSignal, QSize
 from PyQt5.QtGui import QFont
 import random
@@ -20,7 +20,8 @@ class SplashScreen(QWidget):
         
         # Ana layout
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(50, 50, 50, 50)
+        main_layout.setContentsMargins(50, 50, 50, 0)  # Alt margin 0
+        main_layout.setSpacing(0)  # Grid ve status bar arasında boşluk olmasın
         
         # Grid container - şeffaf
         grid_container = QWidget()
@@ -65,8 +66,35 @@ class SplashScreen(QWidget):
                 
             self.boxes.append(box_row)
         
+        # Status bar widget - ince bar şeklinde
+        self.status_widget = QWidget()
+        self.status_widget.setStyleSheet("""
+            QWidget {
+                background-color: rgba(0, 0, 0, 180);
+            }
+        """)
+        self.status_widget.setFixedHeight(30)
+        
+        # Status label
+        status_layout = QHBoxLayout(self.status_widget)
+        status_layout.setContentsMargins(20, 0, 20, 0)
+        
+        self.status_label = QLabel("Başlatılıyor...")
+        self.status_label.setAlignment(Qt.AlignCenter)
+        status_font = QFont("Arial", 11)
+        self.status_label.setFont(status_font)
+        self.status_label.setStyleSheet("""
+            QLabel {
+                color: white;
+                background-color: transparent;
+            }
+        """)
+        
+        status_layout.addWidget(self.status_label)
+        
         # Ana layout'a ekle
         main_layout.addWidget(grid_container)
+        main_layout.addWidget(self.status_widget)
         
         # Animasyon değişkenleri
         self.current_animation_index = 0
@@ -85,6 +113,10 @@ class SplashScreen(QWidget):
         
         # 3 saniye sonra kapat
         QTimer.singleShot(3000, self.animate_boxes_fade_out)
+    
+    def update_status(self, message):
+        """Durum mesajını güncelle"""
+        self.status_label.setText(message)
         
     def animate_boxes_fade_in(self):
         """Kutuları sırayla fade in yap"""

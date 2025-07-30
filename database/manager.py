@@ -11,6 +11,10 @@ class DatabaseManager:
         self.db_path = db_path
         self.init_database()
     
+    def init_db(self):
+        """init_database için alias"""
+        self.init_database()
+    
     def init_database(self):
         """Veritabanını ve tabloları oluştur"""
         with sqlite3.connect(self.db_path) as conn:

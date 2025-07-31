@@ -73,3 +73,6 @@ portable_package/
 
 # Inno Setup files
 *.iss
+
+# NSIS files
+*.nsi

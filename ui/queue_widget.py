@@ -226,7 +226,7 @@ class QueueWidget(QWidget):
             
             # Hemen indir butonu - sadece pending ve failed durumları için
             if item['status'] in ['pending', 'failed']:
-                download_button = QPushButton("▶")
+                download_button = QPushButton("⬇")
                 download_button.setFixedSize(28, 28)
                 download_button.setToolTip("Şimdi İndir")
                 download_button.setStyleSheet("""
@@ -419,7 +419,7 @@ class QueueWidget(QWidget):
             # Tek seçim için menü
             item_id = selected_ids[0]
             
-            download_now_action = menu.addAction("▶ Şimdi İndir")
+            download_now_action = menu.addAction("⬇ Şimdi İndir")
             download_now_action.triggered.connect(lambda: self.download_now(item_id))
             
             menu.addSeparator()
@@ -443,7 +443,7 @@ class QueueWidget(QWidget):
             delete_action.triggered.connect(lambda: self.delete_item(item_id))
         else:
             # Çoklu seçim için menü
-            download_selected_action = menu.addAction(f"▶ Seçilenleri İndir ({len(selected_ids)} öğe)")
+            download_selected_action = menu.addAction(f"⬇ Seçilenleri İndir ({len(selected_ids)} öğe)")
             download_selected_action.triggered.connect(lambda: self.download_selected(selected_ids))
             
             menu.addSeparator()

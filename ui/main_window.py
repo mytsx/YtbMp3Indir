@@ -479,7 +479,19 @@ class MP3YapMainWindow(QMainWindow):
             QMessageBox.warning(self, "Uyarı", "Lütfen en az bir URL girin!")
             return
         
+        # Loading göstergesi
         self.status_label.setText("🔄 Video bilgileri alınıyor...")
+        self.status_label.setStyleSheet("""
+            QLabel {
+                background-color: #FFF3E0;
+                color: #E65100;
+                padding: 5px;
+                border-radius: 3px;
+                font-weight: bold;
+            }
+        """)
+        self.add_to_queue_button.setEnabled(False)
+        self.download_button.setEnabled(False)
         QApplication.processEvents()  # UI güncelleme
         
         # yt-dlp seçenekleri
@@ -525,14 +537,18 @@ class MP3YapMainWindow(QMainWindow):
             except Exception as e:
                 print(f"URL eklenirken hata: {e}")
         
+        # Butonları geri etkinleştir
+        self.add_to_queue_button.setEnabled(True)
+        self.download_button.setEnabled(True)
+        self.status_label.setStyleSheet("")  # Stili sıfırla
+        
         if added_count > 0:
             self.status_label.setText(f"✅ {added_count} video kuyruğa eklendi")
             self.url_text.clear()  # URL'leri temizle
-        else:
-            self.status_label.setText("⚠️ Hiçbir video eklenemedi")
-            self.url_text.clear()
             # Kuyruk sekmesine geç
             self.tab_widget.setCurrentIndex(2)
+        else:
+            self.status_label.setText("⚠️ Hiçbir video eklenemedi")
     
     def process_queue_item(self, queue_item):
         """Kuyruktan gelen öğeyi işle"""
@@ -634,6 +650,22 @@ class MP3YapMainWindow(QMainWindow):
             self.url_status_bar.setVisible(False)
             return
         
+        # Hemen loading göster
+        self.url_status_bar.setText("⏳ URL'ler kontrol ediliyor...")
+        self.url_status_bar.setStyleSheet("""
+            QLabel {
+                padding: 8px;
+                background-color: #fff3e0;
+                border: 1px solid #ff9800;
+                border-radius: 4px;
+                font-size: 12px;
+                color: #e65100;
+                font-weight: bold;
+            }
+        """)
+        self.url_status_bar.setVisible(True)
+        QApplication.processEvents()  # UI güncelle
+        
         # Playlist URL'si varsa hemen kontrol başlat
         has_playlist = any('list=' in url for url in urls)
         if has_playlist:
@@ -649,6 +681,7 @@ class MP3YapMainWindow(QMainWindow):
                 }
             """)
             self.url_status_bar.setVisible(True)
+            QApplication.processEvents()  # UI güncelle
         
         # URL sayısını göster
         valid_urls = []

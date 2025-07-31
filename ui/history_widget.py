@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,
                             QTableWidgetItem, QPushButton, QLineEdit, QLabel,
                             QHeaderView, QMessageBox)
-from PyQt5.QtCore import Qt, pyqtSignal, QUrl
+from PyQt5.QtCore import Qt, pyqtSignal, QUrl, QThread
 from PyQt5.QtGui import QDesktopServices
 from database.manager import DatabaseManager
 from datetime import datetime
@@ -162,7 +162,33 @@ class HistoryWidget(QWidget):
     
     def load_history(self):
         """Geçmişi yükle"""
-        history = self.db_manager.get_all_downloads()
+        # Loading göstergesi
+        self.table.setRowCount(0)
+        loading_row = self.table.rowCount()
+        self.table.insertRow(loading_row)
+        loading_item = QTableWidgetItem("Yükleniyor...")
+        loading_item.setTextAlignment(Qt.AlignCenter)
+        self.table.setItem(loading_row, 1, loading_item)
+        self.table.setSpan(loading_row, 1, 1, 5)  # Tüm sütunları kapla
+        
+        # Thread'de yükle
+        class LoadThread(QThread):
+            data_loaded = pyqtSignal(list)
+            
+            def __init__(self, db_manager):
+                super().__init__()
+                self.db_manager = db_manager
+                
+            def run(self):
+                history = self.db_manager.get_all_downloads()
+                self.data_loaded.emit(history)
+        
+        self.load_thread = LoadThread(self.db_manager)
+        self.load_thread.data_loaded.connect(self.on_history_loaded)
+        self.load_thread.start()
+    
+    def on_history_loaded(self, history):
+        """Geçmiş yüklendiğinde"""
         self.display_history(history)
         self.update_statistics()
     

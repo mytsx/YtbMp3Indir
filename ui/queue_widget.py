@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, 
                            QTableWidgetItem, QPushButton, QLabel, QHeaderView,
-                           QMenu, QMessageBox, QComboBox)
+                           QMenu, QMessageBox, QComboBox, QLineEdit)
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from PyQt5.QtGui import QFont, QMouseEvent
 from database.manager import DatabaseManager
@@ -79,10 +79,8 @@ class QueueWidget(QWidget):
         title_font.setBold(True)
         title_label.setFont(title_font)
         
-        # Durum filtresi
-        self.status_filter = QComboBox()
-        self.status_filter.addItems(["Tümü", "Bekliyor", "İndiriliyor", "Tamamlandı", "Başarısız"])
-        self.status_filter.currentTextChanged.connect(self.filter_by_status)
+        control_layout.addWidget(title_label)
+        control_layout.addStretch()
         
         # Kontrol butonları
         self.start_button = QPushButton("▶ Kuyruğu Başlat")
@@ -95,13 +93,24 @@ class QueueWidget(QWidget):
         self.clear_completed_button = QPushButton("✓ Tamamlananları Temizle")
         self.clear_completed_button.clicked.connect(self.clear_completed)
         
-        control_layout.addWidget(title_label)
-        control_layout.addStretch()
-        control_layout.addWidget(QLabel("Filtre:"))
-        control_layout.addWidget(self.status_filter)
         control_layout.addWidget(self.start_button)
         control_layout.addWidget(self.pause_button)
         control_layout.addWidget(self.clear_completed_button)
+        
+        # Arama ve filtre alanı - ayrı satırda
+        search_layout = QHBoxLayout()
+        
+        search_layout.addWidget(QLabel("Ara:"))
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Şarkı adı veya URL ara...")
+        self.search_input.textChanged.connect(self.search_queue)
+        search_layout.addWidget(self.search_input)
+        
+        search_layout.addWidget(QLabel("Filtre:"))
+        self.status_filter = QComboBox()
+        self.status_filter.addItems(["Tümü", "Bekliyor", "İndiriliyor", "Tamamlandı", "Başarısız"])
+        self.status_filter.currentTextChanged.connect(self.filter_by_status)
+        search_layout.addWidget(self.status_filter)
         
         # Tablo
         self.table = QTableWidget()
@@ -129,6 +138,7 @@ class QueueWidget(QWidget):
         
         # Layout'a ekle
         layout.addLayout(control_layout)
+        layout.addLayout(search_layout)
         layout.addWidget(self.table)
         layout.addWidget(self.stats_label)
         
@@ -173,6 +183,12 @@ class QueueWidget(QWidget):
         
         # Veritabanından öğeleri al
         items = self.db.get_queue_items(filter_status)
+        
+        # Arama filtresi uygula
+        search_text = self.search_input.text().strip().lower()
+        if search_text:
+            items = [item for item in items 
+                    if search_text in (item['video_title'] or item['url']).lower()]
         
         # Hash'i güncelle
         if not force_refresh:
@@ -424,6 +440,16 @@ class QueueWidget(QWidget):
         # Tamamlandıysa veya başarısızsa, sıradakini başlat
         if status in ['completed', 'failed'] and self.pause_button.isEnabled():
             QTimer.singleShot(1000, self.start_queue)
+    
+    def search_queue(self, text):
+        """Kuyrukta arama yap"""
+        # Arama metni boşsa normal yükle
+        if not text.strip():
+            self.load_queue()
+            return
+        
+        # Arama sonuçlarını filtrele ve yükle
+        self.load_queue()
     
     def mousePressEvent(self, a0: QMouseEvent):
         """Mouse tıklaması olduğunda"""

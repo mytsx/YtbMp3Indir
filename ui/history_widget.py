@@ -124,19 +124,6 @@ class HistoryWidget(QWidget):
         
         layout.addLayout(search_layout)
         
-        # İstatistikler
-        self.stats_label = QLabel()
-        self.stats_label.setStyleSheet("""
-            QLabel {
-                padding: 10px;
-                background-color: #f5f5f5;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-        """)
-        layout.addWidget(self.stats_label)
-        
         # Tablo
         self.table = QTableWidget()
         self.table.setColumnCount(6)
@@ -158,6 +145,19 @@ class HistoryWidget(QWidget):
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)  # Düzenleme kapalı
         
         layout.addWidget(self.table)
+        
+        # İstatistikler - tablonun altında
+        self.stats_label = QLabel()
+        self.stats_label.setStyleSheet("""
+            QLabel {
+                padding: 10px;
+                background-color: #f5f5f5;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+        """)
+        layout.addWidget(self.stats_label)
         self.setLayout(layout)
     
     def load_history(self):

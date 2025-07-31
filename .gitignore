@@ -75,4 +75,4 @@ portable_package/
 *.iss
 
 # NSIS files
-*.nsi
+*.nsi*.dmg

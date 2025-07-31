@@ -73,8 +73,8 @@ def main():
         
         # FFmpeg kontrolü
         splash.update_status("FFmpeg kontrol ediliyor...")
-        import static_ffmpeg
-        static_ffmpeg.add_paths()
+        from utils.ffmpeg_helper import setup_ffmpeg
+        setup_ffmpeg()
         app.processEvents()
         
         # Ana pencereyi oluştur

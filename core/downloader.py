@@ -2,9 +2,9 @@ import os
 import shutil
 import threading
 import yt_dlp
-import static_ffmpeg
 from PyQt5.QtCore import QObject, pyqtSignal
 from database.manager import DatabaseManager
+from utils.ffmpeg_helper import setup_ffmpeg
 
 
 class DownloadSignals(QObject):
@@ -55,14 +55,12 @@ class Downloader:
         self.current_playlist_index = {}  # URL -> current index
         self.current_item_index = 0  # Track current item in playlist
         self.playlist_total = 0  # Total items in playlist
-        # Static FFmpeg'i yükle ve kullan
-        try:
-            static_ffmpeg.add_paths()
-            self.ffmpeg_available = True
-        except Exception as e:
+        # FFmpeg'i yükle ve kullan
+        self.ffmpeg_available = setup_ffmpeg()
+        if not self.ffmpeg_available:
             self.ffmpeg_available = self.check_system_ffmpeg()
             if not self.ffmpeg_available:
-                self.signals.status_update.emit(f"FFmpeg yüklenemedi: {str(e)}")
+                self.signals.status_update.emit("FFmpeg bulunamadı. Ses dönüştürme devre dışı.")
     
     def check_system_ffmpeg(self):
         """Sistem FFmpeg'ini kontrol et"""

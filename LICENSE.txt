@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2025 MP3Yap
+Copyright (c) 2025 Mehmet Yerli
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,20 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+TURKISH TRANSLATION / TÜRKÇE ÇEVİRİ:
+Bu yazılım "olduğu gibi" sağlanmaktadır ve hiçbir garanti verilmemektedir.
+Yazılımın kullanımından doğabilecek herhangi bir zarardan geliştirici sorumlu tutulamaz.
+Yazılımı kullanarak bu koşulları kabul etmiş sayılırsınız.
+
+ADDITIONAL DISCLAIMER / EK SORUMLULUK REDDİ:
+- Bu yazılım sadece eğitim amaçlıdır
+- Telif hakkı ihlali yapacak şekilde kullanmayın
+- YouTube'un hizmet şartlarına uygun kullanın
+- Kullanıcı tüm yasal sorumluluğu kabul eder
+
+CONTACT / İLETİŞİM:
+Developer / Geliştirici: Mehmet Yerli
+Email / E-posta: iletisim@mehmetyerli.com
+Website / Web Sitesi: https://mehmetyerli.com
+GitHub: https://github.com/mytsx/mp3yap

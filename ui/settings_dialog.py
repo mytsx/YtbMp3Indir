@@ -116,6 +116,20 @@ class SettingsDialog(QDialog):
         
         perf_layout.addLayout(playlist_layout)
         
+        # Cache limiti
+        cache_layout = QHBoxLayout()
+        cache_layout.addWidget(QLabel("URL Cache Limiti:"))
+        self.cache_spin = QSpinBox()
+        self.cache_spin.setMinimum(100)
+        self.cache_spin.setMaximum(2000)
+        self.cache_spin.setSingleStep(100)
+        self.cache_spin.setSuffix(" URL")
+        self.cache_spin.setToolTip("URL kontrolü için tutulan maksimum cache boyutu")
+        cache_layout.addWidget(self.cache_spin)
+        cache_layout.addStretch()
+        
+        perf_layout.addLayout(cache_layout)
+        
         # Otomatik yeniden deneme
         self.auto_retry_check = QCheckBox("Başarısız indirmeleri otomatik yeniden dene")
         perf_layout.addWidget(self.auto_retry_check)
@@ -200,6 +214,7 @@ class SettingsDialog(QDialog):
         self.folder_edit.setText(self.config.get('output_path', 'music'))
         self.concurrent_spin.setValue(self.config.get('max_simultaneous_downloads', 3))
         self.playlist_spin.setValue(self.config.get('playlist_limit', 0))
+        self.cache_spin.setValue(self.config.get('max_cache_size', 500))
         self.auto_retry_check.setChecked(self.config.get('auto_retry', True))
         
         # Uygulama ayarları
@@ -222,6 +237,7 @@ class SettingsDialog(QDialog):
         self.config.set('output_path', self.folder_edit.text())
         self.config.set('max_simultaneous_downloads', self.concurrent_spin.value())
         self.config.set('playlist_limit', self.playlist_spin.value())
+        self.config.set('max_cache_size', self.cache_spin.value())
         self.config.set('auto_retry', self.auto_retry_check.isChecked())
         
         # Uygulama ayarları

@@ -1,5 +1,6 @@
 import os
 import shutil
+import threading
 import yt_dlp
 import static_ffmpeg
 from PyQt5.QtCore import QObject, pyqtSignal
@@ -44,6 +45,11 @@ class Downloader:
         self.db_manager = DatabaseManager()
         self.ydl = None  # Current YoutubeDL instance for cancellation
         self.current_output_path = None  # Store output path for hooks
+        
+        # Thread-safe data structures
+        self._lock = threading.Lock()
+        self._saved_videos = set()
+        
         # Playlist tracking
         self.playlist_info = {}  # URL -> playlist info
         self.current_playlist_index = {}  # URL -> current index
@@ -67,13 +73,11 @@ class Downloader:
         if not info:
             return
         
-        # Check if already saved
+        # Check if already saved (thread-safe)
         video_id = info.get('id', '')
-        if hasattr(self, '_saved_videos'):
+        with self._lock:
             if video_id in self._saved_videos:
                 return
-        else:
-            self._saved_videos = set()
             
         title = info.get('title', 'Unknown')
         ext = info.get('ext', 'webm')
@@ -100,8 +104,9 @@ class Downloader:
         # Add to database
         self.db_manager.add_download(file_info)
         
-        # Mark as saved
-        self._saved_videos.add(video_id)
+        # Mark as saved (thread-safe)
+        with self._lock:
+            self._saved_videos.add(video_id)
         
         # Check if this is part of a playlist
         if self.current_url in self.playlist_info:

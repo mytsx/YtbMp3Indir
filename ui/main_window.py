@@ -39,9 +39,10 @@ class MP3YapMainWindow(QMainWindow):
         self.download_button: QPushButton
         self.open_folder_button: QPushButton
         
-        # URL kontrol cache
+        # URL kontrol cache (maksimum boyut sınırı ile)
         self.url_cache = {}  # URL -> info dict
         self.last_checked_urls = set()  # Son kontrol edilen URL'ler
+        self.MAX_CACHE_SIZE = self.config.get('max_cache_size', 500)  # Ayarlardan al, yoksa 500
         
         # Özel indirme listesi (sadece seçilenler için)
         self.selected_download_queue = []  # Sadece seçili öğeleri indirmek için
@@ -751,6 +752,15 @@ class MP3YapMainWindow(QMainWindow):
                 # Normal kuyruk modunda ise, bir sonraki öğeyi al
                 QTimer.singleShot(500, lambda: self.queue_widget.start_queue())
     
+    def _add_to_cache(self, url, info):
+        """Cache'e güvenli ekleme (boyut kontrolü ile)"""
+        if len(self.url_cache) >= self.MAX_CACHE_SIZE:
+            # En eski girişi kaldır (FIFO)
+            oldest_key = next(iter(self.url_cache))
+            del self.url_cache[oldest_key]
+        
+        self.url_cache[url] = info
+    
     def on_queue_paused(self):
         """Kuyruk duraklatıldığında"""
         self.is_queue_mode = False
@@ -923,13 +933,13 @@ class MP3YapMainWindow(QMainWindow):
                                 playlist_size = len(info['entries'])
                             uploader = info.get('uploader', info.get('channel', ''))
                             
-                            # Cache'e kaydet
-                            self.url_cache[url] = {
+                            # Cache'e kaydet (boyut kontrolü ile)
+                            self._add_to_cache(url, {
                                 'is_playlist': True,
                                 'title': playlist_title,
                                 'video_count': playlist_size,
                                 'uploader': uploader
-                            }
+                            })
                             
                             playlist_info.append({
                                 'url': url,
@@ -955,12 +965,12 @@ class MP3YapMainWindow(QMainWindow):
             else:
                 # Tek video
                 if url not in self.url_cache:
-                    # Cache'e ekle
-                    self.url_cache[url] = {
+                    # Cache'e ekle (boyut kontrolü ile)
+                    self._add_to_cache(url, {
                         'is_playlist': False,
                         'title': 'Tek Video',
                         'video_count': 1
-                    }
+                    })
                 
                 playlist_info.append({
                     'url': url,

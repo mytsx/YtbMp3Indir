@@ -183,6 +183,10 @@ class HistoryWidget(QWidget):
                 history = self.db_manager.get_all_downloads()
                 self.data_loaded.emit(history)
         
+        # Eski thread varsa bekle
+        if hasattr(self, 'load_thread') and self.load_thread.isRunning():
+            self.load_thread.wait()
+            
         self.load_thread = LoadThread(self.db_manager)
         self.load_thread.data_loaded.connect(self.on_history_loaded)
         self.load_thread.start()

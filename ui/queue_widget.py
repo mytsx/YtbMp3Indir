@@ -565,3 +565,10 @@ class QueueWidget(QWidget):
         
         # Normal event işlemeye devam et
         super().mousePressEvent(a0)
+    
+    def closeEvent(self, event):
+        """Widget kapatılırken temizlik yap"""
+        # Timer'ı durdur
+        if hasattr(self, 'refresh_timer'):
+            self.refresh_timer.stop()
+        event.accept()

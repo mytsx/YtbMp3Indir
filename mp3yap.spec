@@ -6,16 +6,33 @@ Creates a single executable file for Windows
 
 import os
 import sys
+import static_ffmpeg
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 # Get the directory of this spec file
 spec_dir = os.path.dirname(os.path.abspath(SPEC))
 
+# Get FFmpeg binaries location
+static_ffmpeg.add_paths()
+ffmpeg_bin_dir = os.path.join(os.path.dirname(static_ffmpeg.__file__), 'bin', 'win32')
+
 # Collect all data files
 datas = [
     ('assets', 'assets'),  # Include icon files
-    ('static_ffmpeg', 'static_ffmpeg'),  # Include FFmpeg if needed
 ]
+
+# Collect FFmpeg binaries
+binaries = [
+    (os.path.join(ffmpeg_bin_dir, 'ffmpeg.exe'), '.'),
+    (os.path.join(ffmpeg_bin_dir, 'ffprobe.exe'), '.'),
+]
+
+# Also include static_ffmpeg data files
+try:
+    static_ffmpeg_data = collect_data_files('static_ffmpeg')
+    datas.extend(static_ffmpeg_data)
+except:
+    pass
 
 # Hidden imports that PyInstaller might miss
 hiddenimports = [
@@ -35,7 +52,7 @@ hiddenimports.extend(collect_submodules('yt_dlp'))
 a = Analysis(
     ['mp3yap_gui.py'],
     pathex=[spec_dir],
-    binaries=[],
+    binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
@@ -50,22 +67,24 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.datas,
     [],
+    exclude_binaries=True,
     name='MP3Yap',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
     console=False,  # No console window
     disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
     icon='assets/icon.ico' if os.path.exists('assets/icon.ico') else 'assets/icon.png',
     version='version_info.txt' if os.path.exists('version_info.txt') else None,
+)
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name='MP3Yap',
 )

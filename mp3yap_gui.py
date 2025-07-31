@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QIcon
 from ui.splash_screen import SplashScreen
 
 
@@ -20,6 +21,11 @@ def main():
     # print("[MP3YAP] Starting application...")
     app = QApplication(sys.argv)
     app.setApplicationName("YouTube MP3 İndirici")
+    
+    # Set application icon if it exists
+    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets', 'icon.png')
+    if os.path.exists(icon_path):
+        app.setWindowIcon(QIcon(icon_path))
     
     # Splash screen'i göster
     # print("[MP3YAP] Creating splash screen...")

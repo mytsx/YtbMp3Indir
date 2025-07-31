@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import (QMainWindow, QTextEdit, QPushButton,
                             QVBoxLayout, QHBoxLayout, QWidget, QLabel, 
                             QProgressBar, QMessageBox, QMenuBar, QMenu,
                             QAction, QTabWidget, QApplication)
-from PyQt5.QtGui import QDesktopServices, QColor
+from PyQt5.QtGui import QDesktopServices, QColor, QIcon
 from PyQt5.QtCore import QUrl, QTimer, QThread, pyqtSignal
 from core.downloader import Downloader, DownloadSignals
 from ui.settings_dialog import SettingsDialog
@@ -23,6 +23,11 @@ class MP3YapMainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("YouTube MP3 İndirici")
         self.setGeometry(100, 100, 800, 600)
+        
+        # Set window icon if it exists
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets', 'icon.png')
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
         
         # Gölge efektini kaldırdık - tablolarda sorun yaratıyor
         

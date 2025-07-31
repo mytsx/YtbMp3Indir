@@ -29,12 +29,12 @@ VSVersionInfo(
       [
       StringTable(
         u'040904B0',
-        [StringStruct(u'CompanyName', u'MP3Yap'),
+        [StringStruct(u'CompanyName', u'Mehmet Yerli'),
         StringStruct(u'FileDescription', u'YouTube MP3 İndirici'),
         StringStruct(u'FileVersion', u'2.1.0.0'),
-        StringStruct(u'InternalName', u'MP3Yap'),
-        StringStruct(u'LegalCopyright', u'Copyright (c) 2025'),
-        StringStruct(u'OriginalFilename', u'MP3Yap.exe'),
+        StringStruct(u'InternalName', u'Youtube Mp3 İndir'),
+        StringStruct(u'LegalCopyright', u'Copyright (c) 2025 Mehmet Yerli'),
+        StringStruct(u'OriginalFilename', u'Youtube Mp3 İndir.exe'),
         StringStruct(u'ProductName', u'YouTube MP3 İndirici'),
         StringStruct(u'ProductVersion', u'2.1.0.0')])
       ]), 

@@ -1019,25 +1019,49 @@ class MP3YapMainWindow(QMainWindow):
                 
                 # Dosya yolunu kontrol et
                 file_found = False
+                full_file_path = None
+                alt_path = None
                 
                 # file_path genellikle klasör yolu, file_name dosya adı
                 if latest_record.get('file_path') and latest_record.get('file_name'):
+                    file_path = latest_record['file_path']
+                    file_name = latest_record['file_name']
+                    
+                    # Eğer file_path tam yol değilse (sadece "music" gibi), tam yol yap
+                    if not os.path.isabs(file_path):
+                        file_path = os.path.abspath(file_path)
+                    
                     # Tam dosya yolunu oluştur
-                    full_file_path = os.path.join(latest_record['file_path'], latest_record['file_name'])
+                    full_file_path = os.path.join(file_path, file_name)
                     if os.path.exists(full_file_path):
                         file_found = True
+                    
+                    # Eğer bulunamadıysa, yasaklı karakterleri değiştirip tekrar dene
+                    if not file_found:
+                        # Normal pipe'ı full-width pipe ile değiştir
+                        alt_file_name = file_name.replace('|', '｜')
+                        alt_full_path = os.path.join(file_path, alt_file_name)
+                        if os.path.exists(alt_full_path):
+                            file_found = True
+                            full_file_path = alt_full_path
                 
-                # Alternatif kontroller
+                # Alternatif kontroller - config'den output_directory al
                 if not file_found and latest_record.get('file_name'):
-                    # music klasöründe kontrol et
-                    music_path = os.path.join('music', latest_record['file_name'])
-                    if os.path.exists(music_path):
+                    output_dir = self.config.get('output_directory', 'music')
+                    if not os.path.isabs(output_dir):
+                        output_dir = os.path.abspath(output_dir)
+                    
+                    alt_path = os.path.join(output_dir, latest_record['file_name'])
+                    if os.path.exists(alt_path):
                         file_found = True
                     
-                    # Absolute music path
-                    abs_music_path = os.path.join(os.getcwd(), 'music', latest_record['file_name'])
-                    if not file_found and os.path.exists(abs_music_path):
-                        file_found = True
+                    # Pipe karakteri değişimi ile tekrar dene
+                    if not file_found:
+                        alt_file_name = latest_record['file_name'].replace('|', '｜')
+                        alt_path2 = os.path.join(output_dir, alt_file_name)
+                        if os.path.exists(alt_path2):
+                            file_found = True
+                            alt_path = alt_path2
                 
                 if file_found:
                     files_exist += 1

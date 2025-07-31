@@ -33,6 +33,23 @@ class DatabaseManager:
             # Tablo yoksa veya başka bir hata varsa sessizce geç
             pass
     
+    def _add_video_id_columns(self, cursor):
+        """Mevcut tablolara video_id sütununu ekle"""
+        try:
+            # download_queue tablosuna video_id ekle
+            cursor.execute("PRAGMA table_info(download_queue)")
+            columns = [col[1] for col in cursor.fetchall()]
+            if 'video_id' not in columns:
+                cursor.execute('ALTER TABLE download_queue ADD COLUMN video_id TEXT')
+            
+            # download_history tablosuna video_id ekle
+            cursor.execute("PRAGMA table_info(download_history)")
+            columns = [col[1] for col in cursor.fetchall()]
+            if 'video_id' not in columns:
+                cursor.execute('ALTER TABLE download_history ADD COLUMN video_id TEXT')
+        except:
+            pass
+    
     def init_database(self):
         """Veritabanını ve tabloları oluştur"""
         with sqlite3.connect(self.db_path) as conn:
@@ -97,6 +114,8 @@ class DatabaseManager:
             
             # Mevcut tablolara is_deleted sütununu ekle (migration)
             self._add_is_deleted_columns(cursor)
+            # video_id sütununu ekle
+            self._add_video_id_columns(cursor)
             conn.commit()
     
     def add_download(self, video_info: Dict) -> int:
@@ -106,8 +125,8 @@ class DatabaseManager:
             cursor.execute('''
                 INSERT INTO download_history 
                 (video_title, file_name, file_path, format, url, 
-                 file_size, duration, channel_name)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                 file_size, duration, channel_name, video_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 video_info.get('title', 'Unknown'),
                 video_info.get('file_name', ''),
@@ -116,7 +135,8 @@ class DatabaseManager:
                 video_info.get('url', ''),
                 video_info.get('file_size', 0),
                 video_info.get('duration', 0),
-                video_info.get('channel', '')
+                video_info.get('channel', ''),
+                video_info.get('video_id', '')
             ))
             conn.commit()
             return cursor.lastrowid or 0
@@ -253,19 +273,46 @@ class DatabaseManager:
     def add_to_queue(self, url: str, video_title: Optional[str] = None, 
                      format: str = 'mp3', priority: int = 0) -> int:
         """Kuyruğa yeni indirme ekle"""
+        from utils.youtube_utils import extract_video_id
+        
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             
+            # Video ID'yi çıkar
+            video_id = extract_video_id(url)
+            
+            if video_id:
+                # Video ID ile kontrol et (sadece aktif kayıtlar)
+                cursor.execute('''
+                    SELECT id, status, url FROM download_queue 
+                    WHERE video_id = ? AND is_deleted = 0 AND status != 'completed'
+                ''', (video_id,))
+                existing = cursor.fetchone()
+                
+                if existing:
+                    # Aynı video zaten kuyrukta
+                    return -1  # Duplicate olduğunu belirtmek için -1 döndür
+            else:
+                # Video ID çıkarılamadı, URL ile kontrol et
+                cursor.execute('''
+                    SELECT id, status FROM download_queue 
+                    WHERE url = ? AND is_deleted = 0 AND status != 'completed'
+                ''', (url,))
+                existing = cursor.fetchone()
+                
+                if existing:
+                    return -1
+            
             # Mevcut maksimum pozisyonu bul
-            cursor.execute('SELECT MAX(position) FROM download_queue')
+            cursor.execute('SELECT MAX(position) FROM download_queue WHERE is_deleted = 0')
             max_pos = cursor.fetchone()[0]
             next_pos = (max_pos or 0) + 1
             
             cursor.execute('''
                 INSERT INTO download_queue 
-                (url, video_title, format, priority, position)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (url, video_title, format, priority, next_pos))
+                (url, video_title, format, priority, position, video_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (url, video_title, format, priority, next_pos, video_id))
             
             conn.commit()
             return cursor.lastrowid or 0
@@ -396,3 +443,73 @@ class DatabaseManager:
                 cursor.execute('UPDATE download_queue SET position = ? WHERE id = ?', 
                              (idx, item_id))
             conn.commit()
+    
+    def is_url_in_queue(self, url: str) -> bool:
+        """URL'nin kuyrukta olup olmadığını kontrol et"""
+        from utils.youtube_utils import extract_video_id
+        
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Video ID'yi çıkar
+            video_id = extract_video_id(url)
+            
+            if video_id:
+                # Video ID ile kontrol et
+                cursor.execute('''
+                    SELECT COUNT(*) FROM download_queue 
+                    WHERE video_id = ? AND is_deleted = 0 AND status != 'completed'
+                ''', (video_id,))
+            else:
+                # Video ID yoksa URL ile kontrol et
+                cursor.execute('''
+                    SELECT COUNT(*) FROM download_queue 
+                    WHERE url = ? AND is_deleted = 0 AND status != 'completed'
+                ''', (url,))
+            
+            count = cursor.fetchone()[0]
+            return count > 0
+    
+    def get_queue_duplicates(self) -> List[Dict]:
+        """Kuyrukta duplicate URL'leri bul"""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT url, COUNT(*) as count, GROUP_CONCAT(id) as ids
+                FROM download_queue 
+                WHERE is_deleted = 0
+                GROUP BY url 
+                HAVING COUNT(*) > 1
+                ORDER BY count DESC
+            ''')
+            return [dict(row) for row in cursor.fetchall()]
+    
+    def remove_queue_duplicates(self) -> int:
+        """Kuyruktan duplicate kayıtları temizle (en eskiler kalır)"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Her URL için en eski kaydı bul ve diğerlerini sil
+            cursor.execute('''
+                UPDATE download_queue 
+                SET is_deleted = 1 
+                WHERE id IN (
+                    SELECT id FROM (
+                        SELECT id, 
+                               ROW_NUMBER() OVER (PARTITION BY url ORDER BY added_at ASC) as rn
+                        FROM download_queue 
+                        WHERE is_deleted = 0
+                    ) t
+                    WHERE t.rn > 1
+                )
+            ''')
+            
+            deleted_count = cursor.rowcount
+            conn.commit()
+            
+            # Pozisyonları yeniden düzenle
+            if deleted_count > 0:
+                self.reorder_queue_positions()
+            
+            return deleted_count

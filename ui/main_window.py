@@ -39,6 +39,10 @@ class MP3YapMainWindow(QMainWindow):
         self.download_button: QPushButton
         self.open_folder_button: QPushButton
         
+        # URL kontrol cache
+        self.url_cache = {}  # URL -> info dict
+        self.last_checked_urls = set()  # Son kontrol edilen URL'ler
+        
         # Sinyaller ve downloader
         self.signals = DownloadSignals()
         self.downloader = Downloader(self.signals)
@@ -521,18 +525,27 @@ class MP3YapMainWindow(QMainWindow):
                                     video_url = entry.get('url', '')
                                     video_title = entry.get('title', f'Video {idx+1}')
                                     full_title = f"[{playlist_title}] {video_title}"
-                                    self.queue_widget.add_to_queue(video_url, full_title)
-                                    added_count += 1
+                                    result = self.db_manager.add_to_queue(video_url, full_title)
+                                    if result > 0:  # Başarılı
+                                        added_count += 1
+                                    elif result == -1:  # Duplicate
+                                        print(f"Video zaten kuyrukta: {video_title}")
                             else:
                                 # Tek video
                                 video_title = info.get('title', 'İsimsiz Video')
-                                self.queue_widget.add_to_queue(url, video_title)
-                                added_count += 1
+                                result = self.db_manager.add_to_queue(url, video_title)
+                                if result > 0:  # Başarılı
+                                    added_count += 1
+                                elif result == -1:  # Duplicate
+                                    print(f"Video zaten kuyrukta: {video_title}")
                 except Exception as e:
                     print(f"Video bilgisi alınamadı: {e}")
                     # Hata durumunda URL ile ekle
-                    self.queue_widget.add_to_queue(url, None)
-                    added_count += 1
+                    result = self.db_manager.add_to_queue(url, None)
+                    if result > 0:
+                        added_count += 1
+                    elif result == -1:
+                        print(f"URL zaten kuyrukta: {url}")
                     
             except Exception as e:
                 print(f"URL eklenirken hata: {e}")
@@ -542,11 +555,24 @@ class MP3YapMainWindow(QMainWindow):
         self.download_button.setEnabled(True)
         self.status_label.setStyleSheet("")  # Stili sıfırla
         
-        if added_count > 0:
+        # Kuyruğu yenile
+        self.queue_widget.load_queue()
+        
+        # Sonuç mesajı göster
+        total_urls = len(urls)
+        duplicate_count = total_urls - added_count
+        
+        if added_count > 0 and duplicate_count == 0:
             self.status_label.setText(f"✅ {added_count} video kuyruğa eklendi")
             self.url_text.clear()  # URL'leri temizle
             # Kuyruk sekmesine geç
             self.tab_widget.setCurrentIndex(2)
+        elif added_count > 0 and duplicate_count > 0:
+            self.status_label.setText(f"✅ {added_count} yeni video eklendi, ⚠️ {duplicate_count} video zaten kuyrukta")
+            self.url_text.clear()
+            self.tab_widget.setCurrentIndex(2)
+        elif added_count == 0 and duplicate_count > 0:
+            self.status_label.setText(f"⚠️ Tüm videolar ({duplicate_count}) zaten kuyrukta")
         else:
             self.status_label.setText("⚠️ Hiçbir video eklenemedi")
     
@@ -648,7 +674,16 @@ class MP3YapMainWindow(QMainWindow):
         
         if not urls:
             self.url_status_bar.setVisible(False)
+            self.last_checked_urls.clear()
             return
+        
+        # Eğer aynı URL'ler zaten kontrol edildiyse cache'den göster
+        current_urls = set(urls)
+        if current_urls == self.last_checked_urls:
+            self.show_cached_url_status(urls)
+            return
+        
+        self.last_checked_urls = current_urls
         
         # Hemen loading göster
         self.url_status_bar.setText("⏳ URL'ler kontrol ediliyor...")
@@ -685,6 +720,7 @@ class MP3YapMainWindow(QMainWindow):
         
         # URL sayısını göster
         valid_urls = []
+        invalid_urls = []
         
         # Regex ile hızlı YouTube URL kontrolü
         youtube_regex = re.compile(
@@ -701,10 +737,10 @@ class MP3YapMainWindow(QMainWindow):
                     valid_urls.append(url)
                 else:
                     # Video ID eksik veya hatalı
-                    pass
+                    invalid_urls.append(url)
             else:
                 # YouTube URL'si değil
-                pass
+                invalid_urls.append(url)
         
         # Liste URL'lerini kontrol et
         playlist_info = []
@@ -734,11 +770,13 @@ class MP3YapMainWindow(QMainWindow):
                                 playlist_size = len(info['entries'])
                             uploader = info.get('uploader', info.get('channel', ''))
                             
-                            # Durum çubuğunu güncelle (thread-safe değil ama basit bilgilendirme için ok)
-                            status_text = f"✓ Playlist bulundu: {playlist_title} - {playlist_size} video"
-                            if uploader:
-                                status_text += f" ({uploader})"
-                            print(f"[PLAYLIST] {status_text}")
+                            # Cache'e kaydet
+                            self.url_cache[url] = {
+                                'is_playlist': True,
+                                'title': playlist_title,
+                                'video_count': playlist_size,
+                                'uploader': uploader
+                            }
                             
                             playlist_info.append({
                                 'url': url,
@@ -763,6 +801,14 @@ class MP3YapMainWindow(QMainWindow):
                     })
             else:
                 # Tek video
+                if url not in self.url_cache:
+                    # Cache'e ekle
+                    self.url_cache[url] = {
+                        'is_playlist': False,
+                        'title': 'Tek Video',
+                        'video_count': 1
+                    }
+                
                 playlist_info.append({
                     'url': url,
                     'title': None,
@@ -775,29 +821,33 @@ class MP3YapMainWindow(QMainWindow):
         # Geçerli URL sayısı ve playlist bilgisi
         if valid_urls:
             total_videos = sum(p['count'] for p in playlist_info)
-            playlists = [p for p in playlist_info if p['count'] > 1]
+            playlists = [p for p in playlist_info if p.get('count', 1) > 1]
+            single_videos = [p for p in playlist_info if p.get('count', 1) == 1]
             
-            if playlists:
-                # Playlist detayları
-                playlist_details = []
-                for p in playlists:
-                    if p['title'] and p['title'] != 'Tek Video':
-                        playlist_details.append(f"{p['title'][:30]}... ({p['count']} video)")
-                
-                if len(playlists) == 1:
-                    p = playlists[0]
-                    playlist_text = f"✓ Playlist: {p.get('title', 'İsimsiz')[:40]}"
-                    if p.get('uploader'):
-                        playlist_text += f" - {p.get('uploader')}"
-                    playlist_text += f" ({p['count']} video)"
-                    status_parts.append(playlist_text)
-                else:
-                    status_parts.append(f"✓ {len(valid_urls)} URL ({len(playlists)} liste, toplam {total_videos} video)")
+            # Detaylı bilgi
+            if total_videos == len(valid_urls):
+                # Sadece tek videolar var
+                status_parts.append(f"✓ {len(valid_urls)} video indirmeye hazır")
             else:
-                status_parts.append(f"✓ {len(valid_urls)} geçerli URL")
+                # Karışık (playlist + tek video)
+                parts = []
+                if playlists:
+                    parts.append(f"{len(playlists)} playlist")
+                if single_videos:
+                    parts.append(f"{len(single_videos)} video")
+                status_parts.append(f"✓ {' ve '.join(parts)} (toplam {total_videos} video)")
+                
+                # Playlist detayları
+                for p in playlists:
+                    if p.get('title') and p['title'] != 'Bilinmeyen':
+                        playlist_text = f"  • {p['title'][:30]}"
+                        if len(p['title']) > 30:
+                            playlist_text += "..."
+                        playlist_text += f" ({p['count']} video)"
+                        status_parts.append(playlist_text)
         
         # Geçersiz URL sayısı
-        invalid_count = len(urls) - len(valid_urls)
+        invalid_count = len(invalid_urls)
         if invalid_count > 0:
             status_parts.append(f"✗ {invalid_count} geçersiz URL")
         
@@ -906,6 +956,94 @@ class MP3YapMainWindow(QMainWindow):
                         color: #2e7d32;
                     }
                 """)
+        else:
+            self.url_status_bar.setVisible(False)
+    
+    def show_cached_url_status(self, urls):
+        """Cache'den URL durumunu göster"""
+        total_videos = 0
+        playlists = []
+        single_videos = []
+        valid_urls = []
+        invalid_count = 0
+        
+        # Regex ile hızlı YouTube URL kontrolü
+        youtube_regex = re.compile(
+            r'(https?://)?(www\.)?(youtube\.com/(watch\?v=|shorts/|embed/)|youtu\.be/|m\.youtube\.com/watch\?v=)([a-zA-Z0-9_-]{11})'
+        )
+        
+        for url in urls:
+            if youtube_regex.search(url):
+                valid_urls.append(url)
+                # Cache'de var mı?
+                if url in self.url_cache:
+                    info = self.url_cache[url]
+                    if info['is_playlist']:
+                        playlists.append(info)
+                        total_videos += info['video_count']
+                    else:
+                        single_videos.append(info)
+                        total_videos += 1
+                else:
+                    # Cache'de yok, tek video varsay
+                    single_videos.append({'title': 'Tek Video', 'video_count': 1})
+                    total_videos += 1
+            else:
+                invalid_count += 1
+        
+        # Durum mesajını oluştur
+        if total_videos == 0 and invalid_count == 0:
+            self.url_status_bar.setVisible(False)
+            return
+            
+        status_parts = []
+        
+        if total_videos > 0:
+            if total_videos == len(valid_urls) and not playlists:
+                # Sadece tek videolar var
+                status_parts.append(f"✓ {len(valid_urls)} video indirmeye hazır")
+            else:
+                # Karışık (playlist + tek video)
+                parts = []
+                if playlists:
+                    parts.append(f"{len(playlists)} playlist")
+                if single_videos:
+                    parts.append(f"{len(single_videos)} video")
+                status_parts.append(f"✓ {' ve '.join(parts)} (toplam {total_videos} video) indirmeye hazır")
+        
+        if invalid_count > 0:
+            status_parts.append(f"✗ {invalid_count} geçersiz URL")
+        
+        if status_parts:
+            self.url_status_bar.setText(" | ".join(status_parts))
+            # Renk ayarla
+            if invalid_count > 0:
+                # Kırmızı
+                self.url_status_bar.setStyleSheet("""
+                    QLabel {
+                        padding: 8px;
+                        background-color: #ffebee;
+                        border: 1px solid #ef5350;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        color: #c62828;
+                        font-weight: bold;
+                    }
+                """)
+            else:
+                # Yeşil
+                self.url_status_bar.setStyleSheet("""
+                    QLabel {
+                        padding: 8px;
+                        background-color: #e8f5e9;
+                        border: 1px solid #4caf50;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        color: #2e7d32;
+                        font-weight: bold;
+                    }
+                """)
+            self.url_status_bar.setVisible(True)
         else:
             self.url_status_bar.setVisible(False)
     

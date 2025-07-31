@@ -87,7 +87,8 @@ class Downloader:
             'url': info.get('webpage_url', info.get('url', '')),
             'file_size': info.get('filesize', 0),
             'duration': info.get('duration', 0),
-            'channel': info.get('uploader', info.get('channel', ''))
+            'channel': info.get('uploader', info.get('channel', '')),
+            'video_id': video_id
         }
         
         # Add to database

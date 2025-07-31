@@ -507,24 +507,25 @@ class MP3YapMainWindow(QMainWindow):
         # URL sayısını göster
         valid_urls = []
         
+        # Regex ile hızlı YouTube URL kontrolü
+        youtube_regex = re.compile(
+            r'(https?://)?(www\.)?(youtube\.com/(watch\?v=|shorts/|embed/)|youtu\.be/|m\.youtube\.com/watch\?v=)([a-zA-Z0-9_-]{11})'
+        )
+        
         for url in urls:
-            # Basit YouTube URL kontrolü
-            if 'youtube.com/watch' in url or 'youtu.be/' in url:
-                # URL'yi normalize et (son kısmı temizle)
-                # youtu.be/VIDEO_ID veya youtube.com/watch?v=VIDEO_ID formatını kontrol et
-                if 'youtu.be/' in url:
-                    # youtu.be/VIDEO_ID formatı
-                    parts = url.split('youtu.be/')
-                    if len(parts) > 1 and len(parts[1]) >= 11:  # YouTube video ID 11 karakter
-                        valid_urls.append(url)
-                elif 'watch?v=' in url:
-                    # youtube.com/watch?v=VIDEO_ID formatı
-                    parts = url.split('watch?v=')
-                    if len(parts) > 1 and len(parts[1]) >= 11:
-                        valid_urls.append(url)
-            elif url.startswith('http') and ('youtube' in url or 'youtu.be' in url):
-                # Diğer YouTube formatları için genel kontrol
-                valid_urls.append(url)
+            # Önce regex ile hızlı kontrol
+            match = youtube_regex.search(url)
+            if match:
+                # Video ID'yi al
+                video_id = match.group(5)
+                if video_id and len(video_id) == 11:
+                    valid_urls.append(url)
+                else:
+                    # Video ID eksik veya hatalı
+                    pass
+            else:
+                # YouTube URL'si değil
+                pass
         
         # Durum mesajını oluştur
         status_parts = []

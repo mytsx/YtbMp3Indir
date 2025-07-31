@@ -55,3 +55,6 @@ htmlcov/
 
 # FFmpeg binaries
 static_ffmpeg/
+
+# Original resources (large files)
+resources/original_images/

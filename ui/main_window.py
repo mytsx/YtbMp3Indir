@@ -144,6 +144,14 @@ class MP3YapMainWindow(QMainWindow):
         # Durum ve ilerleme
         status_layout = QHBoxLayout()
         self.status_label = QLabel("Hazır")
+        self.status_label.setMinimumHeight(30)
+        self.status_label.setStyleSheet("""
+            QLabel {
+                padding: 5px;
+                font-size: 14px;
+                font-weight: bold;
+            }
+        """)
         status_layout.addWidget(self.status_label)
         
         # İndirme ilerleme çubuğu
@@ -427,6 +435,11 @@ class MP3YapMainWindow(QMainWindow):
     
     def update_status(self, status):
         """Durum mesajını güncelle"""
+        # Önemli uyarıları silme
+        current_text = self.status_label.text()
+        if any(x in current_text for x in ["UYARI:", "✅", "❌"]) and any(x in current_text.lower() for x in ["kuyrukta", "eklendi", "eklenemedi"]):
+            # Kuyruk işlemi mesajı varsa üzerine yazma
+            return
         self.status_label.setText(status)
         
         # Playlist progress'i de status bar'da göster
@@ -509,6 +522,8 @@ class MP3YapMainWindow(QMainWindow):
         
         # URL'leri kuyruğa ekle
         added_count = 0
+        duplicate_videos = []  # Duplicate video listesi
+        
         for url in urls:
             try:
                 # Video başlığını al
@@ -529,7 +544,7 @@ class MP3YapMainWindow(QMainWindow):
                                     if result > 0:  # Başarılı
                                         added_count += 1
                                     elif result == -1:  # Duplicate
-                                        print(f"Video zaten kuyrukta: {video_title}")
+                                        duplicate_videos.append(video_title)
                             else:
                                 # Tek video
                                 video_title = info.get('title', 'İsimsiz Video')
@@ -537,7 +552,7 @@ class MP3YapMainWindow(QMainWindow):
                                 if result > 0:  # Başarılı
                                     added_count += 1
                                 elif result == -1:  # Duplicate
-                                    print(f"Video zaten kuyrukta: {video_title}")
+                                    duplicate_videos.append(video_title)
                 except Exception as e:
                     print(f"Video bilgisi alınamadı: {e}")
                     # Hata durumunda URL ile ekle
@@ -545,7 +560,7 @@ class MP3YapMainWindow(QMainWindow):
                     if result > 0:
                         added_count += 1
                     elif result == -1:
-                        print(f"URL zaten kuyrukta: {url}")
+                        duplicate_videos.append(url)
                     
             except Exception as e:
                 print(f"URL eklenirken hata: {e}")
@@ -555,26 +570,111 @@ class MP3YapMainWindow(QMainWindow):
         self.download_button.setEnabled(True)
         self.status_label.setStyleSheet("")  # Stili sıfırla
         
-        # Kuyruğu yenile
-        self.queue_widget.load_queue()
-        
         # Sonuç mesajı göster
         total_urls = len(urls)
         duplicate_count = total_urls - added_count
         
         if added_count > 0 and duplicate_count == 0:
-            self.status_label.setText(f"✅ {added_count} video kuyruğa eklendi")
+            self.status_label.setText(f"✓ {added_count} video kuyruğa eklendi")
+            self.status_label.setStyleSheet("""
+                QLabel {
+                    background-color: #E8F5E9;
+                    color: #2E7D32;
+                    padding: 5px;
+                    border-radius: 3px;
+                    font-weight: bold;
+                }
+            """)
             self.url_text.clear()  # URL'leri temizle
+            # Kuyruğu yenile
+            self.queue_widget.load_queue()
             # Kuyruk sekmesine geç
             self.tab_widget.setCurrentIndex(2)
         elif added_count > 0 and duplicate_count > 0:
-            self.status_label.setText(f"✅ {added_count} yeni video eklendi, ⚠️ {duplicate_count} video zaten kuyrukta")
+            # Hem eklenen hem duplicate olanları göster
+            if duplicate_count <= 2 and duplicate_videos:
+                # Az sayıda duplicate varsa detay göster
+                dup_names = ", ".join([v[:20] + "..." if len(v) > 20 else v for v in duplicate_videos[:2]])
+                self.status_label.setText(f"✓ {added_count} eklendi | Kuyrukta: {dup_names}")
+            else:
+                self.status_label.setText(f"✓ {added_count} yeni eklendi | {duplicate_count} zaten kuyrukta")
+            
+            self.status_label.setStyleSheet("""
+                QLabel {
+                    background-color: #FFF3E0;
+                    color: #E65100;
+                    padding: 5px;
+                    border-radius: 3px;
+                    font-weight: bold;
+                }
+            """)
             self.url_text.clear()
+            # Kuyruğu yenile
+            self.queue_widget.load_queue()
             self.tab_widget.setCurrentIndex(2)
         elif added_count == 0 and duplicate_count > 0:
-            self.status_label.setText(f"⚠️ Tüm videolar ({duplicate_count}) zaten kuyrukta")
+            # Duplicate listesini göster
+            if duplicate_videos and len(duplicate_videos) <= 3:
+                # Az sayıda duplicate varsa isimleri göster
+                video_names = ", ".join([v[:30] + "..." if len(v) > 30 else v for v in duplicate_videos[:3]])
+                msg = f"Zaten kuyrukta: {video_names}"
+            else:
+                msg = f"Tüm videolar ({duplicate_count}) zaten kuyrukta"
+            
+            # Hem status_label hem de popup göster
+            self.status_label.setText(f"UYARI: {msg}")
+            # Popup'ta emoji kullanma, HTML entity sorunu oluyor
+            QMessageBox.warning(self, "Uyarı", msg)
+            
+            self.status_label.setStyleSheet("""
+                QLabel {
+                    background-color: #FFEBEE;
+                    color: #C62828;
+                    padding: 5px;
+                    border-radius: 3px;
+                    font-weight: bold;
+                }
+            """)
+            print("[DEBUG] Style ayarlandı")
+            
+            # URL kontrolünü durdur - ÖNCELİKLE!
+            self.url_check_timer.stop()
+            print("[DEBUG] URL timer durduruldu")
+            
+            # textChanged sinyalini geçici olarak kapat
+            try:
+                self.url_text.textChanged.disconnect()
+                print("[DEBUG] textChanged sinyali kapatıldı")
+            except:
+                pass
+            
+            # URL'leri temizle
+            print("[DEBUG] URL'ler temizleniyor...")
+            self.url_text.clear()
+            print("[DEBUG] URL'ler temizlendi")
+            
+            # textChanged sinyalini tekrar bağla
+            self.url_text.textChanged.connect(self.on_url_text_changed)
+            print("[DEBUG] textChanged sinyali tekrar bağlandı")
+            
+            # Mesajı koru
+            import time
+            time.sleep(0.1)  # Kısa bekle
+            print(f"[DEBUG] Son mesaj kontrolü: {self.status_label.text()}")
+            
+            # Sekme değiştirme YAPMA
+            return  # Fonksiyondan çık
         else:
-            self.status_label.setText("⚠️ Hiçbir video eklenemedi")
+            self.status_label.setText("Hiçbir video eklenemedi")
+            self.status_label.setStyleSheet("""
+                QLabel {
+                    background-color: #FFEBEE;
+                    color: #C62828;
+                    padding: 5px;
+                    border-radius: 3px;
+                    font-weight: bold;
+                }
+            """)
     
     def process_queue_item(self, queue_item):
         """Kuyruktan gelen öğeyi işle"""
@@ -658,6 +758,14 @@ class MP3YapMainWindow(QMainWindow):
     
     def on_url_text_changed(self):
         """URL metni değiştiğinde"""
+        print("[DEBUG] on_url_text_changed çağrıldı")
+        
+        # Eğer duplicate uyarısı varsa timer'ı başlatma
+        current_text = self.status_label.text()
+        if "kuyrukta" in current_text.lower() and "UYARI:" in current_text:
+            print("[DEBUG] Duplicate uyarısı var, timer başlatılmıyor")
+            return
+            
         # Timer'ı durdur ve yeniden başlat (debounce)
         self.url_check_timer.stop()
         self.url_check_timer.start(500)  # 500ms bekle
@@ -669,10 +777,12 @@ class MP3YapMainWindow(QMainWindow):
     
     def check_urls(self):
         """URL'leri kontrol et ve durum göster"""
+        print("[DEBUG check_urls] Çağrıldı")
         urls = self.url_text.toPlainText().strip().split('\n')
         urls = [url.strip() for url in urls if url.strip()]
         
         if not urls:
+            print("[DEBUG check_urls] URL yok, çıkılıyor")
             self.url_status_bar.setVisible(False)
             self.last_checked_urls.clear()
             return
@@ -918,6 +1028,7 @@ class MP3YapMainWindow(QMainWindow):
                         border-radius: 4px;
                         font-size: 12px;
                         color: #c62828;
+                        font-weight: bold;
                     }
                 """)
             elif files_exist > 0 and files_missing == 0:
@@ -930,6 +1041,7 @@ class MP3YapMainWindow(QMainWindow):
                         border-radius: 4px;
                         font-size: 12px;
                         color: #1565c0;
+                        font-weight: bold;
                     }
                 """)
             elif files_missing > 0:
@@ -942,6 +1054,7 @@ class MP3YapMainWindow(QMainWindow):
                         border-radius: 4px;
                         font-size: 12px;
                         color: #e65100;
+                        font-weight: bold;
                     }
                 """)
             else:
@@ -954,6 +1067,7 @@ class MP3YapMainWindow(QMainWindow):
                         border-radius: 4px;
                         font-size: 12px;
                         color: #2e7d32;
+                        font-weight: bold;
                     }
                 """)
         else:

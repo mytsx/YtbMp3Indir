@@ -17,13 +17,14 @@ class QueueWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.db = DatabaseManager()
+        self.current_items_hash = None  # Mevcut liste hash'i
         self.init_ui()
         self.load_queue()
         
         # Otomatik yenileme
         self.refresh_timer = QTimer()
-        self.refresh_timer.timeout.connect(self.load_queue)
-        self.refresh_timer.start(5000)  # 5 saniyede bir yenile
+        self.refresh_timer.timeout.connect(self.check_and_refresh)
+        self.refresh_timer.start(5000)  # 5 saniyede bir kontrol et
         
     def init_ui(self):
         """Arayüzü oluştur"""
@@ -133,7 +134,31 @@ class QueueWidget(QWidget):
         
         self.setLayout(layout)
         
-    def load_queue(self):
+    def check_and_refresh(self):
+        """Değişiklik varsa kuyruğu yenile"""
+        # Filtre durumunu al
+        filter_status = None
+        if self.status_filter.currentText() != "Tümü":
+            status_map = {
+                "Bekliyor": "pending",
+                "İndiriliyor": "downloading",
+                "Tamamlandı": "completed",
+                "Başarısız": "failed"
+            }
+            filter_status = status_map.get(self.status_filter.currentText())
+        
+        # Veritabanından öğeleri al
+        items = self.db.get_queue_items(filter_status)
+        
+        # Liste hash'ini hesapla
+        items_hash = hash(str([(item['id'], item['status']) for item in items]))
+        
+        # Değişiklik varsa güncelle
+        if items_hash != self.current_items_hash:
+            self.current_items_hash = items_hash
+            self.load_queue()
+    
+    def load_queue(self, force_refresh=False):
         """Kuyruğu veritabanından yükle"""
         # Filtre durumunu al
         filter_status = None
@@ -148,6 +173,10 @@ class QueueWidget(QWidget):
         
         # Veritabanından öğeleri al
         items = self.db.get_queue_items(filter_status)
+        
+        # Hash'i güncelle
+        if not force_refresh:
+            self.current_items_hash = hash(str([(item['id'], item['status']) for item in items]))
         
         # Tabloyu güncelle
         self.table.setRowCount(len(items))

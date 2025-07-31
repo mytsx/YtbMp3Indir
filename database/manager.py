@@ -15,6 +15,24 @@ class DatabaseManager:
         """init_database için alias"""
         self.init_database()
     
+    def _add_is_deleted_columns(self, cursor):
+        """Mevcut tablolara is_deleted sütununu ekle"""
+        try:
+            # download_history tablosuna is_deleted ekle
+            cursor.execute("PRAGMA table_info(download_history)")
+            columns = [col[1] for col in cursor.fetchall()]
+            if 'is_deleted' not in columns:
+                cursor.execute('ALTER TABLE download_history ADD COLUMN is_deleted INTEGER DEFAULT 0')
+            
+            # download_queue tablosuna is_deleted ekle
+            cursor.execute("PRAGMA table_info(download_queue)")
+            columns = [col[1] for col in cursor.fetchall()]
+            if 'is_deleted' not in columns:
+                cursor.execute('ALTER TABLE download_queue ADD COLUMN is_deleted INTEGER DEFAULT 0')
+        except:
+            # Tablo yoksa veya başka bir hata varsa sessizce geç
+            pass
+    
     def init_database(self):
         """Veritabanını ve tabloları oluştur"""
         with sqlite3.connect(self.db_path) as conn:
@@ -31,7 +49,8 @@ class DatabaseManager:
                     duration INTEGER,
                     channel_name TEXT,
                     downloaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    status TEXT DEFAULT 'completed'
+                    status TEXT DEFAULT 'completed',
+                    is_deleted INTEGER DEFAULT 0
                 )
             ''')
             
@@ -48,7 +67,8 @@ class DatabaseManager:
                     started_at DATETIME,
                     completed_at DATETIME,
                     error_message TEXT,
-                    position INTEGER
+                    position INTEGER,
+                    is_deleted INTEGER DEFAULT 0
                 )
             ''')
             
@@ -74,6 +94,10 @@ class DatabaseManager:
             ''')
             
             conn.commit()
+            
+            # Mevcut tablolara is_deleted sütununu ekle (migration)
+            self._add_is_deleted_columns(cursor)
+            conn.commit()
     
     def add_download(self, video_info: Dict) -> int:
         """Yeni indirme kaydı ekle"""
@@ -95,18 +119,27 @@ class DatabaseManager:
                 video_info.get('channel', '')
             ))
             conn.commit()
-            return cursor.lastrowid
+            return cursor.lastrowid or 0
     
-    def get_all_downloads(self, limit: int = 100) -> List[Dict]:
+    def get_all_downloads(self, limit: int = 100, include_deleted: bool = False) -> List[Dict]:
         """Tüm indirme geçmişini getir"""
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            cursor.execute('''
-                SELECT * FROM download_history 
-                ORDER BY downloaded_at DESC 
-                LIMIT ?
-            ''', (limit,))
+            
+            if include_deleted:
+                cursor.execute('''
+                    SELECT * FROM download_history 
+                    ORDER BY downloaded_at DESC 
+                    LIMIT ?
+                ''', (limit,))
+            else:
+                cursor.execute('''
+                    SELECT * FROM download_history 
+                    WHERE is_deleted = 0
+                    ORDER BY downloaded_at DESC 
+                    LIMIT ?
+                ''', (limit,))
             
             return [dict(row) for row in cursor.fetchall()]
     
@@ -117,7 +150,8 @@ class DatabaseManager:
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT * FROM download_history 
-                WHERE video_title LIKE ? OR channel_name LIKE ? OR url LIKE ?
+                WHERE (video_title LIKE ? OR channel_name LIKE ? OR url LIKE ?)
+                AND is_deleted = 0
                 ORDER BY downloaded_at DESC
             ''', (f'%{query}%', f'%{query}%', f'%{query}%'))
             
@@ -130,7 +164,7 @@ class DatabaseManager:
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT * FROM download_history 
-                WHERE url = ?
+                WHERE url = ? AND is_deleted = 0
                 ORDER BY downloaded_at DESC
             ''', (url,))
             
@@ -142,18 +176,18 @@ class DatabaseManager:
             cursor = conn.cursor()
             
             # Toplam indirme sayısı
-            cursor.execute('SELECT COUNT(*) FROM download_history')
+            cursor.execute('SELECT COUNT(*) FROM download_history WHERE is_deleted = 0')
             total_downloads = cursor.fetchone()[0]
             
             # Toplam dosya boyutu
-            cursor.execute('SELECT SUM(file_size) FROM download_history')
+            cursor.execute('SELECT SUM(file_size) FROM download_history WHERE is_deleted = 0')
             total_size = cursor.fetchone()[0] or 0
             
             # En çok indirilen kanal
             cursor.execute('''
                 SELECT channel_name, COUNT(*) as count 
                 FROM download_history 
-                WHERE channel_name IS NOT NULL AND channel_name != ''
+                WHERE channel_name IS NOT NULL AND channel_name != '' AND is_deleted = 0
                 GROUP BY channel_name 
                 ORDER BY count DESC 
                 LIMIT 5
@@ -163,7 +197,7 @@ class DatabaseManager:
             # Bugünkü indirmeler
             cursor.execute('''
                 SELECT COUNT(*) FROM download_history 
-                WHERE DATE(downloaded_at) = DATE('now', 'localtime')
+                WHERE DATE(downloaded_at) = DATE('now', 'localtime') AND is_deleted = 0
             ''')
             today_downloads = cursor.fetchone()[0]
             
@@ -175,15 +209,39 @@ class DatabaseManager:
             }
     
     def delete_download(self, download_id: int) -> bool:
-        """İndirme kaydını sil"""
+        """İndirme kaydını soft delete yap"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('UPDATE download_history SET is_deleted = 1 WHERE id = ?', (download_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+    
+    def hard_delete_download(self, download_id: int) -> bool:
+        """İndirme kaydını kalıcı olarak sil"""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute('DELETE FROM download_history WHERE id = ?', (download_id,))
             conn.commit()
             return cursor.rowcount > 0
     
+    def restore_download(self, download_id: int) -> bool:
+        """Silinmiş indirme kaydını geri getir"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('UPDATE download_history SET is_deleted = 0 WHERE id = ?', (download_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+    
     def clear_history(self) -> int:
-        """Tüm geçmişi temizle"""
+        """Tüm geçmişi soft delete yap"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('UPDATE download_history SET is_deleted = 1 WHERE is_deleted = 0')
+            conn.commit()
+            return cursor.rowcount
+    
+    def hard_clear_history(self) -> int:
+        """Tüm geçmişi kalıcı olarak sil"""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute('DELETE FROM download_history')
@@ -221,12 +279,13 @@ class DatabaseManager:
             if status:
                 cursor.execute('''
                     SELECT * FROM download_queue 
-                    WHERE status = ?
+                    WHERE status = ? AND is_deleted = 0
                     ORDER BY priority DESC, position ASC
                 ''', (status,))
             else:
                 cursor.execute('''
                     SELECT * FROM download_queue 
+                    WHERE is_deleted = 0
                     ORDER BY priority DESC, position ASC
                 ''')
             
@@ -279,21 +338,21 @@ class DatabaseManager:
             return cursor.rowcount > 0
     
     def remove_from_queue(self, queue_id: int) -> bool:
-        """Kuyruktan öğe sil"""
+        """Kuyruktan öğe soft delete yap"""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cursor.execute('DELETE FROM download_queue WHERE id = ?', (queue_id,))
+            cursor.execute('UPDATE download_queue SET is_deleted = 1 WHERE id = ?', (queue_id,))
             conn.commit()
             return cursor.rowcount > 0
     
     def clear_queue(self, status: Optional[str] = None) -> int:
-        """Kuyruğu temizle"""
+        """Kuyruğu soft delete yap"""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             if status:
-                cursor.execute('DELETE FROM download_queue WHERE status = ?', (status,))
+                cursor.execute('UPDATE download_queue SET is_deleted = 1 WHERE status = ? AND is_deleted = 0', (status,))
             else:
-                cursor.execute('DELETE FROM download_queue')
+                cursor.execute('UPDATE download_queue SET is_deleted = 1 WHERE is_deleted = 0')
             conn.commit()
             return cursor.rowcount
     
@@ -304,7 +363,7 @@ class DatabaseManager:
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT * FROM download_queue 
-                WHERE status = 'pending'
+                WHERE status = 'pending' AND is_deleted = 0
                 ORDER BY priority DESC, position ASC
                 LIMIT 1
             ''')

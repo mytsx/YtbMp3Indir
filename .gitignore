@@ -58,3 +58,18 @@ static_ffmpeg/
 
 # Original resources (large files)
 resources/original_images/
+
+# Build and distribution files
+build/
+dist/
+*.spec
+*.exe
+*.msi
+*.zip
+
+# Installer output
+installer_output/
+portable_package/
+
+# Inno Setup files
+*.iss

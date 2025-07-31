@@ -45,6 +45,7 @@ class MP3YapMainWindow(QMainWindow):
         
         # Özel indirme listesi (sadece seçilenler için)
         self.selected_download_queue = []  # Sadece seçili öğeleri indirmek için
+        self.is_queue_mode = False  # Normal kuyruk modu mu yoksa spesifik indirme mi
         
         # Sinyaller ve downloader
         self.signals = DownloadSignals()
@@ -130,6 +131,7 @@ class MP3YapMainWindow(QMainWindow):
         # Kuyruk sekmesi
         self.queue_widget = QueueWidget()
         self.queue_widget.start_download.connect(self.process_queue_item)
+        self.queue_widget.queue_started.connect(lambda: setattr(self, 'is_queue_mode', True))
         self.tab_widget.addTab(self.queue_widget, "Kuyruk")
         
         # Ana widget olarak tab widget'ı ayarla
@@ -654,12 +656,19 @@ class MP3YapMainWindow(QMainWindow):
     
     def process_queue_item(self, queue_item):
         """Kuyruktan gelen öğeyi işle"""
+        # Eğer bu bir normal kuyruk başlatma değilse (spesifik indirme ise)
+        # ve queue_item'da 'is_specific' işareti varsa, is_queue_mode'u kapat
+        if queue_item.get('is_specific', False):
+            self.is_queue_mode = False
+        
         # Eğer başka bir indirme devam ediyorsa, bu öğeyi özel listeye ekle
         if hasattr(self, 'current_queue_item') and self.current_queue_item:
-            if queue_item not in self.selected_download_queue:
-                self.selected_download_queue.append(queue_item)
-                # Durumu "İndirilecek" olarak güncelle
-                self.queue_widget.update_download_status(queue_item['id'], 'queued')
+            if not self.is_queue_mode or queue_item.get('is_specific', False):
+                # Spesifik indirme ise listeye ekle
+                if queue_item not in self.selected_download_queue:
+                    self.selected_download_queue.append(queue_item)
+                    # Durumu "İndirilecek" olarak güncelle
+                    self.queue_widget.update_download_status(queue_item['id'], 'queued')
             return
         
         # İndirme durumunu güncelle
@@ -718,6 +727,9 @@ class MP3YapMainWindow(QMainWindow):
                 next_item = self.selected_download_queue.pop(0)
                 # Kısa bir gecikme ile sonrakini başlat
                 QTimer.singleShot(500, lambda: self.process_queue_item(next_item))
+            elif self.is_queue_mode:
+                # Normal kuyruk modunda ise, bir sonraki öğeyi al
+                QTimer.singleShot(500, lambda: self.queue_widget.start_queue())
     
     def queue_download_error(self, filename, error):
         """Kuyruk indirmesinde hata oluştuğunda"""
@@ -734,6 +746,9 @@ class MP3YapMainWindow(QMainWindow):
                 next_item = self.selected_download_queue.pop(0)
                 # Kısa bir gecikme ile sonrakini başlat
                 QTimer.singleShot(500, lambda: self.process_queue_item(next_item))
+            elif self.is_queue_mode:
+                # Normal kuyruk modunda ise, bir sonraki öğeyi al
+                QTimer.singleShot(500, lambda: self.queue_widget.start_queue())
     
     def on_tab_changed(self, index):
         """Tab değiştiğinde çağrılır"""

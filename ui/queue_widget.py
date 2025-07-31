@@ -13,6 +13,7 @@ class QueueWidget(QWidget):
     # Sinyaller
     start_download = pyqtSignal(dict)  # Kuyruktan indirme başlat
     queue_updated = pyqtSignal()  # Kuyruk güncellendiğinde
+    queue_started = pyqtSignal()  # Normal kuyruk başlatıldığında
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -335,6 +336,9 @@ class QueueWidget(QWidget):
         # İndiriliyor durumunda kalmış olanları düzelt
         self.db.reset_stuck_downloads()
         
+        # Kuyruk modunu işaretle
+        self.queue_started.emit()
+        
         # Sıradaki öğeyi al
         next_item = self.db.get_next_queue_item()
         if next_item:
@@ -506,6 +510,8 @@ class QueueWidget(QWidget):
         queue_item = next((item for item in items if item['id'] == item_id), None)
         
         if queue_item and queue_item['status'] in ['pending', 'failed', 'queued']:
+            # Spesifik indirme olduğunu işaretle
+            queue_item['is_specific'] = True
             # İndirme sinyali gönder
             self.start_download.emit(queue_item)
     
@@ -518,6 +524,8 @@ class QueueWidget(QWidget):
         for item_id in item_ids:
             queue_item = next((item for item in items if item['id'] == item_id), None)
             if queue_item and queue_item['status'] in ['pending', 'failed', 'queued']:
+                # Spesifik indirme olduğunu işaretle
+                queue_item['is_specific'] = True
                 # Her birini ayrı ayrı indir sinyali gönder
                 self.start_download.emit(queue_item)
     

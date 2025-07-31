@@ -79,10 +79,16 @@ class Downloader:
         ext = info.get('ext', 'webm')
         
         # Build file info
+        file_name = f"{title}.mp3" if self.ffmpeg_available else f"{title}.{ext}"
+        # Klasörün tam yolunu al
+        output_dir = self.current_output_path or 'music'
+        if not os.path.isabs(output_dir):
+            output_dir = os.path.abspath(output_dir)
+        
         file_info = {
             'title': title,
-            'file_name': f"{title}.mp3" if self.ffmpeg_available else f"{title}.{ext}",
-            'file_path': self.current_output_path or 'music',
+            'file_name': file_name,
+            'file_path': output_dir,  # Klasörün tam yolu
             'format': 'mp3' if self.ffmpeg_available else ext,
             'url': info.get('webpage_url', info.get('url', '')),
             'file_size': info.get('filesize', 0),

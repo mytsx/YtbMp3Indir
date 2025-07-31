@@ -132,6 +132,7 @@ class MP3YapMainWindow(QMainWindow):
         self.queue_widget = QueueWidget()
         self.queue_widget.start_download.connect(self.process_queue_item)
         self.queue_widget.queue_started.connect(lambda: setattr(self, 'is_queue_mode', True))
+        self.queue_widget.queue_paused.connect(self.on_queue_paused)
         self.tab_widget.addTab(self.queue_widget, "Kuyruk")
         
         # Ana widget olarak tab widget'ı ayarla
@@ -749,6 +750,19 @@ class MP3YapMainWindow(QMainWindow):
             elif self.is_queue_mode:
                 # Normal kuyruk modunda ise, bir sonraki öğeyi al
                 QTimer.singleShot(500, lambda: self.queue_widget.start_queue())
+    
+    def on_queue_paused(self):
+        """Kuyruk duraklatıldığında"""
+        self.is_queue_mode = False
+        # Özel indirme listesini de temizle
+        self.selected_download_queue.clear()
+        # "queued" durumundaki öğeleri "pending"e çevir
+        items = self.queue_widget.db.get_queue_items()
+        for item in items:
+            if item['status'] == 'queued':
+                self.queue_widget.db.update_queue_status(item['id'], 'pending')
+        # Tabloyu yenile
+        self.queue_widget.load_queue()
     
     def on_tab_changed(self, index):
         """Tab değiştiğinde çağrılır"""

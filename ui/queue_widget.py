@@ -14,6 +14,7 @@ class QueueWidget(QWidget):
     start_download = pyqtSignal(dict)  # Kuyruktan indirme başlat
     queue_updated = pyqtSignal()  # Kuyruk güncellendiğinde
     queue_started = pyqtSignal()  # Normal kuyruk başlatıldığında
+    queue_paused = pyqtSignal()  # Kuyruk duraklatıldığında
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -352,6 +353,8 @@ class QueueWidget(QWidget):
         """Kuyruğu duraklat"""
         self.start_button.setEnabled(True)
         self.pause_button.setEnabled(False)
+        # Kuyruk modunu kapat
+        self.queue_paused.emit()  # Ana pencereye duraklatıldığını bildir
     
     def clear_completed(self):
         """Tamamlananları temizle"""

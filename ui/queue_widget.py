@@ -65,17 +65,21 @@ class QueueWidget(QWidget):
         
         # Tablo
         self.table = QTableWidget()
-        self.table.setColumnCount(6)
+        self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels([
-            "Sıra", "URL/Başlık", "Durum", 
-            "Eklenme Zamanı", "İşlem", ""
+            "URL/Başlık", "Durum", 
+            "Eklenme Zamanı", "İşlem"
         ])
         
         # Tablo ayarları
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
-        self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.table.horizontalHeader().setStretchLastSection(False)
+        # URL/Başlık sütunu genişlesin, diğerleri içerik kadar olsun
+        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)  # URL/Başlık
+        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)  # Durum
+        self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)  # Eklenme Zamanı
+        self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)  # İşlem
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_context_menu)
         
@@ -109,41 +113,96 @@ class QueueWidget(QWidget):
         self.table.setRowCount(len(items))
         
         for row, item in enumerate(items):
-            # Sıra
-            self.table.setItem(row, 0, QTableWidgetItem(str(item['position'])))
-            
             # URL/Başlık
             title = item['video_title'] or item['url']
-            self.table.setItem(row, 1, QTableWidgetItem(title))
+            self.table.setItem(row, 0, QTableWidgetItem(title))
             
             # Durum
             status_text = self.get_status_text(item['status'])
             status_item = QTableWidgetItem(status_text)
             self.set_status_style(status_item, item['status'])
-            self.table.setItem(row, 2, status_item)
+            self.table.setItem(row, 1, status_item)
             
             # Eklenme zamanı
             added_time = datetime.fromisoformat(item['added_at']).strftime("%d.%m.%Y %H:%M")
-            self.table.setItem(row, 3, QTableWidgetItem(added_time))
+            self.table.setItem(row, 2, QTableWidgetItem(added_time))
             
-            # İşlem butonları
+            # İşlem butonları - geçmiş tabındaki gibi kompakt
             action_widget = QWidget()
             action_layout = QHBoxLayout()
-            action_layout.setContentsMargins(0, 0, 0, 0)
+            action_layout.setContentsMargins(4, 2, 4, 2)
+            action_layout.setSpacing(2)
             
             # Yukarı taşı
             up_button = QPushButton("↑")
-            up_button.setMaximumWidth(30)
+            up_button.setFixedSize(28, 28)
+            up_button.setToolTip("Yukarı Taşı")
+            up_button.setStyleSheet("""
+                QPushButton {
+                    background-color: #2196F3;
+                    color: white;
+                    border: 1px solid #1976D2;
+                    border-radius: 4px;
+                    font-size: 16px;
+                    font-weight: bold;
+                    padding: 2px;
+                }
+                QPushButton:hover {
+                    background-color: #1976D2;
+                    border-color: #0D47A1;
+                }
+                QPushButton:pressed {
+                    background-color: #0D47A1;
+                }
+            """)
             up_button.clicked.connect(lambda checked, id=item['id']: self.move_up(id))
             
             # Aşağı taşı
             down_button = QPushButton("↓")
-            down_button.setMaximumWidth(30)
+            down_button.setFixedSize(28, 28)
+            down_button.setToolTip("Aşağı Taşı")
+            down_button.setStyleSheet("""
+                QPushButton {
+                    background-color: #2196F3;
+                    color: white;
+                    border: 1px solid #1976D2;
+                    border-radius: 4px;
+                    font-size: 16px;
+                    font-weight: bold;
+                    padding: 2px;
+                }
+                QPushButton:hover {
+                    background-color: #1976D2;
+                    border-color: #0D47A1;
+                }
+                QPushButton:pressed {
+                    background-color: #0D47A1;
+                }
+            """)
             down_button.clicked.connect(lambda checked, id=item['id']: self.move_down(id))
             
             # Sil
-            delete_button = QPushButton("X")
-            delete_button.setMaximumWidth(30)
+            delete_button = QPushButton("×")
+            delete_button.setFixedSize(28, 28)
+            delete_button.setToolTip("Kuyruktan Kaldır")
+            delete_button.setStyleSheet("""
+                QPushButton {
+                    background-color: #f44336;
+                    color: white;
+                    border: 1px solid #d32f2f;
+                    border-radius: 4px;
+                    font-size: 18px;
+                    font-weight: bold;
+                    padding: 2px;
+                }
+                QPushButton:hover {
+                    background-color: #d32f2f;
+                    border-color: #b71c1c;
+                }
+                QPushButton:pressed {
+                    background-color: #b71c1c;
+                }
+            """)
             delete_button.clicked.connect(lambda checked, id=item['id']: self.delete_item(id))
             
             action_layout.addWidget(up_button)
@@ -151,11 +210,10 @@ class QueueWidget(QWidget):
             action_layout.addWidget(delete_button)
             action_widget.setLayout(action_layout)
             
-            self.table.setCellWidget(row, 4, action_widget)
+            self.table.setCellWidget(row, 3, action_widget)
             
-            # Gizli ID sakla
-            self.table.setItem(row, 5, QTableWidgetItem(str(item['id'])))
-            self.table.setColumnHidden(5, True)
+            # ID'yi ilk sütundaki item'a userData olarak sakla
+            self.table.item(row, 0).setData(Qt.UserRole, item['id'])
         
         # İstatistikleri güncelle
         self.update_statistics()
@@ -202,6 +260,9 @@ class QueueWidget(QWidget):
     
     def start_queue(self):
         """Kuyruğu başlat"""
+        # İndiriliyor durumunda kalmış olanları düzelt
+        self.db.reset_stuck_downloads()
+        
         # Sıradaki öğeyi al
         next_item = self.db.get_next_queue_item()
         if next_item:
@@ -219,6 +280,8 @@ class QueueWidget(QWidget):
     def clear_completed(self):
         """Tamamlananları temizle"""
         count = self.db.clear_queue('completed')
+        # Kalan öğelerin pozisyonlarını yeniden düzenle
+        self.db.reorder_queue_positions()
         self.load_queue()
         QMessageBox.information(self, "Bilgi", f"{count} tamamlanmış indirme kaldırıldı.")
     
@@ -275,8 +338,8 @@ class QueueWidget(QWidget):
         
         menu = QMenu()
         
-        # Seçili öğenin ID'sini al
-        item_id = int(self.table.item(self.table.currentRow(), 6).text())
+        # Seçili öğenin ID'sini userData'dan al
+        item_id = self.table.item(self.table.currentRow(), 0).data(Qt.UserRole)
         
         # Menü öğeleri
         retry_action = menu.addAction("Tekrar Dene")

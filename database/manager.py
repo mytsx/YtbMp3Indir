@@ -325,18 +325,6 @@ class DatabaseManager:
             conn.commit()
             return cursor.rowcount > 0
     
-    def update_queue_position(self, queue_id: int, new_position: int) -> bool:
-        """Kuyruk öğesinin pozisyonunu güncelle"""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                UPDATE download_queue 
-                SET position = ?
-                WHERE id = ?
-            ''', (new_position, queue_id))
-            conn.commit()
-            return cursor.rowcount > 0
-    
     def remove_from_queue(self, queue_id: int) -> bool:
         """Kuyruktan öğe soft delete yap"""
         with sqlite3.connect(self.db_path) as conn:
@@ -369,3 +357,42 @@ class DatabaseManager:
             ''')
             row = cursor.fetchone()
             return dict(row) if row else None
+    
+    def update_queue_position(self, queue_id: int, new_position: int) -> bool:
+        """Kuyruk öğesinin pozisyonunu güncelle"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('UPDATE download_queue SET position = ? WHERE id = ?', 
+                         (new_position, queue_id))
+            conn.commit()
+            return cursor.rowcount > 0
+    
+    def reset_stuck_downloads(self) -> int:
+        """İndiriliyor durumunda kalmış öğeleri bekliyor durumuna döndür"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE download_queue 
+                SET status = 'pending' 
+                WHERE status = 'downloading' AND is_deleted = 0
+            ''')
+            conn.commit()
+            return cursor.rowcount
+    
+    def reorder_queue_positions(self) -> None:
+        """Kuyruk pozisyonlarını yeniden düzenle"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            # Tüm aktif öğeleri pozisyona göre sırala
+            cursor.execute('''
+                SELECT id FROM download_queue 
+                WHERE is_deleted = 0 
+                ORDER BY position ASC
+            ''')
+            items = cursor.fetchall()
+            
+            # Yeni pozisyonları ata
+            for idx, (item_id,) in enumerate(items, 1):
+                cursor.execute('UPDATE download_queue SET position = ? WHERE id = ?', 
+                             (idx, item_id))
+            conn.commit()

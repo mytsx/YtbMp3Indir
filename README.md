@@ -1,5 +1,17 @@
 # YouTube MP3 İndirici 🎵
 
+[![GitHub Release](https://img.shields.io/github/v/release/mytsx/mp3yap?style=for-the-badge&logo=github&color=brightgreen)](https://github.com/mytsx/mp3yap/releases/latest)
+[![Download](https://img.shields.io/badge/İNDİR-v2.1.0-blue?style=for-the-badge&logo=download)](https://github.com/mytsx/mp3yap/releases/tag/v2.1.0)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE.txt)
+
+## 📦 Hızlı İndirme
+
+**🚀 [En Son Sürümü İndir (v2.1.0)](https://github.com/mytsx/mp3yap/releases/tag/v2.1.0)**
+
+Windows için hazırlanmış installer dosyasını indirin ve çalıştırın. Kurulum sırasında MIT lisansını kabul etmeniz gerekmektedir.
+
+---
+
 **Sürüm 2.1** - YouTube videolarını MP3 formatında indirmenizi sağlayan modern ve kullanıcı dostu bir masaüstü uygulaması.
 
 > ✨ **Yeni**: Thread güvenliği iyileştirmeleri, yapılandırılabilir cache yönetimi, gelişmiş kuyruk kontrolü ve performans optimizasyonları!
@@ -170,4 +182,29 @@ Uygulama, işlem durumunu emoji'lerle gösterir:
 
 ## 📄 Lisans
 
-Bu proje açık kaynaklıdır ve kişisel kullanım içindir.
+Bu proje MIT lisansı altında dağıtılmaktadır. Detaylar için [LICENSE.txt](LICENSE.txt) dosyasına bakınız.
+
+## 👨‍💻 Geliştirici
+
+**Mehmet Yerli**
+
+- 📧 **İletişim:** [iletisim@mehmetyerli.com](mailto:iletisim@mehmetyerli.com)
+- 🌐 **Web Sitesi:** [mehmetyerli.com](https://mehmetyerli.com)
+- 💻 **GitHub:** [github.com/mytsx](https://github.com/mytsx)
+- 📱 **Bu Proje:** [github.com/mytsx/mp3yap](https://github.com/mytsx/mp3yap)
+
+## ⚠️ Sorumluluk Reddi
+
+Bu yazılım hiçbir garanti verilmeksizin "olduğu gibi" sağlanmaktadır. Yazılımın kullanımından doğacak herhangi bir zarar veya hasardan geliştirici sorumlu tutulamaz. Kullanıcılar, indirdikleri içeriklerin telif hakları konusunda sorumludur.
+
+---
+
+<div align="center">
+
+**🎵 Youtube Mp3 İndir - Mehmet Yerli tarafından geliştirilmiştir**
+
+[![GitHub](https://img.shields.io/badge/GitHub-mytsx-black?style=flat&logo=github)](https://github.com/mytsx)
+[![Website](https://img.shields.io/badge/Website-mehmetyerli.com-blue?style=flat&logo=globe)](https://mehmetyerli.com)
+[![Email](https://img.shields.io/badge/Email-iletisim%40mehmetyerli.com-red?style=flat&logo=gmail)](mailto:iletisim@mehmetyerli.com)
+
+</div>

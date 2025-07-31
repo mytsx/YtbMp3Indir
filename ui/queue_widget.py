@@ -508,12 +508,12 @@ class QueueWidget(QWidget):
         # Veritabanından öğeleri al
         items = self.db.get_queue_items()
         
+        # İndirilebilir öğeleri filtrele
         for item_id in item_ids:
             queue_item = next((item for item in items if item['id'] == item_id), None)
             if queue_item and queue_item['status'] in ['pending', 'failed']:
-                # İlk öğeyi hemen başlat
+                # Her birini ayrı ayrı indir sinyali gönder
                 self.start_download.emit(queue_item)
-                break  # Sadece ilkini başlat, diğerleri sırayla gelecek
     
     def delete_selected(self, item_ids):
         """Seçili öğeleri sil"""

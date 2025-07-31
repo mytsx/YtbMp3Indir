@@ -43,6 +43,9 @@ class MP3YapMainWindow(QMainWindow):
         self.url_cache = {}  # URL -> info dict
         self.last_checked_urls = set()  # Son kontrol edilen URL'ler
         
+        # Özel indirme listesi (sadece seçilenler için)
+        self.selected_download_queue = []  # Sadece seçili öğeleri indirmek için
+        
         # Sinyaller ve downloader
         self.signals = DownloadSignals()
         self.downloader = Downloader(self.signals)
@@ -651,6 +654,12 @@ class MP3YapMainWindow(QMainWindow):
     
     def process_queue_item(self, queue_item):
         """Kuyruktan gelen öğeyi işle"""
+        # Eğer başka bir indirme devam ediyorsa, bu öğeyi özel listeye ekle
+        if hasattr(self, 'current_queue_item') and self.current_queue_item:
+            if queue_item not in self.selected_download_queue:
+                self.selected_download_queue.append(queue_item)
+            return
+        
         # İndirme durumunu güncelle
         self.queue_widget.update_download_status(queue_item['id'], 'downloading')
         
@@ -698,13 +707,31 @@ class MP3YapMainWindow(QMainWindow):
             # Geçmişi güncelle
             if hasattr(self, 'history_widget'):
                 self.history_widget.load_history()
+            
+            # Mevcut indirmeyi temizle
+            self.current_queue_item = None
+            
+            # Özel listede bekleyen varsa onu başlat
+            if self.selected_download_queue:
+                next_item = self.selected_download_queue.pop(0)
+                # Kısa bir gecikme ile sonrakini başlat
+                QTimer.singleShot(500, lambda: self.process_queue_item(next_item))
     
     def queue_download_error(self, filename, error):
         """Kuyruk indirmesinde hata oluştuğunda"""
-        if hasattr(self, 'current_queue_item'):
+        if hasattr(self, 'current_queue_item') and self.current_queue_item:
             self.queue_widget.update_download_status(
                 self.current_queue_item['id'], 'failed', error
             )
+            
+            # Mevcut indirmeyi temizle
+            self.current_queue_item = None
+            
+            # Özel listede bekleyen varsa onu başlat
+            if self.selected_download_queue:
+                next_item = self.selected_download_queue.pop(0)
+                # Kısa bir gecikme ile sonrakini başlat
+                QTimer.singleShot(500, lambda: self.process_queue_item(next_item))
     
     def on_tab_changed(self, index):
         """Tab değiştiğinde çağrılır"""

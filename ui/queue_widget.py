@@ -224,8 +224,8 @@ class QueueWidget(QWidget):
             action_layout.setContentsMargins(4, 2, 4, 2)
             action_layout.setSpacing(2)
             
-            # Hemen indir butonu - sadece pending ve failed durumları için
-            if item['status'] in ['pending', 'failed']:
+            # Hemen indir butonu - pending, failed ve queued durumları için
+            if item['status'] in ['pending', 'failed', 'queued']:
                 download_button = QPushButton("⬇")
                 download_button.setFixedSize(28, 28)
                 download_button.setToolTip("Şimdi İndir")
@@ -288,6 +288,7 @@ class QueueWidget(QWidget):
         """Durum metnini döndür"""
         status_map = {
             'pending': 'Bekliyor',
+            'queued': 'İndirilecek',
             'downloading': 'İndiriliyor',
             'converting': 'Dönüştürülüyor',
             'completed': 'Tamamlandı',
@@ -300,6 +301,11 @@ class QueueWidget(QWidget):
         """Durum stilini ayarla"""
         if status == 'pending':
             item.setForeground(Qt.darkGray)
+        elif status == 'queued':
+            item.setForeground(Qt.darkCyan)
+            font = item.font()
+            font.setBold(True)
+            item.setFont(font)
         elif status == 'downloading':
             item.setForeground(Qt.blue)
         elif status == 'converting':
@@ -499,7 +505,7 @@ class QueueWidget(QWidget):
         items = self.db.get_queue_items()
         queue_item = next((item for item in items if item['id'] == item_id), None)
         
-        if queue_item and queue_item['status'] in ['pending', 'failed']:
+        if queue_item and queue_item['status'] in ['pending', 'failed', 'queued']:
             # İndirme sinyali gönder
             self.start_download.emit(queue_item)
     
@@ -511,7 +517,7 @@ class QueueWidget(QWidget):
         # İndirilebilir öğeleri filtrele
         for item_id in item_ids:
             queue_item = next((item for item in items if item['id'] == item_id), None)
-            if queue_item and queue_item['status'] in ['pending', 'failed']:
+            if queue_item and queue_item['status'] in ['pending', 'failed', 'queued']:
                 # Her birini ayrı ayrı indir sinyali gönder
                 self.start_download.emit(queue_item)
     

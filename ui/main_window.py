@@ -658,6 +658,8 @@ class MP3YapMainWindow(QMainWindow):
         if hasattr(self, 'current_queue_item') and self.current_queue_item:
             if queue_item not in self.selected_download_queue:
                 self.selected_download_queue.append(queue_item)
+                # Durumu "İndirilecek" olarak güncelle
+                self.queue_widget.update_download_status(queue_item['id'], 'queued')
             return
         
         # İndirme durumunu güncelle

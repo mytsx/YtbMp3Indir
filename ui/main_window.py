@@ -121,6 +121,7 @@ class MP3YapMainWindow(QMainWindow):
         """Kullanıcı arayüzünü oluştur"""
         # Ana widget olarak tab widget kullan
         self.tab_widget = QTabWidget()
+        self.tab_widget.setTabPosition(QTabWidget.North)  # Tabları üstte ortala
         
         # İndirme sekmesi
         download_tab = self.create_download_tab()
@@ -140,6 +141,34 @@ class MP3YapMainWindow(QMainWindow):
         self.queue_widget.queue_started.connect(lambda: setattr(self, 'is_queue_mode', True))
         self.queue_widget.queue_paused.connect(self.on_queue_paused)
         self.tab_widget.addTab(self.queue_widget, "Kuyruk")
+        
+        # Tab bar'ı ortalamak için
+        tab_bar = self.tab_widget.tabBar()
+        tab_bar.setExpanding(False)
+        
+        # Tab bar'ı gerçekten ortalamak için stil
+        self.tab_widget.setStyleSheet("""
+            QTabWidget::pane {
+                border: 1px solid #C0C0C0;
+            }
+            QTabBar::tab {
+                background: #E1E1E1;
+                border: 1px solid #C0C0C0;
+                padding: 6px 12px;
+                margin-right: 2px;
+                min-width: 60px;
+            }
+            QTabBar::tab:selected {
+                background: #FFFFFF;
+                border-bottom-color: #FFFFFF;
+            }
+            QTabBar::tab:hover {
+                background: #F0F0F0;
+            }
+            QTabWidget::tab-bar {
+                alignment: center;
+            }
+        """)
         
         # Ana widget olarak tab widget'ı ayarla
         self.setCentralWidget(self.tab_widget)

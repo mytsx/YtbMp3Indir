@@ -57,20 +57,20 @@ class HistoryWidget(QWidget):
         
         self.button_style_delete = """
             QPushButton {
-                background-color: #f44336;
+                background-color: #ff7979;
                 color: white;
-                border: 1px solid #d32f2f;
+                border: 1px solid #e17575;
                 border-radius: 4px;
                 font-size: 20px;
                 font-weight: bold;
                 padding: 2px;
             }
             QPushButton:hover {
-                background-color: #d32f2f;
-                border-color: #b71c1c;
+                background-color: #e17575;
+                border-color: #d63031;
             }
             QPushButton:pressed {
-                background-color: #b71c1c;
+                background-color: #d63031;
             }
         """
         
@@ -111,13 +111,18 @@ class HistoryWidget(QWidget):
         self.clear_button.setStyleSheet("""
             QPushButton {
                 padding: 5px 10px;
-                background-color: #ff5252;
+                background-color: #ff7979;
                 color: white;
-                border: 1px solid #d32f2f;
+                border: 1px solid #e17575;
                 border-radius: 4px;
+                font-weight: bold;
             }
             QPushButton:hover {
-                background-color: #d32f2f;
+                background-color: #e17575;
+                border-color: #d63031;
+            }
+            QPushButton:pressed {
+                background-color: #d63031;
             }
         """)
         search_layout.addWidget(self.clear_button)

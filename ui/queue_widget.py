@@ -54,20 +54,20 @@ class QueueWidget(QWidget):
         
         self.button_style_delete = """
             QPushButton {
-                background-color: #f44336;
+                background-color: #ff7979;
                 color: white;
-                border: 1px solid #d32f2f;
+                border: 1px solid #e17575;
                 border-radius: 4px;
                 font-size: 18px;
                 font-weight: bold;
                 padding: 2px;
             }
             QPushButton:hover {
-                background-color: #d32f2f;
-                border-color: #b71c1c;
+                background-color: #e17575;
+                border-color: #d63031;
             }
             QPushButton:pressed {
-                background-color: #b71c1c;
+                background-color: #d63031;
             }
         """
         
@@ -228,8 +228,8 @@ class QueueWidget(QWidget):
             
             # Hemen indir butonu - pending, failed ve queued durumları için
             if item['status'] in ['pending', 'failed', 'queued']:
-                download_button = QPushButton("⬇")
-                download_button.setFixedSize(28, 28)
+                download_button = QPushButton("İndir")
+                download_button.setFixedSize(50, 28)
                 download_button.setToolTip("Şimdi İndir")
                 download_button.setStyleSheet("""
                     QPushButton {

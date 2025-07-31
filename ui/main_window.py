@@ -5,8 +5,7 @@ import yt_dlp
 from PyQt5.QtWidgets import (QMainWindow, QTextEdit, QPushButton, 
                             QVBoxLayout, QHBoxLayout, QWidget, QLabel, 
                             QProgressBar, QMessageBox, QMenuBar, QMenu,
-                            QAction, QTabWidget, QGraphicsDropShadowEffect,
-                            QApplication)
+                            QAction, QTabWidget, QApplication)
 from PyQt5.QtGui import QDesktopServices, QColor
 from PyQt5.QtCore import QUrl, QTimer, QThread, pyqtSignal
 from core.downloader import Downloader, DownloadSignals
@@ -25,12 +24,7 @@ class MP3YapMainWindow(QMainWindow):
         self.setWindowTitle("YouTube MP3 İndirici")
         self.setGeometry(100, 100, 800, 600)
         
-        # Pencereye gölge efekti ekle
-        shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(20)
-        shadow.setColor(QColor(0, 0, 0, 80))
-        shadow.setOffset(0, 0)
-        self.setGraphicsEffect(shadow)
+        # Gölge efektini kaldırdık - tablolarda sorun yaratıyor
         
         # Config ve Database
         self.config = Config()

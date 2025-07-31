@@ -16,6 +16,64 @@ class HistoryWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.db_manager = DatabaseManager()
+        
+        # Buton stilleri (bir kere tanımla)
+        self.button_style_browser = """
+            QPushButton {
+                background-color: #2196F3;
+                color: white;
+                border: 1px solid #1976D2;
+                border-radius: 4px;
+                font-size: 16px;
+                padding: 2px;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+                border-color: #0D47A1;
+            }
+            QPushButton:pressed {
+                background-color: #0D47A1;
+            }
+        """
+        
+        self.button_style_redownload = """
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                border: 1px solid #45a049;
+                border-radius: 4px;
+                font-size: 18px;
+                font-weight: bold;
+                padding: 2px;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+                border-color: #388e3c;
+            }
+            QPushButton:pressed {
+                background-color: #388e3c;
+            }
+        """
+        
+        self.button_style_delete = """
+            QPushButton {
+                background-color: #f44336;
+                color: white;
+                border: 1px solid #d32f2f;
+                border-radius: 4px;
+                font-size: 20px;
+                font-weight: bold;
+                padding: 2px;
+            }
+            QPushButton:hover {
+                background-color: #d32f2f;
+                border-color: #b71c1c;
+            }
+            QPushButton:pressed {
+                background-color: #b71c1c;
+            }
+        """
+        
         self.setup_ui()
         self.load_history()
     
@@ -145,23 +203,7 @@ class HistoryWidget(QWidget):
             browser_btn.setText("🌐")  # Globe emoji
             browser_btn.setToolTip("Tarayıcıda Aç")
             browser_btn.setFixedSize(28, 28)
-            browser_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #2196F3;
-                    color: white;
-                    border: 1px solid #1976D2;
-                    border-radius: 4px;
-                    font-size: 16px;
-                    padding: 2px;
-                }
-                QPushButton:hover {
-                    background-color: #1976D2;
-                    border-color: #0D47A1;
-                }
-                QPushButton:pressed {
-                    background-color: #0D47A1;
-                }
-            """)
+            browser_btn.setStyleSheet(self.button_style_browser)
             browser_btn.clicked.connect(lambda checked, url=record['url']: self.open_in_browser(url))
             actions_layout.addWidget(browser_btn)
             
@@ -170,24 +212,7 @@ class HistoryWidget(QWidget):
             redownload_btn.setText("↻")  # Reload symbol
             redownload_btn.setToolTip("Tekrar İndir")
             redownload_btn.setFixedSize(28, 28)
-            redownload_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #4CAF50;
-                    color: white;
-                    border: 1px solid #45a049;
-                    border-radius: 4px;
-                    font-size: 18px;
-                    font-weight: bold;
-                    padding: 2px;
-                }
-                QPushButton:hover {
-                    background-color: #45a049;
-                    border-color: #388e3c;
-                }
-                QPushButton:pressed {
-                    background-color: #388e3c;
-                }
-            """)
+            redownload_btn.setStyleSheet(self.button_style_redownload)
             redownload_btn.clicked.connect(lambda checked, url=record['url']: self.redownload(url))
             actions_layout.addWidget(redownload_btn)
             
@@ -196,25 +221,7 @@ class HistoryWidget(QWidget):
             delete_btn.setText("×")  # Simple X character
             delete_btn.setToolTip("Geçmişten Sil")
             delete_btn.setFixedSize(28, 28)
-            delete_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #f44336;
-                    color: white;
-                    border: 1px solid #d32f2f;
-                    border-radius: 4px;
-                    font-size: 20px;
-                    font-weight: bold;
-                    padding: 0px;
-                    padding-bottom: 2px;
-                }
-                QPushButton:hover {
-                    background-color: #d32f2f;
-                    border-color: #c62828;
-                }
-                QPushButton:pressed {
-                    background-color: #c62828;
-                }
-            """)
+            delete_btn.setStyleSheet(self.button_style_delete)
             delete_btn.clicked.connect(lambda checked, id=record['id']: self.delete_record(id))
             actions_layout.addWidget(delete_btn)
             

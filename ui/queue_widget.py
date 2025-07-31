@@ -29,6 +29,45 @@ class QueueWidget(QWidget):
         """Arayüzü oluştur"""
         layout = QVBoxLayout()
         
+        # Buton stilleri (bir kere tanımla)
+        self.button_style_up_down = """
+            QPushButton {
+                background-color: #2196F3;
+                color: white;
+                border: 1px solid #1976D2;
+                border-radius: 4px;
+                font-size: 16px;
+                font-weight: bold;
+                padding: 2px;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+                border-color: #0D47A1;
+            }
+            QPushButton:pressed {
+                background-color: #0D47A1;
+            }
+        """
+        
+        self.button_style_delete = """
+            QPushButton {
+                background-color: #f44336;
+                color: white;
+                border: 1px solid #d32f2f;
+                border-radius: 4px;
+                font-size: 18px;
+                font-weight: bold;
+                padding: 2px;
+            }
+            QPushButton:hover {
+                background-color: #d32f2f;
+                border-color: #b71c1c;
+            }
+            QPushButton:pressed {
+                background-color: #b71c1c;
+            }
+        """
+        
         # Üst kontrol paneli
         control_layout = QHBoxLayout()
         
@@ -143,72 +182,21 @@ class QueueWidget(QWidget):
             up_button = QPushButton("↑")
             up_button.setFixedSize(28, 28)
             up_button.setToolTip("Yukarı Taşı")
-            up_button.setStyleSheet("""
-                QPushButton {
-                    background-color: #2196F3;
-                    color: white;
-                    border: 1px solid #1976D2;
-                    border-radius: 4px;
-                    font-size: 16px;
-                    font-weight: bold;
-                    padding: 2px;
-                }
-                QPushButton:hover {
-                    background-color: #1976D2;
-                    border-color: #0D47A1;
-                }
-                QPushButton:pressed {
-                    background-color: #0D47A1;
-                }
-            """)
+            up_button.setStyleSheet(self.button_style_up_down)
             up_button.clicked.connect(lambda checked, id=item['id']: self.move_up(id))
             
             # Aşağı taşı
             down_button = QPushButton("↓")
             down_button.setFixedSize(28, 28)
             down_button.setToolTip("Aşağı Taşı")
-            down_button.setStyleSheet("""
-                QPushButton {
-                    background-color: #2196F3;
-                    color: white;
-                    border: 1px solid #1976D2;
-                    border-radius: 4px;
-                    font-size: 16px;
-                    font-weight: bold;
-                    padding: 2px;
-                }
-                QPushButton:hover {
-                    background-color: #1976D2;
-                    border-color: #0D47A1;
-                }
-                QPushButton:pressed {
-                    background-color: #0D47A1;
-                }
-            """)
+            down_button.setStyleSheet(self.button_style_up_down)
             down_button.clicked.connect(lambda checked, id=item['id']: self.move_down(id))
             
             # Sil
             delete_button = QPushButton("×")
             delete_button.setFixedSize(28, 28)
             delete_button.setToolTip("Kuyruktan Kaldır")
-            delete_button.setStyleSheet("""
-                QPushButton {
-                    background-color: #f44336;
-                    color: white;
-                    border: 1px solid #d32f2f;
-                    border-radius: 4px;
-                    font-size: 18px;
-                    font-weight: bold;
-                    padding: 2px;
-                }
-                QPushButton:hover {
-                    background-color: #d32f2f;
-                    border-color: #b71c1c;
-                }
-                QPushButton:pressed {
-                    background-color: #b71c1c;
-                }
-            """)
+            delete_button.setStyleSheet(self.button_style_delete)
             delete_button.clicked.connect(lambda checked, id=item['id']: self.delete_item(id))
             
             action_layout.addWidget(up_button)

@@ -87,6 +87,21 @@ class Downloader:
         """İndirme ilerlemesini takip eden fonksiyon"""
         # İptal kontrolü
         if not self.is_running:
+            # Clean up partial files
+            if 'filename' in d:
+                filename = d['filename']
+                # Remove .part file if exists
+                if os.path.exists(filename + '.part'):
+                    try:
+                        os.remove(filename + '.part')
+                    except:
+                        pass
+                # Remove incomplete file
+                if os.path.exists(filename) and d['status'] == 'downloading':
+                    try:
+                        os.remove(filename)
+                    except:
+                        pass
             # Raise DownloadError to stop the download
             raise yt_dlp.DownloadError("İndirme iptal edildi")
             
@@ -132,19 +147,22 @@ class Downloader:
                 }],
                 'postprocessor_hooks': [self.postprocessor_hook],
                 'outtmpl': os.path.join(output_path, '%(title)s.%(ext)s'),
-                'ignoreerrors': True,
+                'ignoreerrors': False,  # Don't ignore errors for better control
                 'noplaylist': False,
                 'progress_hooks': [self.download_progress_hook],
                 'prefer_ffmpeg': True,
+                'continuedl': False,  # Don't continue partial downloads
+                'noprogress': False,
             }
         else:
             # FFmpeg yoksa orijinal formatta indir
             ydl_opts = {
                 'format': 'bestaudio/best',
                 'outtmpl': os.path.join(output_path, '%(title)s.%(ext)s'),
-                'ignoreerrors': True,
+                'ignoreerrors': False,  # Don't ignore errors for better control
                 'noplaylist': False,
                 'progress_hooks': [self.download_progress_hook],
+                'continuedl': False,  # Don't continue partial downloads
             }
             self.signals.status_update.emit("Uyarı: FFmpeg bulunamadı. Dosyalar orijinal formatta indirilecek.")
         
@@ -215,11 +233,21 @@ class Downloader:
             self.signals.status_update.emit(f"URL {i}/{len(urls)} işleniyor")
             success = self.process_url(url, output_path)
             
-            if not success and not self.is_running:
-                break
+            if not success:
+                # If cancelled, stop all downloads
+                if not self.is_running:
+                    self.signals.status_update.emit("İndirme iptal edildi")
+                    break
         
+        # Check if it was cancelled
+        was_cancelled = not self.is_running
         self.is_running = False
-        self.signals.status_update.emit("🎉 Tüm indirmeler tamamlandı!")
+        
+        # Show appropriate final message
+        if was_cancelled:
+            self.signals.status_update.emit("İndirme iptal edildi")
+        else:
+            self.signals.status_update.emit("🎉 Tüm indirmeler tamamlandı!")
 
     def stop(self):
         """İndirmeyi durdur"""
@@ -227,8 +255,24 @@ class Downloader:
         # Cancel current download if exists
         if self.ydl:
             try:
-                # This will raise an exception in the progress hook
-                self.ydl._num_downloads = 0
+                # Force stop by setting internal flags
+                if hasattr(self.ydl, 'params'):
+                    self.ydl.params['break_on_reject'] = True
+                    self.ydl.params['ignoreerrors'] = False
             except:
                 pass
+        
+        # Clean up music directory from .part files
+        try:
+            music_dir = self.current_output_path or 'music'
+            if os.path.exists(music_dir):
+                for file in os.listdir(music_dir):
+                    if file.endswith('.part') or file.endswith('.ytdl'):
+                        try:
+                            os.remove(os.path.join(music_dir, file))
+                        except:
+                            pass
+        except:
+            pass
+            
         self.signals.status_update.emit("İndirme iptal ediliyor...")

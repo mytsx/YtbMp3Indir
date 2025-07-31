@@ -1,4 +1,5 @@
 import os
+import re
 import threading
 from PyQt5.QtWidgets import (QMainWindow, QTextEdit, QPushButton, 
                             QVBoxLayout, QHBoxLayout, QWidget, QLabel, 
@@ -11,6 +12,7 @@ from ui.settings_dialog import SettingsDialog
 from ui.history_widget import HistoryWidget
 from ui.queue_widget import QueueWidget
 from utils.config import Config
+from database.manager import DatabaseManager
 
 
 class MP3YapMainWindow(QMainWindow):
@@ -28,8 +30,9 @@ class MP3YapMainWindow(QMainWindow):
         shadow.setOffset(0, 0)
         self.setGraphicsEffect(shadow)
         
-        # Config
+        # Config ve Database
         self.config = Config()
+        self.db_manager = DatabaseManager()
         
         # Instance attributes initialization
         self.url_text: QTextEdit
@@ -265,12 +268,29 @@ class MP3YapMainWindow(QMainWindow):
         button_layout.addWidget(self.clear_button)
         button_layout.addWidget(self.open_folder_button)
         
+        # URL durum çubuğu
+        self.url_status_bar = QLabel("")
+        self.url_status_bar.setStyleSheet("""
+            QLabel {
+                padding: 8px;
+                background-color: #f5f5f5;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                font-size: 12px;
+            }
+        """)
+        self.url_status_bar.setVisible(False)
+        
         # Layout'a widget'ları ekle
         layout.addWidget(url_label)
         layout.addWidget(self.url_text)
         layout.addLayout(status_layout)
         layout.addLayout(progress_layout)
         layout.addLayout(button_layout)
+        layout.addWidget(self.url_status_bar)
+        
+        # URL değişikliklerini dinle
+        self.url_text.textChanged.connect(self.check_urls)
         
         widget.setLayout(layout)
         return widget
@@ -473,6 +493,144 @@ class MP3YapMainWindow(QMainWindow):
         """URL metin alanını temizle"""
         self.url_text.clear()
         self.status_label.setText("URL listesi temizlendi")
+        self.url_status_bar.setVisible(False)
+    
+    def check_urls(self):
+        """URL'leri kontrol et ve durum göster"""
+        urls = self.url_text.toPlainText().strip().split('\n')
+        urls = [url.strip() for url in urls if url.strip()]
+        
+        if not urls:
+            self.url_status_bar.setVisible(False)
+            return
+        
+        # URL sayısını göster
+        valid_urls = []
+        youtube_pattern = r'(https?://)?(www\.)?(youtube\.com/(watch\?v=|embed/|v/)|youtu\.be/)[\w-]+'
+        
+        for url in urls:
+            if re.match(youtube_pattern, url):
+                valid_urls.append(url)
+        
+        # Durum mesajını oluştur
+        status_parts = []
+        
+        # Geçerli URL sayısı
+        if valid_urls:
+            status_parts.append(f"✓ {len(valid_urls)} geçerli URL")
+        
+        # Geçersiz URL sayısı
+        invalid_count = len(urls) - len(valid_urls)
+        if invalid_count > 0:
+            status_parts.append(f"✗ {invalid_count} geçersiz URL")
+        
+        # Veritabanında kontrol et
+        already_downloaded = 0
+        files_exist = 0
+        files_missing = 0
+        
+        for url in valid_urls:
+            # Veritabanında var mı kontrol et
+            existing = self.db_manager.search_downloads(url)
+            if existing:
+                already_downloaded += 1
+                # En son indirilen kaydı kontrol et (birden fazla olabilir)
+                latest_record = existing[0]  # En yeni kayıt
+                
+                # Dosya yolunu kontrol et
+                file_found = False
+                
+                # file_path genellikle klasör yolu, file_name dosya adı
+                if latest_record.get('file_path') and latest_record.get('file_name'):
+                    # Tam dosya yolunu oluştur
+                    full_file_path = os.path.join(latest_record['file_path'], latest_record['file_name'])
+                    if os.path.exists(full_file_path):
+                        file_found = True
+                
+                # Alternatif kontroller
+                if not file_found and latest_record.get('file_name'):
+                    # music klasöründe kontrol et
+                    music_path = os.path.join('music', latest_record['file_name'])
+                    if os.path.exists(music_path):
+                        file_found = True
+                    
+                    # Absolute music path
+                    abs_music_path = os.path.join(os.getcwd(), 'music', latest_record['file_name'])
+                    if not file_found and os.path.exists(abs_music_path):
+                        file_found = True
+                
+                if file_found:
+                    files_exist += 1
+                else:
+                    files_missing += 1
+        
+        if files_exist > 0:
+            status_parts.append(f"✓ {files_exist} dosya mevcut")
+        
+        if files_missing > 0:
+            status_parts.append(f"⚠ {files_missing} dosya eksik")
+        
+        if already_downloaded > files_exist + files_missing:
+            # Dosya yolu olmayan kayıtlar var
+            unknown = already_downloaded - files_exist - files_missing
+            status_parts.append(f"? {unknown} dosya yolu bilinmiyor")
+        
+        # Durum çubuğunu güncelle
+        if status_parts:
+            self.url_status_bar.setText(" | ".join(status_parts))
+            self.url_status_bar.setVisible(True)
+            
+            # Renk ayarla
+            if files_exist > 0:
+                # Kırmızı - dosyalar zaten mevcut
+                self.url_status_bar.setStyleSheet("""
+                    QLabel {
+                        padding: 8px;
+                        background-color: #ffebee;
+                        border: 1px solid #ef5350;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        color: #c62828;
+                    }
+                """)
+            elif files_missing > 0:
+                # Sarı - daha önce indirilmiş ama dosya yok
+                self.url_status_bar.setStyleSheet("""
+                    QLabel {
+                        padding: 8px;
+                        background-color: #fff3e0;
+                        border: 1px solid #ff9800;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        color: #e65100;
+                    }
+                """)
+            elif invalid_count > 0:
+                # Gri - geçersiz URL var
+                self.url_status_bar.setStyleSheet("""
+                    QLabel {
+                        padding: 8px;
+                        background-color: #f5f5f5;
+                        border: 1px solid #9e9e9e;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        color: #616161;
+                    }
+                """)
+            else:
+                # Yeşil - her şey tamam
+                self.url_status_bar.setStyleSheet("""
+                    QLabel {
+                        padding: 8px;
+                        background-color: #e8f5e9;
+                        border: 1px solid #4caf50;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        color: #2e7d32;
+                    }
+                """)
+        else:
+            self.url_status_bar.setVisible(False)
     
     def closeEvent(self, a0):
         """Pencere kapatılırken"""

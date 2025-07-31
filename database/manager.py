@@ -117,9 +117,9 @@ class DatabaseManager:
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT * FROM download_history 
-                WHERE video_title LIKE ? OR channel_name LIKE ?
+                WHERE video_title LIKE ? OR channel_name LIKE ? OR url LIKE ?
                 ORDER BY downloaded_at DESC
-            ''', (f'%{query}%', f'%{query}%'))
+            ''', (f'%{query}%', f'%{query}%', f'%{query}%'))
             
             return [dict(row) for row in cursor.fetchall()]
     

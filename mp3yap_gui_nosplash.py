@@ -7,6 +7,10 @@ Splash screen olmadan doğrudan açılan versiyon
 import sys
 import os
 
+# macOS environment variables
+if sys.platform == 'darwin':
+    os.environ['QT_MAC_WANTS_LAYER'] = '1'
+
 # Modül yolunu ekle
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 

@@ -1,8 +1,8 @@
 # YouTube MP3 İndirici 🎵
 
-**Sürüm 2.0** - YouTube videolarını MP3 formatında indirmenizi sağlayan modern ve kullanıcı dostu bir masaüstü uygulaması.
+**Sürüm 2.1** - YouTube videolarını MP3 formatında indirmenizi sağlayan modern ve kullanıcı dostu bir masaüstü uygulaması.
 
-> ✨ **Yeni**: Soft delete, gelişmiş kuyruk sistemi, playlist önizleme, URL otomatik kontrolü ve çok daha fazlası!
+> ✨ **Yeni**: Thread güvenliği iyileştirmeleri, yapılandırılabilir cache yönetimi, gelişmiş kuyruk kontrolü ve performans optimizasyonları!
 
 ## ✨ Özellikler
 
@@ -32,10 +32,13 @@
 
 ### 🛠️ Teknik Özellikler
 - 🚀 FFmpeg otomatik kurulum (static-ffmpeg ile)
-- 🧵 Thread-safe indirme işlemleri
+- 🧵 Thread-safe indirme işlemleri (iyileştirilmiş)
 - 🔧 Hata yönetimi ve logging
 - 📋 Playlist bilgi önizleme
 - 🎯 URL eşleşme kontrolü
+- 💾 Yapılandırılabilir URL cache yönetimi (100-2000 arası)
+- ⚡ Performans optimizasyonları
+- 🔒 Gelişmiş bellek yönetimi
 
 ## 🛠️ Gereksinimler
 
@@ -102,6 +105,8 @@ Uygulama, işlem durumunu emoji'lerle gösterir:
 - İndirme sırasında uygulama donmaz (thread kullanımı)
 - URL'ler yapıştırılınca otomatik geçerlilik kontrolü yapılır
 - İndirme tamamlandığında URL alanı otomatik temizlenir
+- Kuyruktan spesifik öğeleri seçerek indirebilirsiniz
+- Performans için URL cache boyutunu ayarlayabilirsiniz
 
 ### 🗄️ Veritabanı
 - Tüm indirme geçmişi SQLite veritabanında saklanır
@@ -109,11 +114,14 @@ Uygulama, işlem durumunu emoji'lerle gösterir:
 - İndirme istatistikleri otomatik hesaplanır
 - Aynı URL'den birden fazla indirme kaydı tutulabilir
 
-### 🔧 Gelişmiş Özellikler
-- **Kuyruk Sistemi**: İndirmeleri sıraya alıp sonra işleyebilir
+#### 🔧 Gelişmiş Özellikler
+- **Kuyruk Sistemi**: İndirmeleri sıraya alıp sonra işleyebilir, spesifik öğeleri seçerek indirebilir
 - **İptal Özelliği**: İndirmeleri güvenli şekilde durdurup kısmi dosyaları temizler
 - **URL Eşleşme**: Daha önce indirilen URL'ler otomatik algılanır
 - **Playlist Önizleme**: Liste URL'leri yapıştırınca video sayısı gösterilir
+- **Bellek Yönetimi**: URL cache boyutu ayarlanabilir (Ayarlar > Performans)
+- **Gelişmiş Arama**: Geçmiş ve kuyruk sekmelerinde arama yapabilir
+- **Çoklu Seçim**: Kuyruktan birden fazla öğe seçip indirebilir
 
 ## 📱 Arayüz Sekmeleri
 
@@ -133,9 +141,26 @@ Uygulama, işlem durumunu emoji'lerle gösterir:
 
 ### 📋 Kuyruk Sekmesi
 - İndirme kuyruğu yönetimi
+- Arama ve filtreleme özellikleri
+- Spesifik öğeleri indirme (tek veya çoklu seçim)
 - Öncelik ayarlama
-- Sıralama değiştirme
+- Sıralama değiştirme (yukarı/aşağı taşıma)
 - Otomatik kuyruk işleme
+- Duraklatma ve devam ettirme
+
+## ⚙️ Ayarlar
+
+### İndirme Ayarları
+- **Ses Kalitesi**: 128, 192, 320 kbps seçenekleri
+- **İndirme Konumu**: Özel klasör seçimi
+- **Eşzamanlı İndirme**: 1-5 arası ayarlanabilir
+- **Playlist Limiti**: Maksimum video sayısı
+- **URL Cache Limiti**: 100-2000 arası ayarlanabilir
+
+### Uygulama Ayarları
+- **Tema**: Açık/Koyu tema desteği
+- **Bildirimler**: Ses ve klasör açma ayarları
+- **Geçmiş Saklama**: 30, 60, 90 gün veya süresiz
 
 ## 🐛 Bilinen Sorunlar
 

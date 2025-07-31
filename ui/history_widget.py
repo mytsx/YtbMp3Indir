@@ -88,10 +88,13 @@ class HistoryWidget(QWidget):
         
         # Tablo ayarları
         header = self.table.horizontalHeader()
+        header.setStretchLastSection(False)  # Son sütun gereksiz genişlemesin
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)  # Tarih
         header.setSectionResizeMode(1, QHeaderView.Stretch)  # Başlık sütunu genişlesin
-        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(5, QHeaderView.Fixed)  # İşlemler sütunu sabit genişlik
-        self.table.setColumnWidth(5, 100)  # İşlemler sütunu genişliği
+        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)  # Kanal
+        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)  # Format
+        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)  # Boyut
+        header.setSectionResizeMode(5, QHeaderView.ResizeToContents)  # İşlemler
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)  # Düzenleme kapalı
@@ -272,3 +275,15 @@ class HistoryWidget(QWidget):
             count = self.db_manager.clear_history()
             QMessageBox.information(self, "Başarılı", f"{count} kayıt silindi.")
             self.load_history()
+    
+    def mousePressEvent(self, a0):
+        """Mouse tıklaması olduğunda"""
+        # Tıklanan widget'ı kontrol et
+        widget = self.childAt(a0.pos())
+        
+        # Eğer tablo dışında bir yere tıklandıysa seçimi temizle
+        if widget != self.table and not self.table.isAncestorOf(widget):
+            self.table.clearSelection()
+        
+        # Normal event işlemeye devam et
+        super().mousePressEvent(a0)

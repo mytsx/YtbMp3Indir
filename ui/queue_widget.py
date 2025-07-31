@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,
                            QTableWidgetItem, QPushButton, QLabel, QHeaderView,
                            QMenu, QMessageBox, QComboBox)
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QFont, QMouseEvent
 from database.manager import DatabaseManager
 from datetime import datetime
 
@@ -407,3 +407,15 @@ class QueueWidget(QWidget):
         # Tamamlandıysa veya başarısızsa, sıradakini başlat
         if status in ['completed', 'failed'] and self.pause_button.isEnabled():
             QTimer.singleShot(1000, self.start_queue)
+    
+    def mousePressEvent(self, a0: QMouseEvent):
+        """Mouse tıklaması olduğunda"""
+        # Tıklanan widget'ı kontrol et
+        widget = self.childAt(a0.pos())
+        
+        # Eğer tablo dışında bir yere tıklandıysa seçimi temizle
+        if widget != self.table and not self.table.isAncestorOf(widget):
+            self.table.clearSelection()
+        
+        # Normal event işlemeye devam et
+        super().mousePressEvent(a0)

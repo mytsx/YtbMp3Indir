@@ -64,8 +64,8 @@ Windows için hazırlanmış installer dosyasını indirin ve çalıştırın. K
 
 ### 1. Depoyu klonlayın:
 ```bash
-git clone https://github.com/kullaniciadi/mp3yap.git
-cd mp3yap
+git clone https://github.com/mytsx/YtbMp3Indir.git
+cd YtbMp3Indir
 ```
 
 ### 2. Bağımlılıkları yükleyin:

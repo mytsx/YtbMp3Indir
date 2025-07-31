@@ -17,6 +17,26 @@ class DownloadSignals(QObject):
 class Downloader:
     """YouTube video indirme ve MP3 dönüştürme sınıfı"""
     
+    # Logger interface for yt-dlp
+    def debug(self, msg):
+        """Called by yt-dlp for debug messages"""
+        # Parse playlist download messages
+        if '[download] Downloading item' in msg:
+            import re
+            match = re.search(r'Downloading item (\d+) of (\d+)', msg)
+            if match:
+                self.current_item_index = int(match.group(1))
+                self.playlist_total = int(match.group(2))
+                self.signals.status_update.emit(f"📥 [{self.current_item_index}/{self.playlist_total}] Playlist indiriliyor...")
+    
+    def warning(self, msg):
+        """Called by yt-dlp for warnings"""
+        pass
+    
+    def error(self, msg):
+        """Called by yt-dlp for errors"""
+        self.signals.status_update.emit(f"❌ Hata: {msg}")
+    
     def __init__(self, signals):
         self.signals = signals
         self.is_running = False
@@ -24,6 +44,11 @@ class Downloader:
         self.db_manager = DatabaseManager()
         self.ydl = None  # Current YoutubeDL instance for cancellation
         self.current_output_path = None  # Store output path for hooks
+        # Playlist tracking
+        self.playlist_info = {}  # URL -> playlist info
+        self.current_playlist_index = {}  # URL -> current index
+        self.current_item_index = 0  # Track current item in playlist
+        self.playlist_total = 0  # Total items in playlist
         # Static FFmpeg'i yükle ve kullan
         try:
             static_ffmpeg.add_paths()
@@ -71,17 +96,56 @@ class Downloader:
         # Mark as saved
         self._saved_videos.add(video_id)
         
-        # Log individual video
-        self.signals.status_update.emit(f"✅ Kaydedildi: {title}")
+        # Check if this is part of a playlist
+        if self.current_url in self.playlist_info:
+            playlist_data = self.playlist_info[self.current_url]
+            current_idx = self.current_playlist_index.get(self.current_url, 0) + 1
+            self.current_playlist_index[self.current_url] = current_idx
+            total_videos = playlist_data.get('count', 1)
+            playlist_title = playlist_data.get('title', 'Playlist')
+            
+            # Log with playlist progress
+            self.signals.status_update.emit(
+                f"✅ [{current_idx}/{total_videos}] {playlist_title}: {title}"
+            )
+        # Also check info directly from yt-dlp
+        elif info.get('playlist_index') and info.get('n_entries'):
+            current_idx = info['playlist_index']
+            total_videos = info['n_entries']
+            playlist_title = info.get('playlist_title', info.get('playlist', 'Playlist'))
+            
+            # Log with playlist progress
+            self.signals.status_update.emit(
+                f"✅ [{current_idx}/{total_videos}] {playlist_title}: {title}"
+            )
+        else:
+            # Log individual video
+            self.signals.status_update.emit(f"✅ Kaydedildi: {title}")
     
     def postprocessor_hook(self, d):
         """Dönüştürme işlemi için hook"""
+        # Check if this is part of a playlist
+        status_prefix = ""
+        # First check our tracked values from logger
+        if self.current_item_index > 0 and self.playlist_total > 0:
+            status_prefix = f"[{self.current_item_index}/{self.playlist_total}] "
+        elif self.current_url in self.playlist_info:
+            playlist_data = self.playlist_info[self.current_url]
+            current_idx = self.current_playlist_index.get(self.current_url, 0) + 1
+            total_videos = playlist_data.get('count', 1)
+            status_prefix = f"[{current_idx}/{total_videos}] "
+        # Also check info_dict for playlist info
+        elif 'info_dict' in d and d['info_dict'].get('playlist_index') and d['info_dict'].get('n_entries'):
+            current_idx = d['info_dict']['playlist_index']
+            total_videos = d['info_dict']['n_entries']
+            status_prefix = f"[{current_idx}/{total_videos}] "
+            
         if d['status'] == 'started':
-            self.signals.status_update.emit(f"🔄 MP3'e dönüştürülüyor...")
+            self.signals.status_update.emit(f"🔄 {status_prefix}MP3'e dönüştürülüyor...")
         elif d['status'] == 'processing':
-            self.signals.status_update.emit(f"🔄 Dönüştürme devam ediyor...")
+            self.signals.status_update.emit(f"🔄 {status_prefix}Dönüştürme devam ediyor...")
         elif d['status'] == 'finished':
-            self.signals.status_update.emit(f"✨ Dönüştürme tamamlandı!")
+            self.signals.status_update.emit(f"✨ {status_prefix}Dönüştürme tamamlandı!")
     
     def download_progress_hook(self, d):
         """İndirme ilerlemesini takip eden fonksiyon"""
@@ -107,18 +171,51 @@ class Downloader:
             
         if d['status'] == 'downloading':
             filename = os.path.basename(d['filename'])
+            
+            # Check if this is part of a playlist
+            status_prefix = ""
+            # First check our tracked values from logger
+            if self.current_item_index > 0 and self.playlist_total > 0:
+                status_prefix = f"[{self.current_item_index}/{self.playlist_total}] "
+            # Check if this is part of a playlist via URL tracking
+            elif self.current_url in self.playlist_info:
+                playlist_data = self.playlist_info[self.current_url]
+                current_idx = self.current_playlist_index.get(self.current_url, 0) + 1
+                total_videos = playlist_data.get('count', 1)
+                status_prefix = f"[{current_idx}/{total_videos}] "
+            # Also check info_dict for playlist info
+            elif 'info_dict' in d and d['info_dict'].get('playlist_index') and d['info_dict'].get('n_entries'):
+                current_idx = d['info_dict']['playlist_index']
+                total_videos = d['info_dict']['n_entries']
+                status_prefix = f"[{current_idx}/{total_videos}] "
+                # Update our tracking
+                if self.current_url:
+                    self.current_playlist_index[self.current_url] = current_idx - 1
+            
             if 'total_bytes' in d and d['total_bytes'] > 0:
                 percent = d['downloaded_bytes'] / d['total_bytes'] * 100
-                self.signals.progress.emit(filename, percent, f"%{percent:.1f}")
-                self.signals.status_update.emit(f"📥 İndiriliyor: {filename} - %{percent:.1f}")
+                progress_text = f"{status_prefix}%{percent:.1f}" if status_prefix else f"%{percent:.1f}"
+                self.signals.progress.emit(filename, percent, progress_text)
+                self.signals.status_update.emit(f"📥 {status_prefix}İndiriliyor: {filename} - %{percent:.1f}")
             else:
                 mb_downloaded = d['downloaded_bytes']/1024/1024
-                self.signals.progress.emit(filename, -1, f"{mb_downloaded:.1f} MB")
-                self.signals.status_update.emit(f"📥 İndiriliyor: {filename} - {mb_downloaded:.1f} MB")
+                progress_text = f"{status_prefix}{mb_downloaded:.1f} MB" if status_prefix else f"{mb_downloaded:.1f} MB"
+                self.signals.progress.emit(filename, -1, progress_text)
+                self.signals.status_update.emit(f"📥 {status_prefix}İndiriliyor: {filename} - {mb_downloaded:.1f} MB")
         elif d['status'] == 'finished':
             filename = os.path.basename(d['filename'])
+            # Check playlist info for finished status
+            status_prefix = ""
+            # First check our tracked values from logger
+            if self.current_item_index > 0 and self.playlist_total > 0:
+                status_prefix = f"[{self.current_item_index}/{self.playlist_total}] "
+            elif 'info_dict' in d and d['info_dict'].get('playlist_index') and d['info_dict'].get('n_entries'):
+                current_idx = d['info_dict']['playlist_index']
+                total_videos = d['info_dict']['n_entries']
+                status_prefix = f"[{current_idx}/{total_videos}] "
+            
             if filename.endswith('.webm') or filename.endswith('.m4a') or filename.endswith('.opus'):
-                self.signals.status_update.emit(f"✅ İndirme tamamlandı, MP3'e dönüştürülüyor...")
+                self.signals.status_update.emit(f"✅ {status_prefix}İndirme tamamlandı, MP3'e dönüştürülüyor...")
             else:
                 self.signals.finished.emit(filename)
             
@@ -153,6 +250,7 @@ class Downloader:
                 'prefer_ffmpeg': True,
                 'continuedl': False,  # Don't continue partial downloads
                 'noprogress': False,
+                'logger': self,  # Use self as logger to capture messages
             }
         else:
             # FFmpeg yoksa orijinal formatta indir
@@ -163,6 +261,7 @@ class Downloader:
                 'noplaylist': False,
                 'progress_hooks': [self.download_progress_hook],
                 'continuedl': False,  # Don't continue partial downloads
+                'logger': self,  # Use self as logger to capture messages
             }
             self.signals.status_update.emit("Uyarı: FFmpeg bulunamadı. Dosyalar orijinal formatta indirilecek.")
         
@@ -176,7 +275,15 @@ class Downloader:
                         # Playlist - individual videos are saved via hooks
                         playlist_title = info.get('title', 'İsimsiz Playlist')
                         entry_count = len(info.get('entries', []))
-                        self.signals.status_update.emit(f"✅ Playlist tamamlandı: {playlist_title} ({entry_count} video)")
+                        
+                        # Store playlist info
+                        self.playlist_info[url] = {
+                            'title': playlist_title,
+                            'count': entry_count
+                        }
+                        self.current_playlist_index[url] = 0
+                        
+                        self.signals.status_update.emit(f"📋 Playlist başlatıldı: {playlist_title} ({entry_count} video)")
                     else:
                         # Single video - save to database if not already saved by hooks
                         title = info.get('title', 'Unknown')
@@ -214,13 +321,17 @@ class Downloader:
             return False
         finally:
             self.ydl = None  # Always clear the reference
+            self.current_item_index = 0
+            self.playlist_total = 0
 
     def download_all(self, urls, output_path):
         """Tüm URL'leri indir"""
         self.is_running = True
         
-        # Reset saved videos set
+        # Reset saved videos set and playlist tracking
         self._saved_videos = set()
+        self.playlist_info = {}
+        self.current_playlist_index = {}
         
         # Çıktı dizinini oluştur
         os.makedirs(output_path, exist_ok=True)

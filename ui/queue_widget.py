@@ -65,9 +65,9 @@ class QueueWidget(QWidget):
         
         # Tablo
         self.table = QTableWidget()
-        self.table.setColumnCount(7)
+        self.table.setColumnCount(6)
         self.table.setHorizontalHeaderLabels([
-            "Sıra", "URL/Başlık", "Durum", "Öncelik", 
+            "Sıra", "URL/Başlık", "Durum", 
             "Eklenme Zamanı", "İşlem", ""
         ])
         
@@ -122,13 +122,9 @@ class QueueWidget(QWidget):
             self.set_status_style(status_item, item['status'])
             self.table.setItem(row, 2, status_item)
             
-            # Öncelik
-            priority_text = self.get_priority_text(item['priority'])
-            self.table.setItem(row, 3, QTableWidgetItem(priority_text))
-            
             # Eklenme zamanı
             added_time = datetime.fromisoformat(item['added_at']).strftime("%d.%m.%Y %H:%M")
-            self.table.setItem(row, 4, QTableWidgetItem(added_time))
+            self.table.setItem(row, 3, QTableWidgetItem(added_time))
             
             # İşlem butonları
             action_widget = QWidget()
@@ -155,11 +151,11 @@ class QueueWidget(QWidget):
             action_layout.addWidget(delete_button)
             action_widget.setLayout(action_layout)
             
-            self.table.setCellWidget(row, 5, action_widget)
+            self.table.setCellWidget(row, 4, action_widget)
             
             # Gizli ID sakla
-            self.table.setItem(row, 6, QTableWidgetItem(str(item['id'])))
-            self.table.setColumnHidden(6, True)
+            self.table.setItem(row, 5, QTableWidgetItem(str(item['id'])))
+            self.table.setColumnHidden(5, True)
         
         # İstatistikleri güncelle
         self.update_statistics()
@@ -169,6 +165,7 @@ class QueueWidget(QWidget):
         status_map = {
             'pending': 'Bekliyor',
             'downloading': 'İndiriliyor',
+            'converting': 'Dönüştürülüyor',
             'completed': 'Tamamlandı',
             'failed': 'Başarısız',
             'paused': 'Duraklatıldı'
@@ -181,6 +178,8 @@ class QueueWidget(QWidget):
             item.setForeground(Qt.darkGray)
         elif status == 'downloading':
             item.setForeground(Qt.blue)
+        elif status == 'converting':
+            item.setForeground(Qt.darkMagenta)
         elif status == 'completed':
             item.setForeground(Qt.darkGreen)
         elif status == 'failed':

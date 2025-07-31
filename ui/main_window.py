@@ -1,10 +1,12 @@
 import os
 import re
 import threading
+import yt_dlp
 from PyQt5.QtWidgets import (QMainWindow, QTextEdit, QPushButton, 
                             QVBoxLayout, QHBoxLayout, QWidget, QLabel, 
                             QProgressBar, QMessageBox, QMenuBar, QMenu,
-                            QAction, QTabWidget, QGraphicsDropShadowEffect)
+                            QAction, QTabWidget, QGraphicsDropShadowEffect,
+                            QApplication)
 from PyQt5.QtGui import QDesktopServices, QColor
 from PyQt5.QtCore import QUrl, QTimer, QThread, pyqtSignal
 from core.downloader import Downloader, DownloadSignals
@@ -47,6 +49,10 @@ class MP3YapMainWindow(QMainWindow):
         self.signals = DownloadSignals()
         self.downloader = Downloader(self.signals)
         
+        # Kuyruk için ayrı downloader
+        self.queue_signals = DownloadSignals()
+        self.queue_downloader = Downloader(self.queue_signals)
+        
         # Menü çubuğu
         self.setup_menu()
         
@@ -58,6 +64,12 @@ class MP3YapMainWindow(QMainWindow):
         self.signals.finished.connect(self.download_finished)
         self.signals.error.connect(self.download_error)
         self.signals.status_update.connect(self.update_status)
+        
+        # Kuyruk sinyalleri
+        self.queue_signals.progress.connect(self.queue_download_progress)
+        self.queue_signals.finished.connect(self.queue_download_finished)
+        self.queue_signals.error.connect(self.queue_download_error)
+        self.queue_signals.status_update.connect(self.queue_status_update)
     
     def setup_menu(self):
         """Menü çubuğunu oluştur"""
@@ -110,6 +122,9 @@ class MP3YapMainWindow(QMainWindow):
         self.history_widget = HistoryWidget()
         self.history_widget.redownload_signal.connect(self.add_url_to_download)
         self.tab_widget.addTab(self.history_widget, "Geçmiş")
+        
+        # Tab değişikliğini dinle
+        self.tab_widget.currentChanged.connect(self.on_tab_changed)
         
         # Kuyruk sekmesi
         self.queue_widget = QueueWidget()
@@ -378,9 +393,30 @@ class MP3YapMainWindow(QMainWindow):
     
     def update_progress(self, filename, percent, text):
         """İlerleme çubuğunu güncelle"""
-        self.current_file_label.setText(f"Dosya: {filename}")
+        # Playlist progress varsa vurgula
+        if '[' in text and '/' in text:
+            # Playlist progress içeriyor
+            self.current_file_label.setText(f"📋 Playlist İndiriliyor - Dosya: {filename}")
+            self.progress_percent.setStyleSheet("""
+                QLabel {
+                    color: #1976D2;
+                    font-weight: bold;
+                    font-size: 14px;
+                }
+            """)
+        else:
+            self.current_file_label.setText(f"Dosya: {filename}")
+            self.progress_percent.setStyleSheet("""
+                QLabel {
+                    font-size: 12px;
+                }
+            """)
+            
         if percent >= 0:
             self.progress_bar.setValue(int(percent))
+            self.progress_bar.setRange(0, 100)
+        else:
+            self.progress_bar.setRange(0, 0)  # Belirsiz ilerleme
         self.progress_percent.setText(text)
     
     def download_finished(self, filename):
@@ -394,6 +430,29 @@ class MP3YapMainWindow(QMainWindow):
     def update_status(self, status):
         """Durum mesajını güncelle"""
         self.status_label.setText(status)
+        
+        # Playlist progress'i de status bar'da göster
+        if '[' in status and '/' in status and ']' in status:
+            # Playlist progress içeriyor, bunu vurgula
+            import re
+            match = re.search(r'\[(\d+)/(\d+)\]', status)
+            if match:
+                current = match.group(1)
+                total = match.group(2)
+                # Status label'ı renklendir
+                self.status_label.setStyleSheet("""
+                    QLabel {
+                        color: #1976D2;
+                        font-weight: bold;
+                        padding: 5px;
+                        background-color: #E3F2FD;
+                        border-radius: 3px;
+                    }
+                """)
+        else:
+            # Normal durum için stil sıfırla
+            self.status_label.setStyleSheet("")
+        
         # Eğer tüm indirmeler tamamlandıysa butonları güncelle
         if status == "🎉 Tüm indirmeler tamamlandı!" or status == "İndirme durduruldu":
             self.download_button.setEnabled(True)
@@ -426,18 +485,57 @@ class MP3YapMainWindow(QMainWindow):
             QMessageBox.warning(self, "Uyarı", "Lütfen en az bir URL girin!")
             return
         
+        self.status_label.setText("🔄 Video bilgileri alınıyor...")
+        QApplication.processEvents()  # UI güncelleme
+        
+        # yt-dlp seçenekleri
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': 'in_playlist',
+            'ignoreerrors': True,
+            'skip_download': True,
+        }
+        
         # URL'leri kuyruğa ekle
         added_count = 0
         for url in urls:
             try:
-                self.queue_widget.add_to_queue(url)
-                added_count += 1
+                # Video başlığını al
+                video_title = None
+                try:
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        info = ydl.extract_info(url, download=False)
+                        if info:
+                            if info.get('_type') == 'playlist':
+                                # Playlist ise her video için ayrı kayıt
+                                playlist_title = info.get('title', 'İsimsiz Liste')
+                                entries = info.get('entries', [])
+                                for idx, entry in enumerate(entries):
+                                    video_url = entry.get('url', '')
+                                    video_title = entry.get('title', f'Video {idx+1}')
+                                    full_title = f"[{playlist_title}] {video_title}"
+                                    self.queue_widget.add_to_queue(video_url, full_title)
+                                    added_count += 1
+                            else:
+                                # Tek video
+                                video_title = info.get('title', 'İsimsiz Video')
+                                self.queue_widget.add_to_queue(url, video_title)
+                                added_count += 1
+                except Exception as e:
+                    print(f"Video bilgisi alınamadı: {e}")
+                    # Hata durumunda URL ile ekle
+                    self.queue_widget.add_to_queue(url, None)
+                    added_count += 1
+                    
             except Exception as e:
                 print(f"URL eklenirken hata: {e}")
         
         if added_count > 0:
-            QMessageBox.information(self, "Başarılı", 
-                                  f"{added_count} URL kuyruğa eklendi!")
+            self.status_label.setText(f"✅ {added_count} video kuyruğa eklendi")
+            self.url_text.clear()  # URL'leri temizle
+        else:
+            self.status_label.setText("⚠️ Hiçbir video eklenemedi")
             self.url_text.clear()
             # Kuyruk sekmesine geç
             self.tab_widget.setCurrentIndex(2)
@@ -463,10 +561,24 @@ class MP3YapMainWindow(QMainWindow):
         # İndirmeyi başlat
         output_dir = self.config.get('output_directory', 'music')
         download_thread = threading.Thread(
-            target=self.downloader.download_all,
+            target=self.queue_downloader.download_all,
             args=([queue_item['url']], output_dir)
         )
         download_thread.start()
+    
+    def queue_download_progress(self, filename, percent, status):
+        """Kuyruk indirme ilerlemesini güncelle"""
+        # Kuyruk widget'ında ilerleme gösterebiliriz
+        pass
+    
+    def queue_status_update(self, status):
+        """Kuyruk durum güncellemesi"""
+        if hasattr(self, 'current_queue_item') and self.current_queue_item:
+            # Dönüştürme durumunu kontrol et
+            if "MP3'e dönüştürülüyor" in status or "Dönüştürme" in status:
+                self.queue_widget.update_download_status(
+                    self.current_queue_item['id'], 'converting'
+                )
     
     def queue_download_finished(self, filename):
         """Kuyruk indirmesi tamamlandığında"""
@@ -484,6 +596,12 @@ class MP3YapMainWindow(QMainWindow):
             self.queue_widget.update_download_status(
                 self.current_queue_item['id'], 'failed', error
             )
+    
+    def on_tab_changed(self, index):
+        """Tab değiştiğinde çağrılır"""
+        # Geçmiş sekmesi (index 1) seçildiyse yenile
+        if index == 1 and hasattr(self, 'history_widget'):
+            self.history_widget.load_history()
     
     def cancel_download(self):
         """İndirmeyi iptal et"""

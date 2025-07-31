@@ -74,6 +74,7 @@ class QueueWidget(QWidget):
         # Tablo ayarları
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)  # Düzenleme kapalı
         self.table.horizontalHeader().setStretchLastSection(False)
         # URL/Başlık sütunu genişlesin, diğerleri içerik kadar olsun
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)  # URL/Başlık
@@ -115,17 +116,22 @@ class QueueWidget(QWidget):
         for row, item in enumerate(items):
             # URL/Başlık
             title = item['video_title'] or item['url']
-            self.table.setItem(row, 0, QTableWidgetItem(title))
+            title_item = QTableWidgetItem(title)
+            title_item.setFlags(title_item.flags() & ~Qt.ItemIsEditable)  # Düzenleme kapalı
+            self.table.setItem(row, 0, title_item)
             
             # Durum
             status_text = self.get_status_text(item['status'])
             status_item = QTableWidgetItem(status_text)
+            status_item.setFlags(status_item.flags() & ~Qt.ItemIsEditable)  # Düzenleme kapalı
             self.set_status_style(status_item, item['status'])
             self.table.setItem(row, 1, status_item)
             
             # Eklenme zamanı
             added_time = datetime.fromisoformat(item['added_at']).strftime("%d.%m.%Y %H:%M")
-            self.table.setItem(row, 2, QTableWidgetItem(added_time))
+            time_item = QTableWidgetItem(added_time)
+            time_item.setFlags(time_item.flags() & ~Qt.ItemIsEditable)  # Düzenleme kapalı
+            self.table.setItem(row, 2, time_item)
             
             # İşlem butonları - geçmiş tabındaki gibi kompakt
             action_widget = QWidget()

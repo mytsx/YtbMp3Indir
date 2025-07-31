@@ -94,6 +94,7 @@ class HistoryWidget(QWidget):
         self.table.setColumnWidth(5, 100)  # İşlemler sütunu genişliği
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)  # Düzenleme kapalı
         
         layout.addWidget(self.table)
         self.setLayout(layout)

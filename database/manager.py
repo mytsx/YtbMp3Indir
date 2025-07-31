@@ -123,6 +123,19 @@ class DatabaseManager:
             
             return [dict(row) for row in cursor.fetchall()]
     
+    def get_download_by_url(self, url: str) -> List[Dict]:
+        """URL ile tam eşleşen indirmeleri getir"""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT * FROM download_history 
+                WHERE url = ?
+                ORDER BY downloaded_at DESC
+            ''', (url,))
+            
+            return [dict(row) for row in cursor.fetchall()]
+    
     def get_statistics(self) -> Dict:
         """İndirme istatistiklerini getir"""
         with sqlite3.connect(self.db_path) as conn:

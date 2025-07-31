@@ -506,10 +506,24 @@ class MP3YapMainWindow(QMainWindow):
         
         # URL sayısını göster
         valid_urls = []
-        youtube_pattern = r'(https?://)?(www\.)?(youtube\.com/(watch\?v=|embed/|v/)|youtu\.be/)[\w-]+'
         
         for url in urls:
-            if re.match(youtube_pattern, url):
+            # Basit YouTube URL kontrolü
+            if 'youtube.com/watch' in url or 'youtu.be/' in url:
+                # URL'yi normalize et (son kısmı temizle)
+                # youtu.be/VIDEO_ID veya youtube.com/watch?v=VIDEO_ID formatını kontrol et
+                if 'youtu.be/' in url:
+                    # youtu.be/VIDEO_ID formatı
+                    parts = url.split('youtu.be/')
+                    if len(parts) > 1 and len(parts[1]) >= 11:  # YouTube video ID 11 karakter
+                        valid_urls.append(url)
+                elif 'watch?v=' in url:
+                    # youtube.com/watch?v=VIDEO_ID formatı
+                    parts = url.split('watch?v=')
+                    if len(parts) > 1 and len(parts[1]) >= 11:
+                        valid_urls.append(url)
+            elif url.startswith('http') and ('youtube' in url or 'youtu.be' in url):
+                # Diğer YouTube formatları için genel kontrol
                 valid_urls.append(url)
         
         # Durum mesajını oluştur
@@ -530,8 +544,8 @@ class MP3YapMainWindow(QMainWindow):
         files_missing = 0
         
         for url in valid_urls:
-            # Veritabanında var mı kontrol et
-            existing = self.db_manager.search_downloads(url)
+            # Veritabanında var mı kontrol et (tam eşleşme)
+            existing = self.db_manager.get_download_by_url(url)
             if existing:
                 already_downloaded += 1
                 # En son indirilen kaydı kontrol et (birden fazla olabilir)
@@ -565,24 +579,24 @@ class MP3YapMainWindow(QMainWindow):
                     files_missing += 1
         
         if files_exist > 0:
-            status_parts.append(f"✓ {files_exist} dosya mevcut")
+            status_parts.append(f"✓ {files_exist} dosya hem indirilmiş hem de klasörde mevcut")
         
         if files_missing > 0:
-            status_parts.append(f"⚠ {files_missing} dosya eksik")
+            status_parts.append(f"⚠ {files_missing} dosya daha önce indirilmiş ama klasörde bulunamadı")
         
         if already_downloaded > files_exist + files_missing:
             # Dosya yolu olmayan kayıtlar var
             unknown = already_downloaded - files_exist - files_missing
-            status_parts.append(f"? {unknown} dosya yolu bilinmiyor")
+            status_parts.append(f"? {unknown} dosya kaydı eksik bilgi içeriyor")
         
         # Durum çubuğunu güncelle
         if status_parts:
             self.url_status_bar.setText(" | ".join(status_parts))
             self.url_status_bar.setVisible(True)
             
-            # Renk ayarla
-            if files_exist > 0:
-                # Kırmızı - dosyalar zaten mevcut
+            # Renk ayarla - öncelik sırasına göre
+            if invalid_count > 0:
+                # Kırmızı - geçersiz URL var (en kritik)
                 self.url_status_bar.setStyleSheet("""
                     QLabel {
                         padding: 8px;
@@ -593,8 +607,20 @@ class MP3YapMainWindow(QMainWindow):
                         color: #c62828;
                     }
                 """)
+            elif files_exist > 0 and files_missing == 0:
+                # Mavi - tüm dosyalar mevcut (bilgilendirme)
+                self.url_status_bar.setStyleSheet("""
+                    QLabel {
+                        padding: 8px;
+                        background-color: #e3f2fd;
+                        border: 1px solid #2196f3;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        color: #1565c0;
+                    }
+                """)
             elif files_missing > 0:
-                # Sarı - daha önce indirilmiş ama dosya yok
+                # Sarı - dosyalar eksik (yeniden indirilebilir)
                 self.url_status_bar.setStyleSheet("""
                     QLabel {
                         padding: 8px;
@@ -605,20 +631,8 @@ class MP3YapMainWindow(QMainWindow):
                         color: #e65100;
                     }
                 """)
-            elif invalid_count > 0:
-                # Gri - geçersiz URL var
-                self.url_status_bar.setStyleSheet("""
-                    QLabel {
-                        padding: 8px;
-                        background-color: #f5f5f5;
-                        border: 1px solid #9e9e9e;
-                        border-radius: 4px;
-                        font-size: 12px;
-                        color: #616161;
-                    }
-                """)
             else:
-                # Yeşil - her şey tamam
+                # Yeşil - yeni indirmeler için hazır
                 self.url_status_bar.setStyleSheet("""
                     QLabel {
                         padding: 8px;

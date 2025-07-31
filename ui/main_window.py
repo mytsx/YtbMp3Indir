@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import (QMainWindow, QTextEdit, QPushButton,
                             QProgressBar, QMessageBox, QMenuBar, QMenu,
                             QAction, QTabWidget, QGraphicsDropShadowEffect)
 from PyQt5.QtGui import QDesktopServices, QColor
-from PyQt5.QtCore import QUrl
+from PyQt5.QtCore import QUrl, QTimer, QThread, pyqtSignal
 from core.downloader import Downloader, DownloadSignals
 from ui.settings_dialog import SettingsDialog
 from ui.history_widget import HistoryWidget
@@ -290,7 +290,10 @@ class MP3YapMainWindow(QMainWindow):
         layout.addWidget(self.url_status_bar)
         
         # URL değişikliklerini dinle
-        self.url_text.textChanged.connect(self.check_urls)
+        self.url_check_timer = QTimer()
+        self.url_check_timer.setSingleShot(True)
+        self.url_check_timer.timeout.connect(self.check_urls_delayed)
+        self.url_text.textChanged.connect(self.on_url_text_changed)
         
         widget.setLayout(layout)
         return widget
@@ -398,6 +401,10 @@ class MP3YapMainWindow(QMainWindow):
             # Geçmiş sekmesini güncelle
             if hasattr(self, 'history_widget'):
                 self.history_widget.load_history()
+            # İndirme tamamlandıysa URL'leri temizle
+            if status == "🎉 Tüm indirmeler tamamlandı!":
+                self.url_text.clear()
+                self.url_status_bar.setVisible(False)
     
     def add_url_to_download(self, url):
         """Geçmişten URL'yi indirme listesine ekle"""
@@ -495,6 +502,17 @@ class MP3YapMainWindow(QMainWindow):
         self.status_label.setText("URL listesi temizlendi")
         self.url_status_bar.setVisible(False)
     
+    def on_url_text_changed(self):
+        """URL metni değiştiğinde"""
+        # Timer'ı durdur ve yeniden başlat (debounce)
+        self.url_check_timer.stop()
+        self.url_check_timer.start(500)  # 500ms bekle
+    
+    def check_urls_delayed(self):
+        """Gecikmiş URL kontrolü"""
+        # Kontrolü direkt çalıştır (QTimer zaten ana thread'de)
+        self.check_urls()
+    
     def check_urls(self):
         """URL'leri kontrol et ve durum göster"""
         urls = self.url_text.toPlainText().strip().split('\n')
@@ -503,6 +521,22 @@ class MP3YapMainWindow(QMainWindow):
         if not urls:
             self.url_status_bar.setVisible(False)
             return
+        
+        # Playlist URL'si varsa hemen kontrol başlat
+        has_playlist = any('list=' in url for url in urls)
+        if has_playlist:
+            self.url_status_bar.setText("⏳ Playlist bilgisi alınıyor...")
+            self.url_status_bar.setStyleSheet("""
+                QLabel {
+                    padding: 8px;
+                    background-color: #e3f2fd;
+                    border: 1px solid #2196f3;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    color: #1565c0;
+                }
+            """)
+            self.url_status_bar.setVisible(True)
         
         # URL sayısını göster
         valid_urls = []
@@ -527,12 +561,95 @@ class MP3YapMainWindow(QMainWindow):
                 # YouTube URL'si değil
                 pass
         
+        # Liste URL'lerini kontrol et
+        playlist_info = []
+        
+        # yt-dlp'yi dışarıda import et
+        import yt_dlp
+        
+        for url in valid_urls:
+            if 'list=' in url:
+                # Bu bir playlist URL'si - detaylı bilgi al
+                try:
+                    ydl_opts = {
+                        'quiet': True,
+                        'no_warnings': True,
+                        'extract_flat': 'in_playlist',  # Playlist metadata'sını al
+                        'ignoreerrors': True,
+                        'skip_download': True,
+                    }
+                    
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        info = ydl.extract_info(url, download=False)
+                        if info and info.get('_type') == 'playlist':
+                            # Playlist bilgisi
+                            playlist_title = info.get('title', 'İsimsiz Liste')
+                            playlist_size = info.get('playlist_count', 0)
+                            if playlist_size == 0 and 'entries' in info:
+                                playlist_size = len(info['entries'])
+                            uploader = info.get('uploader', info.get('channel', ''))
+                            
+                            # Durum çubuğunu güncelle (thread-safe değil ama basit bilgilendirme için ok)
+                            status_text = f"✓ Playlist bulundu: {playlist_title} - {playlist_size} video"
+                            if uploader:
+                                status_text += f" ({uploader})"
+                            print(f"[PLAYLIST] {status_text}")
+                            
+                            playlist_info.append({
+                                'url': url,
+                                'title': playlist_title,
+                                'count': playlist_size,
+                                'uploader': uploader
+                            })
+                        else:
+                            # Playlist URL'si gibi görünüyor ama değil
+                            playlist_info.append({
+                                'url': url,
+                                'title': 'Tek Video',
+                                'count': 1
+                            })
+                except Exception as e:
+                    # Hata durumunda
+                    print(f"Playlist bilgisi alınamadı: {e}")
+                    playlist_info.append({
+                        'url': url,
+                        'title': 'Bilinmeyen',
+                        'count': 1
+                    })
+            else:
+                # Tek video
+                playlist_info.append({
+                    'url': url,
+                    'title': None,
+                    'count': 1
+                })
+        
         # Durum mesajını oluştur
         status_parts = []
         
-        # Geçerli URL sayısı
+        # Geçerli URL sayısı ve playlist bilgisi
         if valid_urls:
-            status_parts.append(f"✓ {len(valid_urls)} geçerli URL")
+            total_videos = sum(p['count'] for p in playlist_info)
+            playlists = [p for p in playlist_info if p['count'] > 1]
+            
+            if playlists:
+                # Playlist detayları
+                playlist_details = []
+                for p in playlists:
+                    if p['title'] and p['title'] != 'Tek Video':
+                        playlist_details.append(f"{p['title'][:30]}... ({p['count']} video)")
+                
+                if len(playlists) == 1:
+                    p = playlists[0]
+                    playlist_text = f"✓ Playlist: {p.get('title', 'İsimsiz')[:40]}"
+                    if p.get('uploader'):
+                        playlist_text += f" - {p.get('uploader')}"
+                    playlist_text += f" ({p['count']} video)"
+                    status_parts.append(playlist_text)
+                else:
+                    status_parts.append(f"✓ {len(valid_urls)} URL ({len(playlists)} liste, toplam {total_videos} video)")
+            else:
+                status_parts.append(f"✓ {len(valid_urls)} geçerli URL")
         
         # Geçersiz URL sayısı
         invalid_count = len(urls) - len(valid_urls)

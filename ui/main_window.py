@@ -621,10 +621,8 @@ class MP3YapMainWindow(QMainWindow):
             else:
                 msg = f"Tüm videolar ({duplicate_count}) zaten kuyrukta"
             
-            # Hem status_label hem de popup göster
+            # Sadece status_label'da göster, popup açma
             self.status_label.setText(f"UYARI: {msg}")
-            # Popup'ta emoji kullanma, HTML entity sorunu oluyor
-            QMessageBox.warning(self, "Uyarı", msg)
             
             self.status_label.setStyleSheet("""
                 QLabel {
@@ -635,33 +633,8 @@ class MP3YapMainWindow(QMainWindow):
                     font-weight: bold;
                 }
             """)
-            print("[DEBUG] Style ayarlandı")
             
-            # URL kontrolünü durdur - ÖNCELİKLE!
-            self.url_check_timer.stop()
-            print("[DEBUG] URL timer durduruldu")
-            
-            # textChanged sinyalini geçici olarak kapat
-            try:
-                self.url_text.textChanged.disconnect()
-                print("[DEBUG] textChanged sinyali kapatıldı")
-            except:
-                pass
-            
-            # URL'leri temizle
-            print("[DEBUG] URL'ler temizleniyor...")
-            self.url_text.clear()
-            print("[DEBUG] URL'ler temizlendi")
-            
-            # textChanged sinyalini tekrar bağla
-            self.url_text.textChanged.connect(self.on_url_text_changed)
-            print("[DEBUG] textChanged sinyali tekrar bağlandı")
-            
-            # Mesajı koru
-            import time
-            time.sleep(0.1)  # Kısa bekle
-            print(f"[DEBUG] Son mesaj kontrolü: {self.status_label.text()}")
-            
+            # URL'leri SİLME - kullanıcı ana ekranda indirmek isteyebilir
             # Sekme değiştirme YAPMA
             return  # Fonksiyondan çık
         else:
@@ -758,12 +731,9 @@ class MP3YapMainWindow(QMainWindow):
     
     def on_url_text_changed(self):
         """URL metni değiştiğinde"""
-        print("[DEBUG] on_url_text_changed çağrıldı")
-        
         # Eğer duplicate uyarısı varsa timer'ı başlatma
         current_text = self.status_label.text()
         if "kuyrukta" in current_text.lower() and "UYARI:" in current_text:
-            print("[DEBUG] Duplicate uyarısı var, timer başlatılmıyor")
             return
             
         # Timer'ı durdur ve yeniden başlat (debounce)
@@ -777,12 +747,10 @@ class MP3YapMainWindow(QMainWindow):
     
     def check_urls(self):
         """URL'leri kontrol et ve durum göster"""
-        print("[DEBUG check_urls] Çağrıldı")
         urls = self.url_text.toPlainText().strip().split('\n')
         urls = [url.strip() for url in urls if url.strip()]
         
         if not urls:
-            print("[DEBUG check_urls] URL yok, çıkılıyor")
             self.url_status_bar.setVisible(False)
             self.last_checked_urls.clear()
             return

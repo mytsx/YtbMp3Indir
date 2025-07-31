@@ -20,7 +20,7 @@ class MP3YapMainWindow(QMainWindow):
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("MP3 Yap - YouTube İndirici")
+        self.setWindowTitle("YouTube MP3 İndirici")
         self.setGeometry(100, 100, 800, 600)
         
         # Pencereye gölge efekti ekle
@@ -348,8 +348,8 @@ class MP3YapMainWindow(QMainWindow):
     
     def show_about(self):
         """Hakkında dialogunu göster"""
-        QMessageBox.about(self, "MP3 Yap Hakkında",
-            "<h3>MP3 Yap - YouTube İndirici</h3>"
+        QMessageBox.about(self, "YouTube MP3 İndirici Hakkında",
+            "<h3>YouTube MP3 İndirici</h3>"
             "<p>Sürüm 2.0</p>"
             "<p>YouTube videolarını MP3 formatında indirmek için modern ve kullanıcı dostu bir araç.</p>"
             "<p><b>Geliştirici:</b> Mehmet Yerli</p>"

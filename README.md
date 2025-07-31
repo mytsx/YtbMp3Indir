@@ -1,4 +1,4 @@
-# MP3 Yap - YouTube İndirici 🎵
+# YouTube MP3 İndirici 🎵
 
 YouTube videolarını MP3 formatında indirmenizi sağlayan modern ve kullanıcı dostu bir masaüstü uygulaması.
 

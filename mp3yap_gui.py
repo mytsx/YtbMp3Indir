@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-MP3 Yap GUI - YouTube MP3 İndirici
+YouTube MP3 İndirici
 Modern ve kullanıcı dostu YouTube'dan MP3 indirme aracı
 """
 
@@ -19,7 +19,7 @@ def main():
     """Ana uygulama başlatıcı"""
     # print("[MP3YAP] Starting application...")
     app = QApplication(sys.argv)
-    app.setApplicationName("MP3 Yap")
+    app.setApplicationName("YouTube MP3 İndirici")
     
     # Splash screen'i göster
     # print("[MP3YAP] Creating splash screen...")

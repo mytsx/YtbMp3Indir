@@ -123,6 +123,7 @@ class QueueWidget(QWidget):
         # Tablo ayarları
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.table.setSelectionMode(QTableWidget.ExtendedSelection)  # Çoklu seçim aktif
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)  # Düzenleme kapalı
         self.table.horizontalHeader().setStretchLastSection(False)
         # URL/Başlık sütunu genişlesin, diğerleri içerik kadar olsun
@@ -222,6 +223,32 @@ class QueueWidget(QWidget):
             action_layout = QHBoxLayout()
             action_layout.setContentsMargins(4, 2, 4, 2)
             action_layout.setSpacing(2)
+            
+            # Hemen indir butonu - sadece pending ve failed durumları için
+            if item['status'] in ['pending', 'failed']:
+                download_button = QPushButton("▶")
+                download_button.setFixedSize(28, 28)
+                download_button.setToolTip("Şimdi İndir")
+                download_button.setStyleSheet("""
+                    QPushButton {
+                        background-color: #4CAF50;
+                        color: white;
+                        border: 1px solid #45a049;
+                        border-radius: 4px;
+                        font-size: 16px;
+                        font-weight: bold;
+                        padding: 2px;
+                    }
+                    QPushButton:hover {
+                        background-color: #45a049;
+                        border-color: #388e3c;
+                    }
+                    QPushButton:pressed {
+                        background-color: #388e3c;
+                    }
+                """)
+                download_button.clicked.connect(lambda checked, id=item['id']: self.download_now(id))
+                action_layout.addWidget(download_button)
             
             # Yukarı taşı
             up_button = QPushButton("↑")
@@ -372,32 +399,57 @@ class QueueWidget(QWidget):
     
     def show_context_menu(self, position):
         """Sağ tık menüsü göster"""
-        if self.table.currentRow() < 0:
+        selected_rows = set()
+        for item in self.table.selectedItems():
+            selected_rows.add(item.row())
+        
+        if not selected_rows:
             return
         
         menu = QMenu()
         
-        # Seçili öğenin ID'sini userData'dan al
-        item_id = self.table.item(self.table.currentRow(), 0).data(Qt.UserRole)
+        # Seçili öğelerin ID'lerini al
+        selected_ids = []
+        for row in selected_rows:
+            item_id = self.table.item(row, 0).data(Qt.UserRole)
+            selected_ids.append(item_id)
         
         # Menü öğeleri
-        retry_action = menu.addAction("Tekrar Dene")
-        retry_action.triggered.connect(lambda: self.retry_item(item_id))
-        
-        priority_menu = menu.addMenu("Öncelik")
-        high_priority = priority_menu.addAction("Yüksek")
-        high_priority.triggered.connect(lambda: self.set_priority(item_id, 2))
-        
-        normal_priority = priority_menu.addAction("Normal")
-        normal_priority.triggered.connect(lambda: self.set_priority(item_id, 1))
-        
-        low_priority = priority_menu.addAction("Düşük")
-        low_priority.triggered.connect(lambda: self.set_priority(item_id, 0))
-        
-        menu.addSeparator()
-        
-        delete_action = menu.addAction("Sil")
-        delete_action.triggered.connect(lambda: self.delete_item(item_id))
+        if len(selected_ids) == 1:
+            # Tek seçim için menü
+            item_id = selected_ids[0]
+            
+            download_now_action = menu.addAction("▶ Şimdi İndir")
+            download_now_action.triggered.connect(lambda: self.download_now(item_id))
+            
+            menu.addSeparator()
+            
+            retry_action = menu.addAction("Tekrar Dene")
+            retry_action.triggered.connect(lambda: self.retry_item(item_id))
+            
+            priority_menu = menu.addMenu("Öncelik")
+            high_priority = priority_menu.addAction("Yüksek")
+            high_priority.triggered.connect(lambda: self.set_priority(item_id, 2))
+            
+            normal_priority = priority_menu.addAction("Normal")
+            normal_priority.triggered.connect(lambda: self.set_priority(item_id, 1))
+            
+            low_priority = priority_menu.addAction("Düşük")
+            low_priority.triggered.connect(lambda: self.set_priority(item_id, 0))
+            
+            menu.addSeparator()
+            
+            delete_action = menu.addAction("Sil")
+            delete_action.triggered.connect(lambda: self.delete_item(item_id))
+        else:
+            # Çoklu seçim için menü
+            download_selected_action = menu.addAction(f"▶ Seçilenleri İndir ({len(selected_ids)} öğe)")
+            download_selected_action.triggered.connect(lambda: self.download_selected(selected_ids))
+            
+            menu.addSeparator()
+            
+            delete_selected_action = menu.addAction(f"Seçilenleri Sil ({len(selected_ids)} öğe)")
+            delete_selected_action.triggered.connect(lambda: self.delete_selected(selected_ids))
         
         menu.exec_(self.table.mapToGlobal(position))
     
@@ -440,6 +492,40 @@ class QueueWidget(QWidget):
         # Tamamlandıysa veya başarısızsa, sıradakini başlat
         if status in ['completed', 'failed'] and self.pause_button.isEnabled():
             QTimer.singleShot(1000, self.start_queue)
+    
+    def download_now(self, item_id):
+        """Tek öğeyi hemen indir"""
+        # Önce veritabanından öğeyi al
+        items = self.db.get_queue_items()
+        queue_item = next((item for item in items if item['id'] == item_id), None)
+        
+        if queue_item and queue_item['status'] in ['pending', 'failed']:
+            # İndirme sinyali gönder
+            self.start_download.emit(queue_item)
+    
+    def download_selected(self, item_ids):
+        """Seçili öğeleri sırayla indir"""
+        # Veritabanından öğeleri al
+        items = self.db.get_queue_items()
+        
+        for item_id in item_ids:
+            queue_item = next((item for item in items if item['id'] == item_id), None)
+            if queue_item and queue_item['status'] in ['pending', 'failed']:
+                # İlk öğeyi hemen başlat
+                self.start_download.emit(queue_item)
+                break  # Sadece ilkini başlat, diğerleri sırayla gelecek
+    
+    def delete_selected(self, item_ids):
+        """Seçili öğeleri sil"""
+        reply = QMessageBox.question(self, "Onay", 
+                                   f"{len(item_ids)} öğeyi kuyruktan kaldırmak istiyor musunuz?",
+                                   QMessageBox.Yes | QMessageBox.No)
+        
+        if reply == QMessageBox.Yes:
+            for item_id in item_ids:
+                self.db.remove_from_queue(item_id)
+            self.load_queue()
+            self.queue_updated.emit()
     
     def search_queue(self, text):
         """Kuyrukta arama yap"""

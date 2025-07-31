@@ -711,6 +711,14 @@ class MP3YapMainWindow(QMainWindow):
         # Geçmiş sekmesi (index 1) seçildiyse yenile
         if index == 1 and hasattr(self, 'history_widget'):
             self.history_widget.load_history()
+        
+        # İndirme sekmesine (index 0) geri dönüldüğünde
+        if index == 0:
+            # Eğer URL alanı boşsa uyarıları temizle
+            if not self.url_text.toPlainText().strip():
+                self.status_label.clear()
+                self.status_label.setStyleSheet("")  # Varsayılan stile dön
+                self.url_status_bar.setVisible(False)
     
     def cancel_download(self):
         """İndirmeyi iptal et"""
@@ -727,6 +735,15 @@ class MP3YapMainWindow(QMainWindow):
         """URL metin alanını temizle"""
         self.url_text.clear()
         self.status_label.setText("URL listesi temizlendi")
+        self.status_label.setStyleSheet("""
+            QLabel {
+                background-color: #E8F5E9;
+                color: #2E7D32;
+                padding: 5px;
+                border-radius: 3px;
+                font-weight: bold;
+            }
+        """)
         self.url_status_bar.setVisible(False)
     
     def on_url_text_changed(self):

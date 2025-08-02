@@ -3,7 +3,6 @@ MP3 Dönüştürücü Widget
 Herhangi bir dosya türünü (video/ses) MP3'e dönüştürür
 """
 
-import json
 import logging
 import os
 import shutil
@@ -155,7 +154,7 @@ class ConversionWorker(QThread):
     progress = pyqtSignal(int)
     status = pyqtSignal(str, str)  # status_code, data (for translation in UI)
     file_completed = pyqtSignal(str, str, bool)  # input_path, output_path, is_replaced
-    error = pyqtSignal(str, str)  # error_code, data (for translation in UI)
+    error = pyqtSignal(str, object)  # error_code, data (for translation in UI)
     
     # Müzik dosyası uzantıları (bunlar yerinde değiştirilecek)
     AUDIO_EXTENSIONS = {'.wav', '.flac', '.m4a', '.ogg', '.wma', '.aac', '.opus', 
@@ -200,7 +199,7 @@ class ConversionWorker(QThread):
                     "-vn",  # Video stream'i yok say
                     "-acodec", "libmp3lame",
                     "-ab", self.bitrate,
-                    "-ar", "44100",  # Sample rate
+                    "-map_metadata", "0",  # Preserve metadata
                     "-y",  # Üzerine yaz
                     str(output_file)
                 ]
@@ -232,6 +231,13 @@ class ConversionWorker(QThread):
                 
                 # İptal edildi mi kontrol et
                 if not self.is_running:
+                    # Conversion was cancelled, clean up the partial output file.
+                    try:
+                        if output_file.exists():
+                            output_file.unlink()
+                            logger.info(f"Cleaned up partial file: {output_file}")
+                    except OSError as e:
+                        logger.warning(f"Could not clean up partial file {output_file}: {e}")
                     # İptal edildi, bu dosyayı atla
                     continue
                     
@@ -243,7 +249,7 @@ class ConversionWorker(QThread):
                             input_file.unlink()
                             is_replaced = True
                         except OSError as e:
-                            self.error.emit("delete_error", json.dumps([input_file.name, str(e)]))
+                            self.error.emit("delete_error", [input_file.name, str(e)])
                     
                     self.file_completed.emit(str(input_file), str(output_file), is_replaced)
                 else:
@@ -569,7 +575,7 @@ class ConverterWidget(QWidget):
         self.status_label.setText(status_text)
         self.status_label.setStyleSheet("color: #2196F3; padding: 5px;")
         
-    def file_completed(self, input_path, output_path, is_replaced):
+    def file_completed(self, input_path, output_path, is_replaced):  # output_path kept for signal compatibility
         """Dosya tamamlandığında"""
         # O(1) lookup ile hızlı bul
         if input_path in self.file_items:
@@ -598,9 +604,9 @@ class ConverterWidget(QWidget):
             error_text = self.tr("Hata ({}): Dosya dönüştürülemedi. Lütfen dosyanın bozuk olmadığını veya desteklenen bir formatta olduğunu kontrol edin.").format(data)
         elif error_code == "delete_error":
             try:
-                file_name, error_str = json.loads(data)
+                file_name, error_str = data
                 error_text = self.tr("Orijinal dosya silinemedi ({}): {}").format(file_name, error_str)
-            except (json.JSONDecodeError, ValueError):
+            except (ValueError, TypeError):
                 error_text = self.tr("Orijinal dosya silinirken bilinmeyen bir hata oluştu.")
         elif error_code == "subprocess_error":
             error_text = self.tr("Dönüştürme hatası: {}").format(data)

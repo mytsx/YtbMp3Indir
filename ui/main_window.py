@@ -145,7 +145,7 @@ class MP3YapMainWindow(QMainWindow):
         
         # MP3'e Dönüştür sekmesi
         self.converter_widget = ConverterWidget()
-        self.tab_widget.addTab(self.converter_widget, "MP3'e Dönüştür")
+        self.tab_widget.addTab(self.converter_widget, self.tr("MP3'e Dönüştür"))
         
         # Tab bar'ı ortalamak için
         tab_bar = self.tab_widget.tabBar()

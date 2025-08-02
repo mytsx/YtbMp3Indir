@@ -3,6 +3,7 @@ MP3 Dönüştürücü Widget
 Herhangi bir dosya türünü (video/ses) MP3'e dönüştürür
 """
 
+import logging
 import os
 import shutil
 import subprocess
@@ -16,6 +17,9 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                            QLabel, QFileDialog, QListWidget, QListWidgetItem,
                            QProgressBar, QMessageBox, QGroupBox,
                            QCheckBox)
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class DragDropListWidget(QListWidget):
@@ -59,9 +63,9 @@ class DragDropListWidget(QListWidget):
 class ConversionWorker(QThread):
     """Dönüştürme işlemini yapan worker thread"""
     progress = pyqtSignal(int)
-    status = pyqtSignal(str)
+    status = pyqtSignal(str, str)  # status_code, data (for translation in UI)
     file_completed = pyqtSignal(str, str, bool)  # input_path, output_path, is_replaced
-    error = pyqtSignal(str)
+    error = pyqtSignal(str, str)  # error_code, data (for translation in UI)
     
     # Müzik dosyası uzantıları (bunlar yerinde değiştirilecek)
     AUDIO_EXTENSIONS = {'.wav', '.flac', '.m4a', '.ogg', '.wma', '.aac', '.opus', 
@@ -96,8 +100,8 @@ class ConversionWorker(QThread):
                 # Çıktı dosyasını belirle - her zaman aynı yerde MP3 oluştur
                 output_file = input_file.with_suffix('.mp3')
                 
-                # Durum güncelle
-                self.status.emit(self.tr("Dönüştürülüyor: {}").format(input_file.name))
+                # Durum güncelle - send status code and data
+                self.status.emit("converting", input_file.name)
                 
                 # FFmpeg komutu
                 cmd = [
@@ -149,29 +153,25 @@ class ConversionWorker(QThread):
                             input_file.unlink()
                             is_replaced = True
                         except OSError as e:
-                            self.error.emit(self.tr("Orijinal dosya silinemedi ({}): {}").format(input_file.name, str(e)))
+                            self.error.emit("delete_error", f"{input_file.name}|{str(e)}")
                     
                     self.file_completed.emit(str(input_file), str(output_file), is_replaced)
                 else:
-                    # Process sonlandırıldı mı yoksa hata mı kontrol et
-                    if process.returncode < 0:
-                        # Negatif returncode = signal ile sonlandırıldı (iptal edildi)
-                        continue
-                    
-                    # Log the technical error for debugging (if needed)
+                    # Non-zero return code means FFmpeg error (cancellation already handled above)
+                    # Log the technical error for debugging
                     if stderr.strip():
-                        print(f"FFmpeg error for {input_file.name}: {stderr}")
+                        logger.error(f"FFmpeg error for {input_file.name}: {stderr}")
                     
-                    self.error.emit(self.tr("Hata ({}): Dosya dönüştürülemedi. Lütfen dosyanın bozuk olmadığını veya desteklenen bir formatta olduğunu kontrol edin.").format(input_file.name))
+                    self.error.emit("conversion_error", input_file.name)
                 
                 # İlerleme güncelle
                 progress = int((index + 1) / total_files * 100)
                 self.progress.emit(progress)
                 
             except (subprocess.SubprocessError, OSError, ValueError) as e:
-                self.error.emit(self.tr("Dönüştürme hatası: {}").format(str(e)))
+                self.error.emit("subprocess_error", str(e))
                 
-        self.status.emit(self.tr("Dönüştürme tamamlandı!") if self.is_running else self.tr("İptal edildi"))
+        self.status.emit("completed" if self.is_running else "cancelled", "")
         
     def stop(self):
         """Dönüştürmeyi durdur"""
@@ -189,7 +189,7 @@ class ConversionWorker(QThread):
                         self.current_process.kill()
                         self.current_process.wait()
                 except (subprocess.SubprocessError, OSError) as e:
-                    self.error.emit(self.tr("FFmpeg process sonlandırılamadı: {}").format(str(e)))
+                    self.error.emit("terminate_error", str(e))
 
 
 class ConverterWidget(QWidget):
@@ -224,7 +224,7 @@ class ConverterWidget(QWidget):
         
         if not self.ffmpeg_path:
             QMessageBox.warning(
-                None,
+                self,
                 self.tr("FFmpeg Bulunamadı"),
                 self.tr("FFmpeg bulunamadı. MP3 dönüştürme özelliği devre dışı.\n\n"
                        "Lütfen FFmpeg'i yükleyin veya uygulamayı yeniden başlatın.")
@@ -540,9 +540,18 @@ class ConverterWidget(QWidget):
         """İlerleme güncelle"""
         self.progress_bar.setValue(value)
         
-    def update_status(self, status):
-        """Durum güncelle"""
-        self.status_label.setText(status)
+    def update_status(self, status_code, data):
+        """Durum güncelle - translate status codes"""
+        if status_code == "converting":
+            status_text = self.tr("Dönüştürülüyor: {}").format(data)
+        elif status_code == "completed":
+            status_text = self.tr("Dönüştürme tamamlandı!")
+        elif status_code == "cancelled":
+            status_text = self.tr("İptal edildi")
+        else:
+            status_text = data  # Fallback
+            
+        self.status_label.setText(status_text)
         self.status_label.setStyleSheet("color: #2196F3; padding: 5px;")
         
     def file_completed(self, input_path, output_path, is_replaced):
@@ -568,9 +577,21 @@ class ConverterWidget(QWidget):
                 item.setText("✓ {} {} → MP3".format(icon, file_name))
             item.setForeground(QColor("green"))
                 
-    def show_error(self, error):
-        """Hata göster"""
-        QMessageBox.warning(self, self.tr("Hata"), error)
+    def show_error(self, error_code, data):
+        """Hata göster - translate error codes"""
+        if error_code == "conversion_error":
+            error_text = self.tr("Hata ({}): Dosya dönüştürülemedi. Lütfen dosyanın bozuk olmadığını veya desteklenen bir formatta olduğunu kontrol edin.").format(data)
+        elif error_code == "delete_error":
+            parts = data.split("|", 1)
+            error_text = self.tr("Orijinal dosya silinemedi ({}): {}").format(parts[0], parts[1] if len(parts) > 1 else "")
+        elif error_code == "subprocess_error":
+            error_text = self.tr("Dönüştürme hatası: {}").format(data)
+        elif error_code == "terminate_error":
+            error_text = self.tr("FFmpeg process sonlandırılamadı: {}").format(data)
+        else:
+            error_text = data  # Fallback
+            
+        QMessageBox.warning(self, self.tr("Hata"), error_text)
         
     def cancel_conversion(self):
         """Dönüştürme işlemini iptal et"""

@@ -4,16 +4,17 @@ Herhangi bir dosya türünü (video/ses) MP3'e dönüştürür
 """
 
 import os
+import shutil
 import subprocess
 from pathlib import Path
-import shutil
+
 import static_ffmpeg
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
+from PyQt5.QtGui import QDragEnterEvent, QDropEvent, QColor
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                            QLabel, QFileDialog, QListWidget, QListWidgetItem,
                            QProgressBar, QMessageBox, QGroupBox,
                            QCheckBox)
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
-from PyQt5.QtGui import QDragEnterEvent, QDropEvent, QColor
 
 
 class DragDropListWidget(QListWidget):
@@ -108,17 +109,19 @@ class ConversionWorker(QThread):
                     str(output_file)
                 ]
                 
-                # FFmpeg'i çalıştır
-                self.current_process = subprocess.Popen(
-                    cmd,
-                    stdout=subprocess.DEVNULL,  # stdout kullanılmıyor, buffer dolmasını önle
-                    stderr=subprocess.PIPE
-                )
-                
-                # İşlem tamamlanana kadar bekle (byte olarak al)
-                stdout_bytes, stderr_bytes = self.current_process.communicate()
-                process = self.current_process
-                self.current_process = None
+                # FFmpeg'i çalıştır - context manager ready yapı
+                try:
+                    self.current_process = subprocess.Popen(
+                        cmd,
+                        stdout=subprocess.DEVNULL,  # stdout kullanılmıyor, buffer dolmasını önle
+                        stderr=subprocess.PIPE
+                    )
+                    
+                    # İşlem tamamlanana kadar bekle (byte olarak al)
+                    stdout_bytes, stderr_bytes = self.current_process.communicate()
+                    process = self.current_process
+                finally:
+                    self.current_process = None
                 
                 # Decode stderr - errors='replace' ile geçersiz karakterler görünür kalır
                 stderr = stderr_bytes.decode('utf-8', errors='replace')
@@ -180,20 +183,24 @@ class ConverterWidget(QWidget):
         self.selected_files = set()
         self.file_items = {}  # Dict for O(1) lookup: {file_path: QListWidgetItem}
     
-    def setup_ffmpeg(self):
-        """FFmpeg kurulumunu kontrol et ve yükle"""
+    def detect_ffmpeg(self):
+        """FFmpeg'i bul ve yolunu döndür"""
+        # Önce static-ffmpeg'i dene
         try:
-            # Önce static-ffmpeg'i dene
             static_ffmpeg.add_paths()
             ffmpeg_path = shutil.which('ffmpeg')
             if ffmpeg_path and os.path.exists(ffmpeg_path):
-                self.ffmpeg_path = ffmpeg_path
-                return
-        except Exception:
-            pass
+                return ffmpeg_path
+        except (ImportError, AttributeError, OSError) as e:
+            print(f"Static FFmpeg setup failed: {e}")
         
         # Sistem FFmpeg'ini kontrol et
-        self.ffmpeg_path = shutil.which('ffmpeg')
+        return shutil.which('ffmpeg')
+    
+    def setup_ffmpeg(self):
+        """FFmpeg kurulumunu kontrol et ve yükle"""
+        self.ffmpeg_path = self.detect_ffmpeg()
+        
         if not self.ffmpeg_path:
             QMessageBox.warning(
                 None,
@@ -223,6 +230,11 @@ class ConverterWidget(QWidget):
         # Dosya seçme butonu
         select_btn = QPushButton(self.tr("Dosya Seç"))
         select_btn.clicked.connect(self.select_files)
+        
+        # FFmpeg yoksa dosya seçme butonunu da devre dışı bırak
+        if not self.ffmpeg_path:
+            select_btn.setEnabled(False)
+            select_btn.setToolTip(self.tr("FFmpeg bulunamadı. Dosya seçimi devre dışı."))
         select_btn.setStyleSheet("""
             QPushButton {
                 background-color: #4CAF50;
@@ -416,6 +428,14 @@ class ConverterWidget(QWidget):
             
     def add_files(self, files):
         """Dosyaları listeye ekle"""
+        # FFmpeg yoksa dosya eklemeye izin verme
+        if not self.ffmpeg_path:
+            QMessageBox.warning(
+                self, 
+                self.tr("FFmpeg Gerekli"), 
+                self.tr("Dönüştürme özelliği için FFmpeg gerekli. Lütfen FFmpeg'i yükleyin veya uygulamayı yeniden başlatın.")
+            )
+            return
         
         for file_path in files:
             # MP3 dosyalarını ekleme

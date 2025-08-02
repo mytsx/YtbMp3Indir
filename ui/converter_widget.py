@@ -154,7 +154,7 @@ class ConversionWorker(QThread):
     progress = pyqtSignal(int)
     status = pyqtSignal(str, str)  # status_code, data (for translation in UI)
     file_completed = pyqtSignal(str, str, bool)  # input_path, output_path, is_replaced
-    error = pyqtSignal(str, object)  # error_code, data (for translation in UI)
+    error = pyqtSignal(str, dict)  # error_code, data_dict (for translation in UI)
     
     # Müzik dosyası uzantıları (bunlar yerinde değiştirilecek)
     AUDIO_EXTENSIONS = {'.wav', '.flac', '.m4a', '.ogg', '.wma', '.aac', '.opus', 
@@ -249,7 +249,7 @@ class ConversionWorker(QThread):
                             input_file.unlink()
                             is_replaced = True
                         except OSError as e:
-                            self.error.emit("delete_error", [input_file.name, str(e)])
+                            self.error.emit("delete_error", {"file_name": input_file.name, "error": str(e)})
                     
                     self.file_completed.emit(str(input_file), str(output_file), is_replaced)
                 else:
@@ -258,14 +258,14 @@ class ConversionWorker(QThread):
                     if stderr.strip():
                         logger.error(f"FFmpeg error for {input_file.name}: {stderr}")
                     
-                    self.error.emit("conversion_error", input_file.name)
+                    self.error.emit("conversion_error", {"file_name": input_file.name})
                 
                 # İlerleme güncelle
                 progress = int((index + 1) / total_files * 100)
                 self.progress.emit(progress)
                 
             except (subprocess.SubprocessError, OSError, ValueError) as e:
-                self.error.emit("subprocess_error", str(e))
+                self.error.emit("subprocess_error", {"error": str(e)})
                 
         self.status.emit("completed" if self.is_running else "cancelled", "")
         
@@ -285,7 +285,7 @@ class ConversionWorker(QThread):
                         self.current_process.kill()
                         self.current_process.wait()
                 except (subprocess.SubprocessError, OSError) as e:
-                    self.error.emit("terminate_error", str(e))
+                    self.error.emit("terminate_error", {"error": str(e)})
 
 
 class ConverterWidget(QWidget):
@@ -479,40 +479,56 @@ class ConverterWidget(QWidget):
             )
             return
         
-        for file_path in files:
-            # MP3 dosyalarını ekleme
-            if file_path.lower().endswith('.mp3'):
-                self.status_label.setText(self.tr("{} zaten MP3 formatında!").format(os.path.basename(file_path)))
-                self.status_label.setStyleSheet("color: orange; padding: 5px;")
-                continue
-                
-            # Zaten listede var mı kontrol et
-            if file_path not in self.selected_files:
-                self.selected_files.add(file_path)
-                
-                # Dosya tipine göre ikon ve bilgi ekle
-                file_ext = Path(file_path).suffix.lower()
-                file_name = os.path.basename(file_path)
-                
-                if file_ext in ConversionWorker.AUDIO_EXTENSIONS:
-                    if self.replace_checkbox.isChecked():
-                        display_text = "🎵 {} ({})".format(file_name, self.tr("Orijinal silinecek"))
+        # Batch UI updates for performance
+        self.file_list.setUpdatesEnabled(False)
+        
+        try:
+            mp3_skipped_count = 0
+            added_count = 0
+            
+            for file_path in files:
+                # MP3 dosyalarını ekleme
+                if file_path.lower().endswith('.mp3'):
+                    mp3_skipped_count += 1
+                    continue
+                    
+                # Zaten listede var mı kontrol et
+                if file_path not in self.selected_files:
+                    self.selected_files.add(file_path)
+                    added_count += 1
+                    
+                    # Dosya tipine göre ikon ve bilgi ekle
+                    file_ext = Path(file_path).suffix.lower()
+                    file_name = os.path.basename(file_path)
+                    
+                    if file_ext in ConversionWorker.AUDIO_EXTENSIONS:
+                        if self.replace_checkbox.isChecked():
+                            display_text = "🎵 {} ({})".format(file_name, self.tr("Orijinal silinecek"))
+                        else:
+                            display_text = "🎵 {}".format(file_name)
+                    elif file_ext in ConversionWorker.VIDEO_EXTENSIONS:
+                        display_text = "🎬 {}".format(file_name)
                     else:
-                        display_text = "🎵 {}".format(file_name)
-                elif file_ext in ConversionWorker.VIDEO_EXTENSIONS:
-                    display_text = "🎬 {}".format(file_name)
-                else:
-                    display_text = "📄 {}".format(file_name)
-                
-                item = QListWidgetItem(display_text)
-                item.setData(Qt.UserRole, file_path)
-                self.file_list.addItem(item)
-                self.file_items[file_path] = item  # Store for O(1) lookup
-                
-        # Dönüştür butonunu aktif et (FFmpeg varsa)
-        if self.selected_files and self.ffmpeg_path:
+                        display_text = "📄 {}".format(file_name)
+                    
+                    item = QListWidgetItem(display_text)
+                    item.setData(Qt.UserRole, file_path)
+                    self.file_list.addItem(item)
+                    self.file_items[file_path] = item  # Store for O(1) lookup
+        finally:
+            # Re-enable updates
+            self.file_list.setUpdatesEnabled(True)
+            
+        # Update status label once after all files are processed
+        if mp3_skipped_count > 0 and added_count == 0:
+            self.status_label.setText(self.tr("{} MP3 dosyası atlandı").format(mp3_skipped_count))
+            self.status_label.setStyleSheet("color: orange; padding: 5px;")
+        elif self.selected_files and self.ffmpeg_path:
             self.convert_btn.setEnabled(True)
-            self.status_label.setText(self.tr("{} dosya seçildi").format(len(self.selected_files)))
+            if added_count > 0:
+                self.status_label.setText(self.tr("{} dosya eklendi (toplam {})").format(added_count, len(self.selected_files)))
+            else:
+                self.status_label.setText(self.tr("{} dosya seçildi").format(len(self.selected_files)))
             self.status_label.setStyleSheet("color: green; padding: 5px;")
         elif self.selected_files and not self.ffmpeg_path:
             self.status_label.setText(self.tr("FFmpeg bulunamadı - Dönüştürme yapılamaz"))
@@ -598,23 +614,20 @@ class ConverterWidget(QWidget):
                 item.setText("✓ {} {} → MP3".format(icon, file_name))
             item.setForeground(QColor("green"))
                 
-    def show_error(self, error_code, data):
+    def show_error(self, error_code, data_dict):
         """Hata göster - translate error codes"""
         if error_code == "conversion_error":
-            error_text = self.tr("Hata ({}): Dosya dönüştürülemedi. Lütfen dosyanın bozuk olmadığını veya desteklenen bir formatta olduğunu kontrol edin.").format(data)
+            error_text = self.tr("Hata ({}): Dosya dönüştürülemedi. Lütfen dosyanın bozuk olmadığını veya desteklenen bir formatta olduğunu kontrol edin.").format(data_dict.get("file_name", "Unknown"))
         elif error_code == "delete_error":
-            try:
-                file_name, error_str = data
-                error_text = self.tr("Orijinal dosya silinemedi ({}): {}").format(file_name, error_str)
-            except (ValueError, TypeError) as e:
-                logger.warning(f"Could not unpack data for delete_error: {data!r}, error: {e}")
-                error_text = self.tr("Orijinal dosya silinirken bilinmeyen bir hata oluştu.")
+            file_name = data_dict.get("file_name", "Unknown")
+            error_str = data_dict.get("error", "Unknown error")
+            error_text = self.tr("Orijinal dosya silinemedi ({}): {}").format(file_name, error_str)
         elif error_code == "subprocess_error":
-            error_text = self.tr("Dönüştürme hatası: {}").format(data)
+            error_text = self.tr("Dönüştürme hatası: {}").format(data_dict.get("error", "Unknown error"))
         elif error_code == "terminate_error":
-            error_text = self.tr("FFmpeg process sonlandırılamadı: {}").format(data)
+            error_text = self.tr("FFmpeg process sonlandırılamadı: {}").format(data_dict.get("error", "Unknown error"))
         else:
-            error_text = data  # Fallback
+            error_text = str(data_dict)  # Fallback
             
         QMessageBox.warning(self, self.tr("Hata"), error_text)
         

@@ -606,7 +606,8 @@ class ConverterWidget(QWidget):
             try:
                 file_name, error_str = data
                 error_text = self.tr("Orijinal dosya silinemedi ({}): {}").format(file_name, error_str)
-            except (ValueError, TypeError):
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Could not unpack data for delete_error: {data!r}, error: {e}")
                 error_text = self.tr("Orijinal dosya silinirken bilinmeyen bir hata oluştu.")
         elif error_code == "subprocess_error":
             error_text = self.tr("Dönüştürme hatası: {}").format(data)

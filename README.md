@@ -182,14 +182,6 @@ Uygulama, işlem durumunu emoji'lerle gösterir:
 - Otomatik kuyruk işleme
 - Duraklatma ve devam ettirme
 
-### 🔄 MP3'e Dönüştür Sekmesi
-- Herhangi bir dosyayı MP3'e dönüştürme
-- Sürükle-bırak ile dosya ekleme
-- Toplu dönüştürme desteği
-- Video dosyalarından ses çıkarma
-- Akıllı dosya yönetimi ayarları
-- Gerçek zamanlı dönüştürme durumu
-- İptal edilebilir işlemler
 
 ## ⚙️ Ayarlar
 

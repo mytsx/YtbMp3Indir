@@ -12,6 +12,7 @@ from core.downloader import Downloader, DownloadSignals
 from ui.settings_dialog import SettingsDialog
 from ui.history_widget import HistoryWidget
 from ui.queue_widget import QueueWidget
+from ui.converter_widget import ConverterWidget
 from utils.config import Config
 from database.manager import DatabaseManager
 
@@ -141,6 +142,10 @@ class MP3YapMainWindow(QMainWindow):
         self.queue_widget.queue_started.connect(lambda: setattr(self, 'is_queue_mode', True))
         self.queue_widget.queue_paused.connect(self.on_queue_paused)
         self.tab_widget.addTab(self.queue_widget, "Kuyruk")
+        
+        # MP3'e Dönüştür sekmesi
+        self.converter_widget = ConverterWidget()
+        self.tab_widget.addTab(self.converter_widget, "MP3'e Dönüştür")
         
         # Tab bar'ı ortalamak için
         tab_bar = self.tab_widget.tabBar()

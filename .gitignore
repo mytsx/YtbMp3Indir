@@ -62,7 +62,7 @@ resources/original_images/
 # Build and distribution files
 build/
 dist/
-*.spec
+# *.spec  # Spec files are now tracked for reproducible builds
 *.exe
 *.msi
 *.zip
@@ -72,7 +72,7 @@ installer_output/
 portable_package/
 
 # Inno Setup files
-*.iss
+# *.iss  # Installer scripts are now tracked
 
 # NSIS files
 *.nsi

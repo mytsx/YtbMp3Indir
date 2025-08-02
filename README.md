@@ -1,18 +1,18 @@
 # YouTube MP3 İndirici 🎵
 
 [![GitHub Release](https://img.shields.io/github/v/release/mytsx/YtbMp3Indir?style=for-the-badge&logo=github&color=brightgreen)](https://github.com/mytsx/YtbMp3Indir/releases/latest)
-[![Download](https://img.shields.io/badge/İNDİR-v2.1.0-blue?style=for-the-badge&logo=download)](https://github.com/mytsx/YtbMp3Indir/releases/tag/v2.1.0)
+[![Download](https://img.shields.io/badge/İNDİR-v2.2.0-blue?style=for-the-badge&logo=download)](https://github.com/mytsx/YtbMp3Indir/releases/tag/v2.2.0)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE.txt)
 
 ## 📦 Hızlı İndirme
 
-**🚀 [En Son Sürümü İndir (v2.1.0)](https://github.com/mytsx/YtbMp3Indir/releases/tag/v2.1.0)**
+**🚀 [En Son Sürümü İndir (v2.2.0)](https://github.com/mytsx/YtbMp3Indir/releases/tag/v2.2.0)**
 
 Windows için hazırlanmış installer dosyasını indirin ve çalıştırın. Kurulum sırasında MIT lisansını kabul etmeniz gerekmektedir.
 
 ---
 
-**Sürüm 2.1** - YouTube videolarını MP3 formatında indirmenizi sağlayan modern ve kullanıcı dostu bir masaüstü uygulaması.
+**Sürüm 2.2** - YouTube videolarını MP3 formatında indirmenizi sağlayan modern ve kullanıcı dostu bir masaüstü uygulaması.
 
 > ✨ **Yeni**: MP3 dönüştürücü özelliği! Herhangi bir video veya ses dosyasını MP3'e dönüştürün. Thread güvenliği iyileştirmeleri, yapılandırılabilir cache yönetimi, gelişmiş kuyruk kontrolü ve performans optimizasyonları!
 

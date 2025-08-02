@@ -3,6 +3,7 @@ MP3 Dönüştürücü Widget
 Herhangi bir dosya türünü (video/ses) MP3'e dönüştürür
 """
 
+import html
 import logging
 import os
 import shutil
@@ -210,10 +211,15 @@ class ConversionWorker(QThread):
                     if not self.is_running:
                         break
                     try:
+                        startupinfo = None
+                        if os.name == 'nt':
+                            startupinfo = subprocess.STARTUPINFO()
+                            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
                         self.current_process = subprocess.Popen(
                             cmd,
                             stdout=subprocess.DEVNULL,  # stdout kullanılmıyor, buffer dolmasını önle
-                            stderr=subprocess.PIPE
+                            stderr=subprocess.PIPE,
+                            startupinfo=startupinfo
                         )
                         process = self.current_process
                     except (OSError, ValueError):
@@ -442,7 +448,7 @@ class ConverterWidget(QWidget):
         # Listedeki ses dosyalarının açıklamalarını güncelle
         for file_path, item in self.file_items.items():
             file_ext = Path(file_path).suffix.lower()
-            file_name = os.path.basename(file_path)
+            file_name = html.escape(os.path.basename(file_path))
             
             # Sadece ses dosyalarını güncelle ve henüz dönüştürülmemiş olanları
             if file_ext in ConversionWorker.AUDIO_EXTENSIONS and not item.text().startswith("✓"):
@@ -499,7 +505,7 @@ class ConverterWidget(QWidget):
                     
                     # Dosya tipine göre ikon ve bilgi ekle
                     file_ext = Path(file_path).suffix.lower()
-                    file_name = os.path.basename(file_path)
+                    file_name = html.escape(os.path.basename(file_path))
                     
                     if file_ext in ConversionWorker.AUDIO_EXTENSIONS:
                         if self.replace_checkbox.isChecked():
@@ -580,13 +586,13 @@ class ConverterWidget(QWidget):
     def update_status(self, status_code, data):
         """Durum güncelle - translate status codes"""
         if status_code == "converting":
-            status_text = self.tr("Dönüştürülüyor: {}").format(data)
+            status_text = self.tr("Dönüştürülüyor: {}").format(html.escape(data))
         elif status_code == "completed":
             status_text = self.tr("Dönüştürme tamamlandı!")
         elif status_code == "cancelled":
             status_text = self.tr("İptal edildi")
         else:
-            status_text = data  # Fallback
+            status_text = html.escape(str(data))  # Fallback
             
         self.status_label.setText(status_text)
         self.status_label.setStyleSheet("color: #2196F3; padding: 5px;")
@@ -596,7 +602,7 @@ class ConverterWidget(QWidget):
         # O(1) lookup ile hızlı bul
         if input_path in self.file_items:
             item = self.file_items[input_path]
-            file_name = os.path.basename(input_path)
+            file_name = html.escape(os.path.basename(input_path))
             file_ext = Path(input_path).suffix.lower()
             
             # Dosya tipine göre orijinal ikonu belirle
@@ -617,10 +623,10 @@ class ConverterWidget(QWidget):
     def show_error(self, error_code, data_dict):
         """Hata göster - translate error codes"""
         if error_code == "conversion_error":
-            error_text = self.tr("Hata ({}): Dosya dönüştürülemedi. Lütfen dosyanın bozuk olmadığını veya desteklenen bir formatta olduğunu kontrol edin.").format(data_dict.get("file_name", "Unknown"))
+            error_text = self.tr("Hata ({}): Dosya dönüştürülemedi. Lütfen dosyanın bozuk olmadığını veya desteklenen bir formatta olduğunu kontrol edin.").format(html.escape(data_dict.get("file_name", "Unknown")))
         elif error_code == "delete_error":
-            file_name = data_dict.get("file_name", "Unknown")
-            error_str = data_dict.get("error", "Unknown error")
+            file_name = html.escape(data_dict.get("file_name", "Unknown"))
+            error_str = html.escape(data_dict.get("error", "Unknown error"))
             error_text = self.tr("Orijinal dosya silinemedi ({}): {}").format(file_name, error_str)
         elif error_code == "subprocess_error":
             error_text = self.tr("Dönüştürme hatası: {}").format(data_dict.get("error", "Unknown error"))

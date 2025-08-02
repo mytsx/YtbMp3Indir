@@ -3,7 +3,7 @@
 echo "🔔 macOS Notarization Script"
 echo "============================"
 
-DMG_FILE="MP3Yap-2.1.1-console.dmg"
+DMG_FILE="MP3Yap-2.1.1-signed.dmg"
 
 # Check if DMG exists
 if [ ! -f "$DMG_FILE" ]; then

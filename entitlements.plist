@@ -8,5 +8,16 @@
     <true/>
     <key>com.apple.security.automation.apple-events</key>
     <true/>
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+    <key>com.apple.security.files.downloads.read-write</key>
+    <true/>
+    <key>com.apple.security.temporary-exception.files.home-relative-path.read-write</key>
+    <array>
+        <string>/music/</string>
+        <string>/Desktop/</string>
+        <string>/Downloads/</string>
+        <string>/Documents/</string>
+    </array>
 </dict>
 </plist>

@@ -157,6 +157,9 @@ class ConversionWorker(QThread):
     file_completed = pyqtSignal(str, str, bool)  # input_path, output_path, is_replaced
     error = pyqtSignal(str, dict)  # error_code, data_dict (for translation in UI)
     
+    # Constants
+    BITRATE = "320k"  # Maximum quality MP3 bitrate
+    
     # Müzik dosyası uzantıları (bunlar yerinde değiştirilecek)
     AUDIO_EXTENSIONS = {'.wav', '.flac', '.m4a', '.ogg', '.wma', '.aac', '.opus', 
                        '.aiff', '.ape', '.wv', '.dsf', '.dff'}
@@ -168,7 +171,7 @@ class ConversionWorker(QThread):
     def __init__(self, files, replace_originals=True, ffmpeg_path='ffmpeg'):
         super().__init__()
         self.files = files
-        self.bitrate = "320k"  # Maksimum kalite
+        self.bitrate = self.BITRATE  # Maksimum kalite
         self.replace_originals = replace_originals
         self.is_running = True
         self.current_process = None
@@ -451,7 +454,7 @@ class ConverterWidget(QWidget):
             file_name = html.escape(os.path.basename(file_path))
             
             # Sadece ses dosyalarını güncelle ve henüz dönüştürülmemiş olanları
-            if file_ext in ConversionWorker.AUDIO_EXTENSIONS and not item.text().startswith("✓"):
+            if file_ext in ConversionWorker.AUDIO_EXTENSIONS and item.data(Qt.UserRole + 1) != 'completed':
                 if self.replace_checkbox.isChecked():
                     item.setText("🎵 {} ({})".format(file_name, self.tr("Orijinal silinecek")))
                 else:
@@ -468,7 +471,7 @@ class ConverterWidget(QWidget):
             self,
             self.tr("Dönüştürülecek Dosyaları Seç"),
             "",
-            self.tr("Desteklenen Dosyalar ({});;Video Dosyaları ({});;Ses Dosyaları ({});;Tüm Dosyalar (*.*)").format(all_exts, video_exts, audio_exts)
+            f"{self.tr('Desteklenen Dosyalar')} ({all_exts});;{self.tr('Video Dosyaları')} ({video_exts});;{self.tr('Ses Dosyaları')} ({audio_exts});;{self.tr('Tüm Dosyalar')} (*.*)"
         )
         
         if files:
@@ -519,6 +522,7 @@ class ConverterWidget(QWidget):
                     
                     item = QListWidgetItem(display_text)
                     item.setData(Qt.UserRole, file_path)
+                    item.setData(Qt.UserRole + 1, 'pending')  # Store conversion state
                     self.file_list.addItem(item)
                     self.file_items[file_path] = item  # Store for O(1) lookup
         finally:
@@ -619,6 +623,7 @@ class ConverterWidget(QWidget):
             else:
                 item.setText("✓ {} {} → MP3".format(icon, file_name))
             item.setForeground(QColor("green"))
+            item.setData(Qt.UserRole + 1, 'completed')  # Update conversion state
                 
     def show_error(self, error_code, data_dict):
         """Hata göster - translate error codes"""

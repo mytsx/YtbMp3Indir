@@ -44,7 +44,7 @@ class DragDropListWidget(QListWidget):
             files = []
             for url in event.mimeData().urls():
                 file_path = url.toLocalFile()
-                if os.path.isfile(file_path):
+                if Path(file_path).is_file():
                     files.append(file_path)
             if files:
                 self.files_dropped.emit(files)
@@ -109,15 +109,19 @@ class ConversionWorker(QThread):
                 self.current_process = subprocess.Popen(
                     cmd,
                     stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    encoding='utf-8'
+                    stderr=subprocess.PIPE
                 )
                 
-                # İşlem tamamlanana kadar bekle
-                stdout, stderr = self.current_process.communicate()
+                # İşlem tamamlanana kadar bekle (byte olarak al)
+                stdout_bytes, stderr_bytes = self.current_process.communicate()
                 process = self.current_process
                 self.current_process = None
+                
+                # Decode with error handling
+                try:
+                    stderr = stderr_bytes.decode('utf-8', errors='ignore')
+                except:
+                    stderr = "Çıktı okunamadı"
                 
                 if process.returncode == 0:
                     # Başarılı - orijinal dosyayı sil (eğer ses dosyasıysa ve replace_originals true ise)
@@ -137,8 +141,8 @@ class ConversionWorker(QThread):
                 progress = int((index + 1) / total_files * 100)
                 self.progress.emit(progress)
                 
-            except Exception as e:
-                self.error.emit(f"Hata: {str(e)}")
+            except (subprocess.SubprocessError, OSError, ValueError) as e:
+                self.error.emit(f"Dönüştürme hatası: {str(e)}")
                 
         self.status.emit("Dönüştürme tamamlandı!" if self.is_running else "İptal edildi")
         
@@ -156,7 +160,7 @@ class ConversionWorker(QThread):
                     # Hala çalışıyorsa zorla kapat
                     self.current_process.kill()
                     self.current_process.wait()
-            except Exception as e:
+            except (subprocess.SubprocessError, OSError) as e:
                 self.error.emit(f"FFmpeg process sonlandırılamadı: {str(e)}")
 
 
@@ -167,7 +171,7 @@ class ConverterWidget(QWidget):
         super().__init__()
         self.init_ui()
         self.conversion_worker = None
-        self.selected_files = []
+        self.selected_files = set()
         
     def init_ui(self):
         """Arayüzü oluştur"""
@@ -393,7 +397,7 @@ class ConverterWidget(QWidget):
                 
             # Zaten listede var mı kontrol et
             if file_path not in self.selected_files:
-                self.selected_files.append(file_path)
+                self.selected_files.add(file_path)
                 
                 # Dosya tipine göre ikon ve bilgi ekle
                 file_ext = Path(file_path).suffix.lower()
@@ -443,7 +447,7 @@ class ConverterWidget(QWidget):
         
         # Worker thread'i başlat
         self.conversion_worker = ConversionWorker(
-            self.selected_files,
+            list(self.selected_files),  # Set'i liste'ye çevir
             self.replace_checkbox.isChecked()
         )
         

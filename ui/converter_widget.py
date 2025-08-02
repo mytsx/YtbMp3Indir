@@ -108,7 +108,7 @@ class ConversionWorker(QThread):
                 # FFmpeg'i çalıştır
                 self.current_process = subprocess.Popen(
                     cmd,
-                    stdout=subprocess.PIPE,
+                    stdout=subprocess.DEVNULL,  # stdout kullanılmıyor, buffer dolmasını önle
                     stderr=subprocess.PIPE
                 )
                 
@@ -117,11 +117,8 @@ class ConversionWorker(QThread):
                 process = self.current_process
                 self.current_process = None
                 
-                # Decode with error handling
-                try:
-                    stderr = stderr_bytes.decode('utf-8', errors='ignore')
-                except Exception:
-                    stderr = "Çıktı okunamadı"
+                # Decode stderr - errors='ignore' zaten hataları ele alıyor
+                stderr = stderr_bytes.decode('utf-8', errors='ignore')
                 
                 if process.returncode == 0:
                     # Başarılı - orijinal dosyayı sil (eğer ses dosyasıysa ve replace_originals true ise)

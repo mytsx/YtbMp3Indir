@@ -113,6 +113,9 @@ class ConversionWorker(QThread):
                 
                 # FFmpeg'i çalıştır - thread-safe erişim
                 with self.process_lock:
+                    # Re-check for cancellation inside the lock to prevent a race condition.
+                    if not self.is_running:
+                        break
                     try:
                         self.current_process = subprocess.Popen(
                             cmd,
@@ -120,7 +123,7 @@ class ConversionWorker(QThread):
                             stderr=subprocess.PIPE
                         )
                         process = self.current_process
-                    except Exception:
+                    except (OSError, ValueError):
                         self.current_process = None
                         raise
                 
@@ -133,6 +136,11 @@ class ConversionWorker(QThread):
                 # Decode stderr - errors='replace' ile geçersiz karakterler görünür kalır
                 stderr = stderr_bytes.decode('utf-8', errors='replace')
                 
+                # İptal edildi mi kontrol et
+                if not self.is_running:
+                    # İptal edildi, bu dosyayı atla
+                    continue
+                    
                 if process.returncode == 0:
                     # Başarılı - orijinal dosyayı sil (eğer ses dosyasıysa ve replace_originals true ise)
                     is_replaced = False
@@ -145,6 +153,11 @@ class ConversionWorker(QThread):
                     
                     self.file_completed.emit(str(input_file), str(output_file), is_replaced)
                 else:
+                    # Process sonlandırıldı mı yoksa hata mı kontrol et
+                    if process.returncode < 0:
+                        # Negatif returncode = signal ile sonlandırıldı (iptal edildi)
+                        continue
+                    
                     # Log the technical error for debugging (if needed)
                     if stderr.strip():
                         print(f"FFmpeg error for {input_file.name}: {stderr}")

@@ -63,6 +63,13 @@ resources/original_images/
 build/
 dist/
 # *.spec  # Spec files are now tracked for reproducible builds
+# Specific spec files to ignore (macOS variants)
+mp3yap_macos.spec
+mp3yap_macos_nosplash.spec
+mp3yap_macos_signed.spec
+mp3yap_macos_test.spec
+mp3yap_permissions.spec
+mp3yap_windowed.spec
 *.exe
 *.msi
 *.zip

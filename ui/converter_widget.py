@@ -73,6 +73,7 @@ class ConversionWorker(QThread):
         self.bitrate = "320k"  # Maksimum kalite
         self.replace_originals = replace_originals
         self.is_running = True
+        self.current_process = None
         
     def run(self):
         """Dönüştürme işlemini başlat"""
@@ -86,13 +87,8 @@ class ConversionWorker(QThread):
                 input_file = Path(file_path)
                 file_ext = input_file.suffix.lower()
                 
-                # Çıktı dosyasının yerini belirle
-                if file_ext in self.AUDIO_EXTENSIONS and self.replace_originals:
-                    # Müzik dosyası - aynı yere kaydet
-                    output_file = input_file.parent / f"{input_file.stem}.mp3"
-                else:
-                    # Video veya diğer - yanına kaydet
-                    output_file = input_file.parent / f"{input_file.stem}.mp3"
+                # Çıktı dosyasını belirle - her zaman aynı yerde MP3 oluştur
+                output_file = input_file.with_suffix('.mp3')
                 
                 # Durum güncelle
                 self.status.emit(f"Dönüştürülüyor: {input_file.name}")
@@ -110,15 +106,18 @@ class ConversionWorker(QThread):
                 ]
                 
                 # FFmpeg'i çalıştır
-                process = subprocess.Popen(
+                self.current_process = subprocess.Popen(
                     cmd,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
-                    universal_newlines=True
+                    text=True,
+                    encoding='utf-8'
                 )
                 
                 # İşlem tamamlanana kadar bekle
-                stdout, stderr = process.communicate()
+                stdout, stderr = self.current_process.communicate()
+                process = self.current_process
+                self.current_process = None
                 
                 if process.returncode == 0:
                     # Başarılı - orijinal dosyayı sil (eğer ses dosyasıysa ve replace_originals true ise)
@@ -127,8 +126,8 @@ class ConversionWorker(QThread):
                         try:
                             os.remove(str(input_file))
                             is_replaced = True
-                        except:
-                            pass
+                        except OSError as e:
+                            self.error.emit(f"Orijinal dosya silinemedi ({input_file.name}): {str(e)}")
                     
                     self.file_completed.emit(str(input_file), str(output_file), is_replaced)
                 else:
@@ -146,6 +145,19 @@ class ConversionWorker(QThread):
     def stop(self):
         """Dönüştürmeyi durdur"""
         self.is_running = False
+        # Eğer aktif bir FFmpeg process varsa sonlandır
+        if self.current_process and self.current_process.poll() is None:
+            try:
+                self.current_process.terminate()
+                # Process'in kapanmasını bekle (max 5 saniye)
+                try:
+                    self.current_process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    # Hala çalışıyorsa zorla kapat
+                    self.current_process.kill()
+                    self.current_process.wait()
+            except Exception as e:
+                self.error.emit(f"FFmpeg process sonlandırılamadı: {str(e)}")
 
 
 class ConverterWidget(QWidget):
@@ -213,9 +225,6 @@ class ConverterWidget(QWidget):
             }
         """)
         self.file_list.files_dropped.connect(self.add_files)
-        
-        # Placeholder metin (liste boşken)
-        self.file_list.setPlaceholderText = lambda text: None  # PyQt5'te yok, görmezden gel
         
         layout.addWidget(self.file_list)
         
@@ -294,6 +303,25 @@ class ConverterWidget(QWidget):
         """)
         button_layout.addWidget(self.convert_btn)
         
+        self.cancel_btn = QPushButton("İptal Et")
+        self.cancel_btn.clicked.connect(self.cancel_conversion)
+        self.cancel_btn.setEnabled(False)
+        self.cancel_btn.setVisible(False)
+        self.cancel_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #ff9800;
+                color: white;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 5px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #e68900;
+            }
+        """)
+        button_layout.addWidget(self.cancel_btn)
+        
         self.clear_btn = QPushButton("Listeyi Temizle")
         self.clear_btn.clicked.connect(self.clear_list)
         self.clear_btn.setStyleSheet("""
@@ -337,15 +365,16 @@ class ConverterWidget(QWidget):
         
     def select_files(self):
         """Dosya seçme dialogu"""
-        # Desteklenen tüm formatları birleştir
-        audio_exts = "*.wav *.flac *.m4a *.ogg *.wma *.aac *.opus *.aiff *.ape *.wv"
-        video_exts = "*.mp4 *.avi *.mkv *.mov *.wmv *.flv *.webm *.m4v *.mpg *.mpeg *.3gp *.ogv"
+        # Desteklenen formatları dinamik olarak oluştur
+        audio_exts = ' '.join([f'*{ext}' for ext in ConversionWorker.AUDIO_EXTENSIONS])
+        video_exts = ' '.join([f'*{ext}' for ext in ConversionWorker.VIDEO_EXTENSIONS])
+        all_exts = f"{audio_exts} {video_exts}"
         
         files, _ = QFileDialog.getOpenFileNames(
             self,
             "Dönüştürülecek Dosyaları Seç",
             "",
-            f"Desteklenen Dosyalar ({audio_exts} {video_exts});;Video Dosyaları ({video_exts});;Ses Dosyaları ({audio_exts});;Tüm Dosyalar (*.*)"
+            f"Desteklenen Dosyalar ({all_exts});;Video Dosyaları ({video_exts});;Ses Dosyaları ({audio_exts});;Tüm Dosyalar (*.*)"
         )
         
         if files:
@@ -405,6 +434,9 @@ class ConverterWidget(QWidget):
         
         # UI'yi güncelle
         self.convert_btn.setEnabled(False)
+        self.convert_btn.setVisible(False)
+        self.cancel_btn.setEnabled(True)
+        self.cancel_btn.setVisible(True)
         self.clear_btn.setEnabled(False)
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
@@ -452,9 +484,19 @@ class ConverterWidget(QWidget):
         """Hata göster"""
         QMessageBox.warning(self, "Hata", error)
         
+    def cancel_conversion(self):
+        """Dönüştürme işlemini iptal et"""
+        if self.conversion_worker:
+            self.conversion_worker.stop()
+            self.status_label.setText("İptal ediliyor...")
+            self.status_label.setStyleSheet("color: orange; padding: 5px;")
+    
     def conversion_finished(self):
         """Dönüştürme tamamlandığında"""
         self.convert_btn.setEnabled(True)
+        self.convert_btn.setVisible(True)
+        self.cancel_btn.setEnabled(False)
+        self.cancel_btn.setVisible(False)
         self.clear_btn.setEnabled(True)
         self.progress_bar.setVisible(False)
         

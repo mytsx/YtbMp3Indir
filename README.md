@@ -14,7 +14,7 @@ Windows için hazırlanmış installer dosyasını indirin ve çalıştırın. K
 
 **Sürüm 2.1** - YouTube videolarını MP3 formatında indirmenizi sağlayan modern ve kullanıcı dostu bir masaüstü uygulaması.
 
-> ✨ **Yeni**: Thread güvenliği iyileştirmeleri, yapılandırılabilir cache yönetimi, gelişmiş kuyruk kontrolü ve performans optimizasyonları!
+> ✨ **Yeni**: MP3 dönüştürücü özelliği! Herhangi bir video veya ses dosyasını MP3'e dönüştürün. Thread güvenliği iyileştirmeleri, yapılandırılabilir cache yönetimi, gelişmiş kuyruk kontrolü ve performans optimizasyonları!
 
 ## ✨ Özellikler
 
@@ -32,6 +32,7 @@ Windows için hazırlanmış installer dosyasını indirin ve çalıştırın. K
 - 🎨 Animasyonlu splash screen
 - 📊 İndirme geçmişi yönetimi
 - 📋 İndirme kuyruğu sistemi
+- 🎵 MP3 dönüştürücü sekmesi
 - ⚙️ Ayarlar paneli
 - 🔄 Otomatik URL temizleme
 
@@ -51,6 +52,15 @@ Windows için hazırlanmış installer dosyasını indirin ve çalıştırın. K
 - 💾 Yapılandırılabilir URL cache yönetimi (100-2000 arası)
 - ⚡ Performans optimizasyonları
 - 🔒 Gelişmiş bellek yönetimi
+
+### 🔄 MP3 Dönüştürücü Özellikleri
+- 🎵 30+ ses formatı desteği (WAV, FLAC, M4A, OGG, WMA, AAC, vb.)
+- 🎬 Video dosyalarından MP3 çıkarma (MP4, AVI, MKV, MOV, vb.)
+- 📂 Sürükle-bırak desteği
+- 🔊 Maksimum kalite (320kbps)
+- 🗑️ Akıllı dosya yönetimi (ses dosyaları değiştirilir, videolar korunur)
+- ⏸️ İptal edilebilir dönüştürme işlemleri
+- 🌍 Çoklu dil desteği hazır altyapı
 
 ## 🛠️ Gereksinimler
 
@@ -86,6 +96,8 @@ python mp3yap_gui.py
 ```
 
 ### Kullanım adımları:
+
+#### YouTube İndirme:
 1. 📋 YouTube URL'lerini metin alanına yapıştırın (her URL yeni satırda)
 2. 🔍 URL durumu otomatik kontrol edilir ve geçerlilik gösterilir
 3. 📊 Playlist URL'leri için video sayısı otomatik gösterilir
@@ -94,6 +106,13 @@ python mp3yap_gui.py
 6. ⏹ Gerekirse "İptal" butonu ile durdurun
 7. 📁 İndirilen MP3 dosyaları `music/` klasöründe bulunacaktır
 8. 📈 "Geçmiş" sekmesinden indirme geçmişinizi görüntüleyin
+
+#### MP3 Dönüştürme:
+1. 🔄 "MP3'e Dönüştür" sekmesine geçin
+2. 📂 Dosyaları sürükleyip bırakın veya "Dosya Seç" butonunu kullanın
+3. ⚙️ Ses dosyalarının orijinallerini silme seçeneğini ayarlayın
+4. 🎵 "Dönüştürmeyi Başlat" butonuna tıklayın
+5. ✅ Dönüştürme tamamlandığında dosyalar orijinal konumlarında MP3 olarak bulunur
 
 ## 🔔 Durum Mesajları
 
@@ -107,6 +126,9 @@ Uygulama, işlem durumunu emoji'lerle gösterir:
 - ⏳ Playlist bilgisi alınıyor...
 - ⚠ Dosya eksik uyarıları
 - ✓ Geçerli URL'ler ve mevcut dosyalar
+- 🎵 Ses dosyası (MP3 dönüştürücüde)
+- 🎬 Video dosyası (MP3 dönüştürücüde)
+- 📄 Diğer dosya türleri
 
 ## 📝 Notlar
 
@@ -159,6 +181,7 @@ Uygulama, işlem durumunu emoji'lerle gösterir:
 - Sıralama değiştirme (yukarı/aşağı taşıma)
 - Otomatik kuyruk işleme
 - Duraklatma ve devam ettirme
+
 
 ## ⚙️ Ayarlar
 

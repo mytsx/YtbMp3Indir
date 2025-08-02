@@ -3,6 +3,7 @@ MP3 Dönüştürücü Widget
 Herhangi bir dosya türünü (video/ses) MP3'e dönüştürür
 """
 
+import json
 import logging
 import os
 import shutil
@@ -21,6 +22,94 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
 # Configure logging
 logger = logging.getLogger(__name__)
 
+# Stylesheet constants
+SELECT_BTN_STYLE = """
+    QPushButton {
+        background-color: #4CAF50;
+        color: white;
+        padding: 10px;
+        border: none;
+        border-radius: 5px;
+        font-weight: bold;
+    }
+    QPushButton:hover {
+        background-color: #45a049;
+    }
+"""
+
+FILE_LIST_STYLE = """
+    QListWidget {
+        border: 2px dashed #ccc;
+        border-radius: 5px;
+        padding: 10px;
+        background-color: #f9f9f9;
+        min-height: 200px;
+    }
+    QListWidget::item {
+        padding: 5px;
+        margin: 2px;
+    }
+    QListWidget:hover {
+        border-color: #999;
+        background-color: #f5f5f5;
+    }
+"""
+
+WARNING_LABEL_STYLE = """
+    QLabel {
+        background-color: #fff3cd;
+        color: #856404;
+        padding: 8px;
+        border: 1px solid #ffeaa7;
+        border-radius: 5px;
+        margin-top: 5px;
+    }
+"""
+
+CONVERT_BTN_STYLE = """
+    QPushButton {
+        background-color: #2196F3;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        font-weight: bold;
+    }
+    QPushButton:hover {
+        background-color: #0b7dda;
+    }
+    QPushButton:disabled {
+        background-color: #ccc;
+    }
+"""
+
+CANCEL_BTN_STYLE = """
+    QPushButton {
+        background-color: #ff9800;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        font-weight: bold;
+    }
+    QPushButton:hover {
+        background-color: #e68900;
+    }
+"""
+
+CLEAR_BTN_STYLE = """
+    QPushButton {
+        background-color: #f44336;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+    }
+    QPushButton:hover {
+        background-color: #da190b;
+    }
+"""
+
 
 class DragDropListWidget(QListWidget):
     """Sürükle-bırak destekli özel QListWidget"""
@@ -31,19 +120,20 @@ class DragDropListWidget(QListWidget):
         super().__init__()
         self.setAcceptDrops(True)
         
-    def dragEnterEvent(self, event: QDragEnterEvent):
-        """Sürükleme başladığında"""
+    def _handle_drag_event(self, event):
+        """Handle drag events uniformly"""
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
         else:
             event.ignore()
+
+    def dragEnterEvent(self, event: QDragEnterEvent):
+        """Sürükleme başladığında"""
+        self._handle_drag_event(event)
             
     def dragMoveEvent(self, event):
         """Sürükleme devam ederken"""
-        if event.mimeData().hasUrls():
-            event.acceptProposedAction()
-        else:
-            event.ignore()
+        self._handle_drag_event(event)
             
     def dropEvent(self, event: QDropEvent):
         """Dosyalar bırakıldığında"""
@@ -153,7 +243,7 @@ class ConversionWorker(QThread):
                             input_file.unlink()
                             is_replaced = True
                         except OSError as e:
-                            self.error.emit("delete_error", f"{input_file.name}|{str(e)}")
+                            self.error.emit("delete_error", json.dumps([input_file.name, str(e)]))
                     
                     self.file_completed.emit(str(input_file), str(output_file), is_replaced)
                 else:
@@ -213,7 +303,7 @@ class ConverterWidget(QWidget):
             if ffmpeg_path and os.path.exists(ffmpeg_path):
                 return ffmpeg_path
         except (ImportError, AttributeError, OSError) as e:
-            print(f"Static FFmpeg setup failed: {e}")
+            logger.warning(f"Static FFmpeg setup failed: {e}")
         
         # Sistem FFmpeg'ini kontrol et
         return shutil.which('ffmpeg')
@@ -256,40 +346,12 @@ class ConverterWidget(QWidget):
         if not self.ffmpeg_path:
             select_btn.setEnabled(False)
             select_btn.setToolTip(self.tr("FFmpeg bulunamadı. Dosya seçimi devre dışı."))
-        select_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #4CAF50;
-                color: white;
-                padding: 10px;
-                border: none;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-            }
-        """)
+        select_btn.setStyleSheet(SELECT_BTN_STYLE)
         layout.addWidget(select_btn)
         
         # Dosya listesi
         self.file_list = DragDropListWidget()
-        self.file_list.setStyleSheet("""
-            QListWidget {
-                border: 2px dashed #ccc;
-                border-radius: 5px;
-                padding: 10px;
-                background-color: #f9f9f9;
-                min-height: 200px;
-            }
-            QListWidget::item {
-                padding: 5px;
-                margin: 2px;
-            }
-            QListWidget:hover {
-                border-color: #999;
-                background-color: #f5f5f5;
-            }
-        """)
+        self.file_list.setStyleSheet(FILE_LIST_STYLE)
         self.file_list.files_dropped.connect(self.add_files)
         
         layout.addWidget(self.file_list)
@@ -319,16 +381,7 @@ class ConverterWidget(QWidget):
         self.warning_label = QLabel(self.tr("DİKKAT: Ses dosyaları (WAV, FLAC, M4A vb.) MP3'e dönüştürüldükten sonra "
                                    "orijinal dosyalar otomatik olarak silinir. Video dosyaları korunur."))
         self.warning_label.setWordWrap(True)
-        self.warning_label.setStyleSheet("""
-            QLabel {
-                background-color: #fff3cd;
-                color: #856404;
-                padding: 8px;
-                border: 1px solid #ffeaa7;
-                border-radius: 5px;
-                margin-top: 5px;
-            }
-        """)
+        self.warning_label.setStyleSheet(WARNING_LABEL_STYLE)
         settings_layout.addWidget(self.warning_label)
         
         settings_group.setLayout(settings_layout)
@@ -355,57 +408,19 @@ class ConverterWidget(QWidget):
         # FFmpeg yoksa butonu devre dışı bırak
         if not self.ffmpeg_path:
             self.convert_btn.setToolTip(self.tr("FFmpeg bulunamadı. Dönüştürme özelliği kullanılamaz."))
-        self.convert_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #2196F3;
-                color: white;
-                padding: 10px 20px;
-                border: none;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #0b7dda;
-            }
-            QPushButton:disabled {
-                background-color: #ccc;
-            }
-        """)
+        self.convert_btn.setStyleSheet(CONVERT_BTN_STYLE)
         button_layout.addWidget(self.convert_btn)
         
         self.cancel_btn = QPushButton(self.tr("İptal Et"))
         self.cancel_btn.clicked.connect(self.cancel_conversion)
         self.cancel_btn.setEnabled(False)
         self.cancel_btn.setVisible(False)
-        self.cancel_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #ff9800;
-                color: white;
-                padding: 10px 20px;
-                border: none;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #e68900;
-            }
-        """)
+        self.cancel_btn.setStyleSheet(CANCEL_BTN_STYLE)
         button_layout.addWidget(self.cancel_btn)
         
         self.clear_btn = QPushButton(self.tr("Listeyi Temizle"))
         self.clear_btn.clicked.connect(self.clear_list)
-        self.clear_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #f44336;
-                color: white;
-                padding: 10px 20px;
-                border: none;
-                border-radius: 5px;
-            }
-            QPushButton:hover {
-                background-color: #da190b;
-            }
-        """)
+        self.clear_btn.setStyleSheet(CLEAR_BTN_STYLE)
         button_layout.addWidget(self.clear_btn)
         
         layout.addLayout(button_layout)
@@ -582,8 +597,11 @@ class ConverterWidget(QWidget):
         if error_code == "conversion_error":
             error_text = self.tr("Hata ({}): Dosya dönüştürülemedi. Lütfen dosyanın bozuk olmadığını veya desteklenen bir formatta olduğunu kontrol edin.").format(data)
         elif error_code == "delete_error":
-            parts = data.split("|", 1)
-            error_text = self.tr("Orijinal dosya silinemedi ({}): {}").format(parts[0], parts[1] if len(parts) > 1 else "")
+            try:
+                file_name, error_str = json.loads(data)
+                error_text = self.tr("Orijinal dosya silinemedi ({}): {}").format(file_name, error_str)
+            except (json.JSONDecodeError, ValueError):
+                error_text = self.tr("Orijinal dosya silinirken bilinmeyen bir hata oluştu.")
         elif error_code == "subprocess_error":
             error_text = self.tr("Dönüştürme hatası: {}").format(data)
         elif error_code == "terminate_error":

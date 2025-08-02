@@ -120,7 +120,7 @@ class ConversionWorker(QThread):
                 # Decode with error handling
                 try:
                     stderr = stderr_bytes.decode('utf-8', errors='ignore')
-                except:
+                except Exception:
                     stderr = "Çıktı okunamadı"
                 
                 if process.returncode == 0:
@@ -172,6 +172,7 @@ class ConverterWidget(QWidget):
         self.init_ui()
         self.conversion_worker = None
         self.selected_files = set()
+        self.file_items = {}  # Dict for O(1) lookup: {file_path: QListWidgetItem}
         
     def init_ui(self):
         """Arayüzü oluştur"""
@@ -353,19 +354,16 @@ class ConverterWidget(QWidget):
         self.warning_label.setVisible(self.replace_checkbox.isChecked())
         
         # Listedeki ses dosyalarının açıklamalarını güncelle
-        for i in range(self.file_list.count()):
-            item = self.file_list.item(i)
-            file_path = item.data(Qt.UserRole)
-            if file_path:
-                file_ext = Path(file_path).suffix.lower()
-                file_name = os.path.basename(file_path)
-                
-                # Sadece ses dosyalarını güncelle ve henüz dönüştürülmemiş olanları
-                if file_ext in ConversionWorker.AUDIO_EXTENSIONS and not item.text().startswith("✓"):
-                    if self.replace_checkbox.isChecked():
-                        item.setText(f"🎵 {file_name} (Orijinal silinecek)")
-                    else:
-                        item.setText(f"🎵 {file_name}")
+        for file_path, item in self.file_items.items():
+            file_ext = Path(file_path).suffix.lower()
+            file_name = os.path.basename(file_path)
+            
+            # Sadece ses dosyalarını güncelle ve henüz dönüştürülmemiş olanları
+            if file_ext in ConversionWorker.AUDIO_EXTENSIONS and not item.text().startswith("✓"):
+                if self.replace_checkbox.isChecked():
+                    item.setText(f"🎵 {file_name} (Orijinal silinecek)")
+                else:
+                    item.setText(f"🎵 {file_name}")
         
     def select_files(self):
         """Dosya seçme dialogu"""
@@ -416,6 +414,7 @@ class ConverterWidget(QWidget):
                 item = QListWidgetItem(display_text)
                 item.setData(Qt.UserRole, file_path)
                 self.file_list.addItem(item)
+                self.file_items[file_path] = item  # Store for O(1) lookup
                 added_count += 1
                 
         # Dönüştür butonunu aktif et
@@ -428,6 +427,7 @@ class ConverterWidget(QWidget):
         """Listeyi temizle"""
         self.file_list.clear()
         self.selected_files.clear()
+        self.file_items.clear()  # Clear the lookup dict
         self.convert_btn.setEnabled(False)
         self.status_label.setText("")
         
@@ -472,17 +472,15 @@ class ConverterWidget(QWidget):
         
     def file_completed(self, input_path, output_path, is_replaced):
         """Dosya tamamlandığında"""
-        # Listede işaretle
-        for i in range(self.file_list.count()):
-            item = self.file_list.item(i)
-            if item.data(Qt.UserRole) == input_path:
-                current_text = item.text()
-                if is_replaced:
-                    item.setText(f"✓ {current_text} → MP3 (Orijinal silindi)")
-                else:
-                    item.setText(f"✓ {current_text} → MP3")
-                item.setForeground(QColor("green"))
-                break
+        # O(1) lookup ile hızlı bul
+        if input_path in self.file_items:
+            item = self.file_items[input_path]
+            current_text = item.text()
+            if is_replaced:
+                item.setText(f"✓ {current_text} → MP3 (Orijinal silindi)")
+            else:
+                item.setText(f"✓ {current_text} → MP3")
+            item.setForeground(QColor("green"))
                 
     def show_error(self, error):
         """Hata göster"""

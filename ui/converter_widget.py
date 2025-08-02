@@ -6,6 +6,7 @@ Herhangi bir dosya türünü (video/ses) MP3'e dönüştürür
 import os
 import shutil
 import subprocess
+import threading
 from pathlib import Path
 
 import static_ffmpeg
@@ -77,6 +78,7 @@ class ConversionWorker(QThread):
         self.replace_originals = replace_originals
         self.is_running = True
         self.current_process = None
+        self.process_lock = threading.Lock()  # Thread-safe access to current_process
         self.ffmpeg_path = ffmpeg_path
         
     def run(self):
@@ -109,18 +111,23 @@ class ConversionWorker(QThread):
                     str(output_file)
                 ]
                 
-                # FFmpeg'i çalıştır - context manager ready yapı
-                try:
-                    self.current_process = subprocess.Popen(
-                        cmd,
-                        stdout=subprocess.DEVNULL,  # stdout kullanılmıyor, buffer dolmasını önle
-                        stderr=subprocess.PIPE
-                    )
-                    
-                    # İşlem tamamlanana kadar bekle (byte olarak al)
-                    stdout_bytes, stderr_bytes = self.current_process.communicate()
-                    process = self.current_process
-                finally:
+                # FFmpeg'i çalıştır - thread-safe erişim
+                with self.process_lock:
+                    try:
+                        self.current_process = subprocess.Popen(
+                            cmd,
+                            stdout=subprocess.DEVNULL,  # stdout kullanılmıyor, buffer dolmasını önle
+                            stderr=subprocess.PIPE
+                        )
+                        process = self.current_process
+                    except Exception:
+                        self.current_process = None
+                        raise
+                
+                # İşlem tamamlanana kadar bekle (byte olarak al)
+                stdout_bytes, stderr_bytes = process.communicate()
+                
+                with self.process_lock:
                     self.current_process = None
                 
                 # Decode stderr - errors='replace' ile geçersiz karakterler görünür kalır
@@ -156,19 +163,20 @@ class ConversionWorker(QThread):
     def stop(self):
         """Dönüştürmeyi durdur"""
         self.is_running = False
-        # Eğer aktif bir FFmpeg process varsa sonlandır
-        if self.current_process and self.current_process.poll() is None:
-            try:
-                self.current_process.terminate()
-                # Process'in kapanmasını bekle (max 5 saniye)
+        # Thread-safe FFmpeg process sonlandırma
+        with self.process_lock:
+            if self.current_process and self.current_process.poll() is None:
                 try:
-                    self.current_process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    # Hala çalışıyorsa zorla kapat
-                    self.current_process.kill()
-                    self.current_process.wait()
-            except (subprocess.SubprocessError, OSError) as e:
-                self.error.emit(self.tr("FFmpeg process sonlandırılamadı: {}").format(str(e)))
+                    self.current_process.terminate()
+                    # Process'in kapanmasını bekle (max 5 saniye)
+                    try:
+                        self.current_process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        # Hala çalışıyorsa zorla kapat
+                        self.current_process.kill()
+                        self.current_process.wait()
+                except (subprocess.SubprocessError, OSError) as e:
+                    self.error.emit(self.tr("FFmpeg process sonlandırılamadı: {}").format(str(e)))
 
 
 class ConverterWidget(QWidget):
@@ -392,7 +400,7 @@ class ConverterWidget(QWidget):
         
         self.setLayout(layout)
         
-    def on_replace_checkbox_changed(self, state):
+    def on_replace_checkbox_changed(self):
         """Checkbox durumu değiştiğinde"""
         # Checkbox işaretli ise uyarıyı göster, değilse gizle
         self.warning_label.setVisible(self.replace_checkbox.isChecked())
@@ -529,11 +537,22 @@ class ConverterWidget(QWidget):
         # O(1) lookup ile hızlı bul
         if input_path in self.file_items:
             item = self.file_items[input_path]
-            current_text = item.text()
-            if is_replaced:
-                item.setText("✓ {} → MP3 ({})".format(current_text, self.tr("Orijinal silindi")))
+            file_name = os.path.basename(input_path)
+            file_ext = Path(input_path).suffix.lower()
+            
+            # Dosya tipine göre orijinal ikonu belirle
+            if file_ext in ConversionWorker.AUDIO_EXTENSIONS:
+                icon = "🎵"
+            elif file_ext in ConversionWorker.VIDEO_EXTENSIONS:
+                icon = "🎬"
             else:
-                item.setText("✓ {} → MP3".format(current_text))
+                icon = "📄"
+            
+            # Tamamlanmış metni oluştur
+            if is_replaced:
+                item.setText("✓ {} {} → MP3 ({})".format(icon, file_name, self.tr("Orijinal silindi")))
+            else:
+                item.setText("✓ {} {} → MP3".format(icon, file_name))
             item.setForeground(QColor("green"))
                 
     def show_error(self, error):

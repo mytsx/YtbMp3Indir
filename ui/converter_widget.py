@@ -6,9 +6,11 @@ Herhangi bir dosya türünü (video/ses) MP3'e dönüştürür
 import os
 import subprocess
 from pathlib import Path
+import shutil
+import static_ffmpeg
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                            QLabel, QFileDialog, QListWidget, QListWidgetItem,
-                           QProgressBar, QMessageBox, QComboBox, QGroupBox,
+                           QProgressBar, QMessageBox, QGroupBox,
                            QCheckBox)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
 from PyQt5.QtGui import QDragEnterEvent, QDropEvent, QColor
@@ -67,13 +69,14 @@ class ConversionWorker(QThread):
     VIDEO_EXTENSIONS = {'.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm',
                        '.m4v', '.mpg', '.mpeg', '.3gp', '.ogv', '.vob', '.ts', '.m2ts'}
     
-    def __init__(self, files, replace_originals=True):
+    def __init__(self, files, replace_originals=True, ffmpeg_path='ffmpeg'):
         super().__init__()
         self.files = files
         self.bitrate = "320k"  # Maksimum kalite
         self.replace_originals = replace_originals
         self.is_running = True
         self.current_process = None
+        self.ffmpeg_path = ffmpeg_path
         
     def run(self):
         """Dönüştürme işlemini başlat"""
@@ -95,7 +98,7 @@ class ConversionWorker(QThread):
                 
                 # FFmpeg komutu
                 cmd = [
-                    "ffmpeg",
+                    self.ffmpeg_path,
                     "-i", str(input_file),
                     "-vn",  # Video stream'i yok say
                     "-acodec", "libmp3lame",
@@ -125,14 +128,18 @@ class ConversionWorker(QThread):
                     is_replaced = False
                     if file_ext in self.AUDIO_EXTENSIONS and self.replace_originals:
                         try:
-                            os.remove(str(input_file))
+                            input_file.unlink()
                             is_replaced = True
                         except OSError as e:
                             self.error.emit(self.tr("Orijinal dosya silinemedi ({}): {}").format(input_file.name, str(e)))
                     
                     self.file_completed.emit(str(input_file), str(output_file), is_replaced)
                 else:
-                    self.error.emit(self.tr("Hata ({}): {}").format(input_file.name, stderr))
+                    # Log the technical error for debugging (if needed)
+                    if stderr.strip():
+                        print(f"FFmpeg error for {input_file.name}: {stderr}")
+                    
+                    self.error.emit(self.tr("Hata ({}): Dosya dönüştürülemedi. Lütfen dosyanın bozuk olmadığını veya desteklenen bir formatta olduğunu kontrol edin.").format(input_file.name))
                 
                 # İlerleme güncelle
                 progress = int((index + 1) / total_files * 100)
@@ -166,10 +173,34 @@ class ConverterWidget(QWidget):
     
     def __init__(self):
         super().__init__()
+        self.ffmpeg_path = None
+        self.setup_ffmpeg()
         self.init_ui()
         self.conversion_worker = None
         self.selected_files = set()
         self.file_items = {}  # Dict for O(1) lookup: {file_path: QListWidgetItem}
+    
+    def setup_ffmpeg(self):
+        """FFmpeg kurulumunu kontrol et ve yükle"""
+        try:
+            # Önce static-ffmpeg'i dene
+            static_ffmpeg.add_paths()
+            ffmpeg_path = shutil.which('ffmpeg')
+            if ffmpeg_path and os.path.exists(ffmpeg_path):
+                self.ffmpeg_path = ffmpeg_path
+                return
+        except Exception:
+            pass
+        
+        # Sistem FFmpeg'ini kontrol et
+        self.ffmpeg_path = shutil.which('ffmpeg')
+        if not self.ffmpeg_path:
+            QMessageBox.warning(
+                None,
+                self.tr("FFmpeg Bulunamadı"),
+                self.tr("FFmpeg bulunamadı. MP3 dönüştürme özelliği devre dışı.\n\n"
+                       "Lütfen FFmpeg'i yükleyin veya uygulamayı yeniden başlatın.")
+            )
         
     def init_ui(self):
         """Arayüzü oluştur"""
@@ -287,6 +318,10 @@ class ConverterWidget(QWidget):
         self.convert_btn = QPushButton(self.tr("Dönüştürmeyi Başlat"))
         self.convert_btn.clicked.connect(self.start_conversion)
         self.convert_btn.setEnabled(False)
+        
+        # FFmpeg yoksa butonu devre dışı bırak
+        if not self.ffmpeg_path:
+            self.convert_btn.setToolTip(self.tr("FFmpeg bulunamadı. Dönüştürme özelliği kullanılamaz."))
         self.convert_btn.setStyleSheet("""
             QPushButton {
                 background-color: #2196F3;
@@ -412,11 +447,14 @@ class ConverterWidget(QWidget):
                 self.file_list.addItem(item)
                 self.file_items[file_path] = item  # Store for O(1) lookup
                 
-        # Dönüştür butonunu aktif et
-        if self.selected_files:
+        # Dönüştür butonunu aktif et (FFmpeg varsa)
+        if self.selected_files and self.ffmpeg_path:
             self.convert_btn.setEnabled(True)
             self.status_label.setText(self.tr("{} dosya seçildi").format(len(self.selected_files)))
             self.status_label.setStyleSheet("color: green; padding: 5px;")
+        elif self.selected_files and not self.ffmpeg_path:
+            self.status_label.setText(self.tr("FFmpeg bulunamadı - Dönüştürme yapılamaz"))
+            self.status_label.setStyleSheet("color: red; padding: 5px;")
             
     def clear_list(self):
         """Listeyi temizle"""
@@ -443,7 +481,8 @@ class ConverterWidget(QWidget):
         # Worker thread'i başlat
         self.conversion_worker = ConversionWorker(
             list(self.selected_files),  # Set'i liste'ye çevir
-            self.replace_checkbox.isChecked()
+            self.replace_checkbox.isChecked(),
+            self.ffmpeg_path or 'ffmpeg'  # FFmpeg yolu veya varsayılan
         )
         
         # Sinyalleri bağla

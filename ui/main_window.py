@@ -169,6 +169,9 @@ class MP3YapMainWindow(QMainWindow):
         self.queue_signals.finished.connect(self.queue_download_finished)
         self.queue_signals.error.connect(self.queue_download_error)
         self.queue_signals.status_update.connect(self.queue_status_update)
+        
+        # Güncelleme kontrolü başlat
+        self.check_for_updates()
     
     def setup_menu(self):
         """Menü çubuğunu oluştur"""
@@ -260,6 +263,21 @@ class MP3YapMainWindow(QMainWindow):
         status_bar.addWidget(self.status_message)
         
         # Sağ taraf - kalıcı widget'lar
+        # Güncelleme durumu
+        self.update_status_widget = QPushButton()
+        self.update_status_widget.setFlat(True)
+        self.update_status_widget.setCursor(Qt.PointingHandCursor)
+        self.update_status_widget.setObjectName("updateStatusButton")
+        self.update_status_widget.hide()  # Başlangıçta gizli
+        status_bar.addPermanentWidget(self.update_status_widget)
+        
+        # Versiyon etiketi (güncelleme kontrolü yapılmadan önce)
+        from version import __version__
+        self.version_label = QLabel(f"v{__version__}")
+        self.version_label.setObjectName("versionLabel")
+        self.version_label.setStyleSheet("color: gray; padding: 0 10px;")
+        status_bar.addPermanentWidget(self.version_label)
+        
         # Klavye kısayolları butonu
         shortcuts_hint = QPushButton("Kısayollar (F1)")
         # Tema'ya göre renk belirle
@@ -431,13 +449,102 @@ class MP3YapMainWindow(QMainWindow):
             # Ayarlar değişmiş olabilir, gerekli güncellemeleri yap
             pass
     
+    def check_for_updates(self):
+        """Güncelleme kontrolü başlat"""
+        from utils.update_checker import UpdateChecker
+        
+        self.update_checker = UpdateChecker()
+        self.update_checker.update_available.connect(self.on_update_available)
+        self.update_checker.check_finished.connect(self.on_update_check_finished)
+        self.update_checker.start()
+    
+    def on_update_available(self, update_info):
+        """Güncelleme mevcut olduğunda"""
+        self.latest_update_info = update_info
+        
+        # Güncelleme butonunu göster
+        self.update_status_widget.setText(f"🔄 Güncelleme Mevcut: v{update_info['version']}")
+        self.update_status_widget.setStyleSheet("""
+            QPushButton {
+                color: #4CAF50;
+                background-color: rgba(76, 175, 80, 0.1);
+                border: 1px solid #4CAF50;
+                border-radius: 3px;
+                padding: 2px 10px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: rgba(76, 175, 80, 0.2);
+            }
+        """)
+        self.update_status_widget.clicked.connect(self.show_update_dialog)
+        self.update_status_widget.show()
+        
+        # Versiyon etiketini gizle
+        self.version_label.hide()
+    
+    def on_update_check_finished(self, success, message):
+        """Güncelleme kontrolü tamamlandığında"""
+        if not success and not hasattr(self, 'latest_update_info'):
+            # Hata durumunda sadece log'la, kullanıcıyı rahatsız etme
+            print(f"Update check: {message}")
+    
+    def show_update_dialog(self):
+        """Güncelleme dialogunu göster"""
+        if not hasattr(self, 'latest_update_info'):
+            return
+        
+        info = self.latest_update_info
+        from PyQt5.QtWidgets import QDialog, QVBoxLayout, QTextEdit, QDialogButtonBox
+        from PyQt5.QtCore import QUrl
+        from PyQt5.QtGui import QDesktopServices
+        
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Güncelleme Mevcut")
+        dialog.setMinimumWidth(500)
+        dialog.setMinimumHeight(400)
+        
+        layout = QVBoxLayout()
+        
+        # Başlık
+        title = QLabel(f"<h2>Yeni Sürüm: v{info['version']}</h2>")
+        layout.addWidget(title)
+        
+        # Değişiklikler
+        changes_label = QLabel("<b>Değişiklikler:</b>")
+        layout.addWidget(changes_label)
+        
+        changes_text = QTextEdit()
+        changes_text.setReadOnly(True)
+        changes_text.setPlainText(info['body'])
+        layout.addWidget(changes_text)
+        
+        # Butonlar
+        button_box = QDialogButtonBox()
+        download_btn = button_box.addButton("İndir", QDialogButtonBox.AcceptRole)
+        later_btn = button_box.addButton("Daha Sonra", QDialogButtonBox.RejectRole)
+        
+        download_btn.clicked.connect(lambda: self.open_update_url(info['url']))
+        later_btn.clicked.connect(dialog.reject)
+        
+        layout.addWidget(button_box)
+        dialog.setLayout(layout)
+        dialog.exec_()
+    
+    def open_update_url(self, url):
+        """Güncelleme URL'sini aç"""
+        from PyQt5.QtCore import QUrl
+        from PyQt5.QtGui import QDesktopServices
+        QDesktopServices.openUrl(QUrl(url))
+    
     def show_about(self):
         """Hakkında dialogunu göster"""
-        QMessageBox.about(self, "YouTube MP3 İndirici Hakkında",
-            "<h3>YouTube MP3 İndirici</h3>"
-            "<p>Sürüm 2.0</p>"
+        from version import __version__, __app_name__, __author__
+        QMessageBox.about(self, f"{__app_name__} Hakkında",
+            f"<h3>{__app_name__}</h3>"
+            f"<p>Sürüm {__version__}</p>"
             "<p>YouTube videolarını MP3 formatında indirmek için modern ve kullanıcı dostu bir araç.</p>"
-            "<p><b>Geliştirici:</b> Mehmet Yerli</p>"
+            f"<p><b>Geliştirici:</b> {__author__}</p>"
             "<p><b>Web:</b> <a href='https://mehmetyerli.com'>mehmetyerli.com</a></p>"
             "<p><b>Lisans:</b> Açık Kaynak</p>")
     
@@ -695,7 +802,7 @@ class MP3YapMainWindow(QMainWindow):
     
     def queue_download_finished(self, filename):
         """Kuyruk indirmesi tamamlandığında"""
-        if hasattr(self, 'current_queue_item'):
+        if hasattr(self, 'current_queue_item') and self.current_queue_item:
             self.queue_widget.update_download_status(
                 self.current_queue_item['id'], 'completed'
             )

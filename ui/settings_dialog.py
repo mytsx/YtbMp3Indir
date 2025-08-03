@@ -1,9 +1,11 @@
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
-                            QComboBox, QPushButton, QSpinBox, QCheckBox,
-                            QGroupBox, QFileDialog, QLineEdit, QTabWidget,
-                            QWidget)
+                           QComboBox, QPushButton, QSpinBox, QCheckBox,
+                           QGroupBox, QFileDialog, QLineEdit, QTabWidget,
+                           QWidget)
 from PyQt5.QtCore import Qt
 from utils.config import Config
+from styles import style_manager
+from utils.icon_manager import icon_manager
 
 
 class SettingsDialog(QDialog):
@@ -14,15 +16,16 @@ class SettingsDialog(QDialog):
         self.config = Config()
         self.setWindowTitle("Ayarlar")
         self.setModal(True)
-        self.setMinimumWidth(500)
-        self.setMinimumHeight(400)
+        self.setFixedSize(650, 700)  # Genişletildi
         
         self.setup_ui()
         self.load_settings()
     
     def setup_ui(self):
         """Ayarlar arayüzünü oluştur"""
-        layout = QVBoxLayout()
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(15)
         
         # Tab widget
         self.tab_widget = QTabWidget()
@@ -35,100 +38,106 @@ class SettingsDialog(QDialog):
         app_tab = self.create_app_tab()
         self.tab_widget.addTab(app_tab, "Uygulama")
         
-        layout.addWidget(self.tab_widget)
+        main_layout.addWidget(self.tab_widget)
         
         # Butonlar
         button_layout = QHBoxLayout()
+        button_layout.setSpacing(10)
         button_layout.addStretch()
         
         self.save_button = QPushButton("Kaydet")
+        self.save_button.setIcon(icon_manager.get_icon("save", "#FFFFFF"))
+        style_manager.apply_button_style(self.save_button, "primary")
         self.save_button.clicked.connect(self.save_settings)
         
         self.cancel_button = QPushButton("İptal")
+        self.cancel_button.setIcon(icon_manager.get_icon("x", "#FFFFFF"))
+        style_manager.apply_button_style(self.cancel_button, "secondary")
         self.cancel_button.clicked.connect(self.reject)
         
         button_layout.addWidget(self.save_button)
         button_layout.addWidget(self.cancel_button)
         
-        layout.addLayout(button_layout)
-        self.setLayout(layout)
+        main_layout.addLayout(button_layout)
+        self.setLayout(main_layout)
     
     def create_download_tab(self):
         """İndirme ayarları sekmesi"""
         widget = QWidget()
         layout = QVBoxLayout()
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(20)
         
         # Ses kalitesi
-        quality_group = QGroupBox("Ses Ayarları")
+        quality_group = self.create_group_box("Ses Ayarları")
         quality_layout = QVBoxLayout()
+        quality_layout.setSpacing(10)
+        quality_layout.setContentsMargins(10, 10, 10, 10)
         
-        quality_hlayout = QHBoxLayout()
-        quality_hlayout.addWidget(QLabel("Ses Kalitesi:"))
+        quality_row = QHBoxLayout()
+        quality_label = QLabel("Ses Kalitesi:")
+        quality_label.setFixedWidth(150)
         self.quality_combo = QComboBox()
         self.quality_combo.addItems(["128 kbps", "192 kbps", "320 kbps"])
-        quality_hlayout.addWidget(self.quality_combo)
-        quality_hlayout.addStretch()
+        quality_row.addWidget(quality_label)
+        quality_row.addWidget(self.quality_combo)
+        quality_row.addStretch()
         
-        quality_layout.addLayout(quality_hlayout)
+        quality_layout.addLayout(quality_row)
         quality_group.setLayout(quality_layout)
         layout.addWidget(quality_group)
         
         # İndirme klasörü
-        folder_group = QGroupBox("İndirme Konumu")
+        folder_group = self.create_group_box("İndirme Konumu")
         folder_layout = QVBoxLayout()
+        folder_layout.setSpacing(10)
+        folder_layout.setContentsMargins(10, 10, 10, 10)
         
-        folder_hlayout = QHBoxLayout()
+        folder_row = QHBoxLayout()
         self.folder_edit = QLineEdit()
         self.folder_button = QPushButton("Gözat...")
+        self.folder_button.setIcon(icon_manager.get_icon("folder", "#666666"))
+        # Icon button için sabit boyut gerekli
+        self.folder_button.setFixedSize(80, 32)
         self.folder_button.clicked.connect(self.browse_folder)
         
-        folder_hlayout.addWidget(self.folder_edit)
-        folder_hlayout.addWidget(self.folder_button)
+        folder_row.addWidget(self.folder_edit)
+        folder_row.addWidget(self.folder_button)
         
-        folder_layout.addLayout(folder_hlayout)
+        folder_layout.addLayout(folder_row)
         folder_group.setLayout(folder_layout)
         layout.addWidget(folder_group)
         
         # Performans ayarları
-        perf_group = QGroupBox("Performans")
+        perf_group = self.create_group_box("Performans")
         perf_layout = QVBoxLayout()
+        perf_layout.setSpacing(15)  # Arttırıldı
+        perf_layout.setContentsMargins(15, 20, 15, 15)  # Arttırıldı
         
         # Eşzamanlı indirme
-        concurrent_layout = QHBoxLayout()
-        concurrent_layout.addWidget(QLabel("Eşzamanlı İndirme:"))
-        self.concurrent_spin = QSpinBox()
-        self.concurrent_spin.setMinimum(1)
-        self.concurrent_spin.setMaximum(5)
-        concurrent_layout.addWidget(self.concurrent_spin)
-        concurrent_layout.addStretch()
-        
-        perf_layout.addLayout(concurrent_layout)
+        concurrent_row = self.create_spinbox_row(
+            "Eşzamanlı İndirme:",
+            self.create_spinbox(1, 5, 1)
+        )
+        self.concurrent_spin = concurrent_row.itemAt(1).widget()
+        perf_layout.addLayout(concurrent_row)
         
         # Playlist limiti
-        playlist_layout = QHBoxLayout()
-        playlist_layout.addWidget(QLabel("Playlist Limiti:"))
-        self.playlist_spin = QSpinBox()
-        self.playlist_spin.setMinimum(0)
-        self.playlist_spin.setMaximum(1000)
-        self.playlist_spin.setSpecialValueText("Limitsiz")
-        playlist_layout.addWidget(self.playlist_spin)
-        playlist_layout.addStretch()
-        
-        perf_layout.addLayout(playlist_layout)
+        playlist_row = self.create_spinbox_row(
+            "Playlist Limiti:",
+            self.create_spinbox(0, 1000, 1, "Limitsiz")
+        )
+        self.playlist_spin = playlist_row.itemAt(1).widget()
+        perf_layout.addLayout(playlist_row)
         
         # Cache limiti
-        cache_layout = QHBoxLayout()
-        cache_layout.addWidget(QLabel("URL Cache Limiti:"))
-        self.cache_spin = QSpinBox()
-        self.cache_spin.setMinimum(100)
-        self.cache_spin.setMaximum(2000)
-        self.cache_spin.setSingleStep(100)
-        self.cache_spin.setSuffix(" URL")
+        cache_row = self.create_spinbox_row(
+            "URL Cache Limiti:",
+            self.create_spinbox(100, 2000, 100, suffix=" URL")
+        )
+        self.cache_spin = cache_row.itemAt(1).widget()
         self.cache_spin.setToolTip("URL kontrolü için tutulan maksimum cache boyutu")
-        cache_layout.addWidget(self.cache_spin)
-        cache_layout.addStretch()
-        
-        perf_layout.addLayout(cache_layout)
+        perf_layout.addLayout(cache_row)
         
         # Otomatik yeniden deneme
         self.auto_retry_check = QCheckBox("Başarısız indirmeleri otomatik yeniden dene")
@@ -145,26 +154,32 @@ class SettingsDialog(QDialog):
         """Uygulama ayarları sekmesi"""
         widget = QWidget()
         layout = QVBoxLayout()
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(20)
         
         # Görünüm ayarları
-        appearance_group = QGroupBox("Görünüm")
+        appearance_group = self.create_group_box("Görünüm")
         appearance_layout = QVBoxLayout()
+        appearance_layout.setSpacing(10)
         
         # Tema
-        theme_layout = QHBoxLayout()
-        theme_layout.addWidget(QLabel("Tema:"))
+        theme_row = QHBoxLayout()
+        theme_label = QLabel("Tema:")
+        theme_label.setFixedWidth(150)
         self.theme_combo = QComboBox()
         self.theme_combo.addItems(["Açık", "Koyu"])
-        theme_layout.addWidget(self.theme_combo)
-        theme_layout.addStretch()
+        theme_row.addWidget(theme_label)
+        theme_row.addWidget(self.theme_combo)
+        theme_row.addStretch()
         
-        appearance_layout.addLayout(theme_layout)
+        appearance_layout.addLayout(theme_row)
         appearance_group.setLayout(appearance_layout)
         layout.addWidget(appearance_group)
         
         # Bildirim ayarları
-        notif_group = QGroupBox("Bildirimler")
+        notif_group = self.create_group_box("Bildirimler")
         notif_layout = QVBoxLayout()
+        notif_layout.setSpacing(10)
         
         self.notif_sound_check = QCheckBox("İndirme tamamlandığında ses çal")
         notif_layout.addWidget(self.notif_sound_check)
@@ -176,23 +191,57 @@ class SettingsDialog(QDialog):
         layout.addWidget(notif_group)
         
         # Geçmiş ayarları
-        history_group = QGroupBox("İndirme Geçmişi")
+        history_group = self.create_group_box("İndirme Geçmişi")
         history_layout = QVBoxLayout()
+        history_layout.setSpacing(10)
         
-        history_hlayout = QHBoxLayout()
-        history_hlayout.addWidget(QLabel("Geçmişi sakla:"))
+        history_row = QHBoxLayout()
+        history_label = QLabel("Geçmişi sakla:")
+        history_label.setFixedWidth(150)
         self.history_combo = QComboBox()
         self.history_combo.addItems(["30 gün", "60 gün", "90 gün", "Süresiz"])
-        history_hlayout.addWidget(self.history_combo)
-        history_hlayout.addStretch()
+        history_row.addWidget(history_label)
+        history_row.addWidget(self.history_combo)
+        history_row.addStretch()
         
-        history_layout.addLayout(history_hlayout)
+        history_layout.addLayout(history_row)
         history_group.setLayout(history_layout)
         layout.addWidget(history_group)
         
         layout.addStretch()
         widget.setLayout(layout)
         return widget
+    
+    def create_group_box(self, title):
+        """Styled group box oluştur"""
+        group = QGroupBox(title)
+        return group
+    
+    def create_spinbox(self, minimum, maximum, step=1, special_text=None, suffix=None):
+        """Styled spinbox oluştur"""
+        spinbox = QSpinBox()
+        spinbox.setMinimum(minimum)
+        spinbox.setMaximum(maximum)
+        spinbox.setSingleStep(step)
+        spinbox.setFixedWidth(120)  # Genişletildi
+        spinbox.setFixedHeight(30)  # Sabit yükseklik
+        
+        if special_text:
+            spinbox.setSpecialValueText(special_text)
+        if suffix:
+            spinbox.setSuffix(suffix)
+            
+        return spinbox
+    
+    def create_spinbox_row(self, label_text, spinbox):
+        """Label ve spinbox içeren satır oluştur"""
+        row = QHBoxLayout()
+        label = QLabel(label_text)
+        label.setFixedWidth(150)
+        row.addWidget(label)
+        row.addWidget(spinbox)
+        row.addStretch()
+        return row
     
     def browse_folder(self):
         """İndirme klasörü seç"""

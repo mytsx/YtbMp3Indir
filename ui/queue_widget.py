@@ -115,7 +115,7 @@ class QueueWidget(QWidget):
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)  # URL/Başlık - geri kalan alanı kaplasın
         self.table.setColumnWidth(1, 100)  # Durum - sabit genişlik
         self.table.setColumnWidth(2, 130)  # Eklenme Zamanı - sabit genişlik
-        self.table.setColumnWidth(3, 140)  # İşlem - butonlar için geniş alan
+        self.table.setColumnWidth(3, 160)  # İşlem - butonlar için geniş alan
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)  # Durum
         self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)  # Eklenme Zamanı
         self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)  # İşlem
@@ -281,8 +281,9 @@ class QueueWidget(QWidget):
             
             # Hemen indir butonu - pending, failed ve queued durumları için
             if item['status'] in ['pending', 'failed', 'queued']:
-                download_button = QPushButton("İndir")
-                download_button.setFixedSize(50, 24)
+                download_button = QPushButton()
+                download_button.setIcon(icon_manager.get_icon("download", "#FFFFFF"))
+                download_button.setFixedSize(24, 24)
                 download_button.setToolTip("Şimdi İndir")
                 download_button.setObjectName("queueDownloadButton")
                 download_button.clicked.connect(lambda checked, id=item['id']: self.download_now(id))

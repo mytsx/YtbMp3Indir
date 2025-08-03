@@ -175,7 +175,7 @@ class MP3YapMainWindow(QMainWindow):
         
         # Sağ taraf - kalıcı widget'lar
         # Klavye kısayolları butonu
-        shortcuts_hint = QPushButton(" Kısayollar (F1)")
+        shortcuts_hint = QPushButton("Kısayollar (F1)")
         # Tema'ya göre renk belirle
         theme = self.config.get('theme', 'light')
         icon_color = "#8B92A9" if theme == 'dark' else "#666666"
@@ -185,6 +185,7 @@ class MP3YapMainWindow(QMainWindow):
         shortcuts_hint.clicked.connect(self.show_shortcuts_help)
         shortcuts_hint.setToolTip("Klavye kısayollarını göster")
         shortcuts_hint.setObjectName("statusBarButton")
+        shortcuts_hint.setMaximumWidth(110)  # Maksimum genişlik sınırı
         
         status_bar.addPermanentWidget(shortcuts_hint)
     
@@ -216,29 +217,39 @@ class MP3YapMainWindow(QMainWindow):
         
         # Butonlar
         button_layout = QHBoxLayout()
-        self.download_button = QPushButton("▶ İndir")
+        self.download_button = QPushButton(" İndir")
+        self.download_button.setIcon(icon_manager.get_icon("download", "#FFFFFF"))
         self.download_button.clicked.connect(self.start_download)  # type: ignore
+        self.download_button.setToolTip("İndirmeyi başlat (Ctrl+Enter)")
         style_manager.apply_button_style(self.download_button, "download")
         
         # İptal butonu
-        self.cancel_button = QPushButton("⏹ İptal")
+        self.cancel_button = QPushButton(" İptal")
+        self.cancel_button.setIcon(icon_manager.get_icon("x", "#FFFFFF"))
         self.cancel_button.clicked.connect(self.cancel_download)  # type: ignore
         self.cancel_button.setEnabled(False)
+        self.cancel_button.setToolTip("İndirmeyi iptal et (Esc)")
         style_manager.apply_button_style(self.cancel_button, "danger")
         
         # Kuyruğa ekle butonu
-        self.add_to_queue_button = QPushButton("➕ Kuyruğa Ekle")
+        self.add_to_queue_button = QPushButton(" Kuyruğa Ekle")
+        self.add_to_queue_button.setIcon(icon_manager.get_icon("plus", "#FFFFFF"))
         self.add_to_queue_button.clicked.connect(self.add_to_queue)  # type: ignore
+        self.add_to_queue_button.setToolTip("URL'leri kuyruğa ekle")
         style_manager.apply_button_style(self.add_to_queue_button, "secondary")
         
         # Temizle butonu
-        self.clear_button = QPushButton("🗑 Temizle")
+        self.clear_button = QPushButton(" Temizle")
+        self.clear_button.setIcon(icon_manager.get_icon("trash-2", "#FFFFFF"))
         self.clear_button.clicked.connect(self.clear_urls)  # type: ignore
+        self.clear_button.setToolTip("URL listesini temizle")
         style_manager.apply_button_style(self.clear_button, "warning")
         
         # Klasörü aç butonu
-        self.open_folder_button = QPushButton("📁 Klasörü Aç")
+        self.open_folder_button = QPushButton(" Klasörü Aç")
+        self.open_folder_button.setIcon(icon_manager.get_icon("folder", "#FFFFFF"))
         self.open_folder_button.clicked.connect(self.open_output_folder)  # type: ignore
+        self.open_folder_button.setToolTip("İndirme klasörünü aç (Ctrl+D)")
         style_manager.apply_button_style(self.open_folder_button, "accent")
         
         # Sol taraf - ana işlemler

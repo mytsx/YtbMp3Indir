@@ -6,6 +6,7 @@ from PyQt5.QtGui import QDesktopServices
 from database.manager import DatabaseManager
 from datetime import datetime
 from styles import style_manager
+from utils.icon_manager import icon_manager
 
 
 class HistoryWidget(QWidget):
@@ -36,12 +37,14 @@ class HistoryWidget(QWidget):
         self.search_input.textChanged.connect(self.search_history)
         search_layout.addWidget(self.search_input)
         
-        self.refresh_button = QPushButton("↻ Yenile")
+        self.refresh_button = QPushButton(" Yenile")
+        self.refresh_button.setIcon(icon_manager.get_icon("refresh-cw", "#FFFFFF"))
         self.refresh_button.clicked.connect(self.load_history)
         style_manager.apply_button_style(self.refresh_button, "secondary")
         search_layout.addWidget(self.refresh_button)
         
-        self.clear_button = QPushButton("🗑 Geçmişi Temizle")
+        self.clear_button = QPushButton(" Geçmişi Temizle")
+        self.clear_button.setIcon(icon_manager.get_icon("trash-2", "#FFFFFF"))
         self.clear_button.clicked.connect(self.clear_history)
         style_manager.apply_button_style(self.clear_button, "danger")
         search_layout.addWidget(self.clear_button)
@@ -157,7 +160,7 @@ class HistoryWidget(QWidget):
             
             # Tarayıcıda aç butonu
             browser_btn = QPushButton()
-            browser_btn.setText("🌐")  # Globe emoji
+            browser_btn.setIcon(icon_manager.get_icon("external-link", "#FFFFFF"))
             browser_btn.setToolTip("Tarayıcıda Aç")
             browser_btn.setFixedSize(24, 24)
             browser_btn.setObjectName("browserIconButton")
@@ -166,7 +169,7 @@ class HistoryWidget(QWidget):
             
             # Tekrar indir butonu
             redownload_btn = QPushButton()
-            redownload_btn.setText("↻")  # Reload symbol
+            redownload_btn.setIcon(icon_manager.get_icon("refresh-cw", "#FFFFFF"))
             redownload_btn.setToolTip("Tekrar İndir")
             redownload_btn.setFixedSize(24, 24)
             redownload_btn.setObjectName("redownloadIconButton")
@@ -175,7 +178,7 @@ class HistoryWidget(QWidget):
             
             # Sil butonu
             delete_btn = QPushButton()
-            delete_btn.setText("×")  # Simple X character
+            delete_btn.setIcon(icon_manager.get_icon("x", "#FFFFFF"))
             delete_btn.setToolTip("Geçmişten Sil")
             delete_btn.setFixedSize(24, 24)
             delete_btn.setObjectName("deleteIconButton")

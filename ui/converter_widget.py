@@ -19,6 +19,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                            QProgressBar, QMessageBox, QGroupBox,
                            QCheckBox, QGraphicsDropShadowEffect)
 from styles import style_manager
+from utils.icon_manager import icon_manager
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -50,10 +51,7 @@ class DragDropListWidget(QListWidget):
             painter = QPainter(self.viewport())
             
             # Theme'e göre renk ayarla
-            # Arka plan rengini al ve tersine göre metin rengini belirle
-            bg_color = self.palette().color(self.backgroundRole())
-            # Koyu tema mı kontrol et (arka plan koyuysa)
-            is_dark = bg_color.value() < 128
+            is_dark = style_manager.get_current_theme() == 'dark'
             
             if is_dark:
                 # Koyu tema için açık gri
@@ -315,7 +313,8 @@ class ConverterWidget(QWidget):
         content_layout.setContentsMargins(10, 0, 10, 0)  # Sol ve sağ padding
         
         # Dosya seçme butonu
-        select_btn = QPushButton(self.tr("Dosya Seç"))
+        select_btn = QPushButton(self.tr(" Dosya Seç"))
+        select_btn.setIcon(icon_manager.get_icon("file", "#FFFFFF"))
         select_btn.clicked.connect(self.select_files)
         
         # FFmpeg yoksa dosya seçme butonunu da devre dışı bırak
@@ -385,7 +384,8 @@ class ConverterWidget(QWidget):
         button_layout = QHBoxLayout()
         button_layout.setContentsMargins(10, 0, 10, 10)  # Butonlar için yan ve alt margin
         
-        self.convert_btn = QPushButton(self.tr("Dönüştürmeyi Başlat"))
+        self.convert_btn = QPushButton(self.tr(" Dönüştürmeyi Başlat"))
+        self.convert_btn.setIcon(icon_manager.get_icon("refresh-cw", "#FFFFFF"))
         self.convert_btn.clicked.connect(self.start_conversion)
         self.convert_btn.setEnabled(False)
         
@@ -395,14 +395,16 @@ class ConverterWidget(QWidget):
         style_manager.apply_button_style(self.convert_btn, "secondary")
         button_layout.addWidget(self.convert_btn)
         
-        self.cancel_btn = QPushButton(self.tr("İptal Et"))
+        self.cancel_btn = QPushButton(self.tr(" İptal Et"))
+        self.cancel_btn.setIcon(icon_manager.get_icon("x", "#FFFFFF"))
         self.cancel_btn.clicked.connect(self.cancel_conversion)
         self.cancel_btn.setEnabled(False)
         self.cancel_btn.setVisible(False)
         style_manager.apply_button_style(self.cancel_btn, "warning")
         button_layout.addWidget(self.cancel_btn)
         
-        self.clear_btn = QPushButton(self.tr("Listeyi Temizle"))
+        self.clear_btn = QPushButton(self.tr(" Listeyi Temizle"))
+        self.clear_btn.setIcon(icon_manager.get_icon("trash-2", "#FFFFFF"))
         self.clear_btn.clicked.connect(self.clear_list)
         style_manager.apply_button_style(self.clear_btn, "warning")
         button_layout.addWidget(self.clear_btn)

@@ -34,10 +34,14 @@ class StyleManager:
             return content
         return ""
     
+    def get_current_theme(self) -> str:
+        """Get the current theme name from configuration."""
+        config = Config()
+        return config.get('theme', 'light')
+    
     def get_combined_stylesheet(self) -> str:
         """Get combined stylesheet for the application."""
-        config = Config()
-        theme = config.get('theme', 'light')
+        theme = self.get_current_theme()
         
         if theme == 'dark':
             return self.load_stylesheet("modern.qss")

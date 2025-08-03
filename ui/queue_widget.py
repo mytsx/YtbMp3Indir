@@ -6,6 +6,7 @@ from PyQt5.QtGui import QFont, QMouseEvent, QKeySequence
 from database.manager import DatabaseManager
 from datetime import datetime
 from styles import style_manager
+from utils.icon_manager import icon_manager
 
 
 class QueueWidget(QWidget):
@@ -49,18 +50,21 @@ class QueueWidget(QWidget):
         control_layout.addStretch()
         
         # Kontrol butonları
-        self.start_button = QPushButton("▶ Kuyruğu Başlat")
+        self.start_button = QPushButton(" Kuyruğu Başlat")
+        self.start_button.setIcon(icon_manager.get_icon("play", "#FFFFFF"))
         self.start_button.clicked.connect(self.start_queue)
         self.start_button.setToolTip("Kuyruktaki öğeleri indirmeye başla")
         style_manager.apply_button_style(self.start_button, "primary")
         
-        self.pause_button = QPushButton("⏸ Duraklat")
+        self.pause_button = QPushButton(" Duraklat")
+        self.pause_button.setIcon(icon_manager.get_icon("pause", "#FFFFFF"))
         self.pause_button.clicked.connect(self.pause_queue)
         self.pause_button.setEnabled(False)
         self.pause_button.setToolTip("Kuyruk indirmesini duraklat")
         style_manager.apply_button_style(self.pause_button, "warning")
         
-        self.clear_completed_button = QPushButton("✓ Tamamlananları Temizle")
+        self.clear_completed_button = QPushButton(" Tamamlananları Temizle")
+        self.clear_completed_button.setIcon(icon_manager.get_icon("check-circle", "#FFFFFF"))
         self.clear_completed_button.clicked.connect(self.clear_completed)
         self.clear_completed_button.setToolTip("Tamamlanan indirmeleri kuyruktan kaldır")
         style_manager.apply_button_style(self.clear_completed_button, "danger")
@@ -286,21 +290,24 @@ class QueueWidget(QWidget):
                 action_layout.addSpacing(4)  # İndir butonu ile diğerleri arasına ekstra boşluk
             
             # Yukarı taşı
-            up_button = QPushButton("↑")
+            up_button = QPushButton()
+            up_button.setIcon(icon_manager.get_icon("arrow-up", "#FFFFFF"))
             up_button.setFixedSize(24, 24)
             up_button.setToolTip("Yukarı Taşı")
             up_button.setObjectName("upButton")
             up_button.clicked.connect(lambda checked, id=item['id']: self.move_up(id))
             
             # Aşağı taşı
-            down_button = QPushButton("↓")
+            down_button = QPushButton()
+            down_button.setIcon(icon_manager.get_icon("arrow-down", "#FFFFFF"))
             down_button.setFixedSize(24, 24)
             down_button.setToolTip("Aşağı Taşı")
             down_button.setObjectName("downButton")
             down_button.clicked.connect(lambda checked, id=item['id']: self.move_down(id))
             
             # Sil
-            delete_button = QPushButton("×")
+            delete_button = QPushButton()
+            delete_button.setIcon(icon_manager.get_icon("x", "#FFFFFF"))
             delete_button.setFixedSize(24, 24)
             delete_button.setToolTip("Kuyruktan Kaldır")
             delete_button.setObjectName("deleteButton")
@@ -465,15 +472,18 @@ class QueueWidget(QWidget):
             # Tek seçim için menü
             item_id = selected_ids[0]
             
-            download_now_action = menu.addAction("⬇ Şimdi İndir")
+            download_now_action = menu.addAction(" Şimdi İndir")
+            download_now_action.setIcon(icon_manager.get_icon("download", "#1976D2"))
             download_now_action.triggered.connect(lambda: self.download_now(item_id))
             
             menu.addSeparator()
             
-            retry_action = menu.addAction("Tekrar Dene")
+            retry_action = menu.addAction(" Tekrar Dene")
+            retry_action.setIcon(icon_manager.get_icon("refresh-cw", "#FFA500"))
             retry_action.triggered.connect(lambda: self.retry_item(item_id))
             
-            priority_menu = menu.addMenu("Öncelik")
+            priority_menu = menu.addMenu(" Öncelik")
+            priority_menu.setIcon(icon_manager.get_icon("star", "#9C27B0"))
             high_priority = priority_menu.addAction("Yüksek")
             high_priority.triggered.connect(lambda: self.set_priority(item_id, 2))
             
@@ -485,16 +495,19 @@ class QueueWidget(QWidget):
             
             menu.addSeparator()
             
-            delete_action = menu.addAction("Sil")
+            delete_action = menu.addAction(" Sil")
+            delete_action.setIcon(icon_manager.get_icon("trash-2", "#DC3545"))
             delete_action.triggered.connect(lambda: self.delete_item(item_id))
         else:
             # Çoklu seçim için menü
-            download_selected_action = menu.addAction(f"⬇ Seçilenleri İndir ({len(selected_ids)} öğe)")
+            download_selected_action = menu.addAction(f" Seçilenleri İndir ({len(selected_ids)} öğe)")
+            download_selected_action.setIcon(icon_manager.get_icon("download", "#1976D2"))
             download_selected_action.triggered.connect(lambda: self.download_selected(selected_ids))
             
             menu.addSeparator()
             
-            delete_selected_action = menu.addAction(f"Seçilenleri Sil ({len(selected_ids)} öğe)")
+            delete_selected_action = menu.addAction(f" Seçilenleri Sil ({len(selected_ids)} öğe)")
+            delete_selected_action.setIcon(icon_manager.get_icon("trash-2", "#DC3545"))
             delete_selected_action.triggered.connect(lambda: self.delete_selected(selected_ids))
         
         menu.exec_(self.table.mapToGlobal(position))

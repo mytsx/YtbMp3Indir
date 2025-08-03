@@ -15,7 +15,7 @@ TextSecondary: #8B92A9 (Gray)
 QWidget {
     background-color: #1A1D29;
     color: #FFFFFF;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: ".SF NS Text", "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif;
     font-size: 14px;
 }
 

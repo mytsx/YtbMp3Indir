@@ -1111,44 +1111,86 @@ class MP3YapMainWindow(QMainWindow):
         else:
             self.url_status_bar.setVisible(False)
     
+    def get_keyboard_shortcuts(self):
+        """Get keyboard shortcuts definition."""
+        return [
+            # Ana kısayollar
+            {
+                'key': QKeySequence.Paste,
+                'description': 'URL yapıştır ve otomatik doğrula',
+                'action': self.paste_and_validate_url,
+                'category': 'main'
+            },
+            {
+                'key': QKeySequence("Ctrl+Return"),
+                'description': 'Hızlı indirme başlat',
+                'action': self.quick_download,
+                'category': 'main'
+            },
+            {
+                'key': QKeySequence("Ctrl+D"),
+                'description': 'İndirme klasörünü aç',
+                'action': self.open_output_folder,
+                'category': 'main'
+            },
+            {
+                'key': QKeySequence("Ctrl+H"),
+                'description': 'Geçmiş sekmesine geç',
+                'action': lambda: self.tab_widget.setCurrentIndex(1),
+                'category': 'navigation'
+            },
+            {
+                'key': QKeySequence("Ctrl+K"),
+                'description': 'Kuyruk sekmesine geç',
+                'action': lambda: self.tab_widget.setCurrentIndex(2),
+                'category': 'navigation'
+            },
+            {
+                'key': QKeySequence.Refresh,
+                'description': 'Mevcut sekmeyi yenile',
+                'action': self.refresh_current_tab,
+                'category': 'main'
+            },
+            {
+                'key': QKeySequence.HelpContents,
+                'description': 'Bu yardım penceresini göster',
+                'action': self.show_shortcuts_help,
+                'category': 'help'
+            },
+            {
+                'key': QKeySequence("Escape"),
+                'description': 'İndirmeyi iptal et',
+                'action': self.handle_escape,
+                'category': 'main'
+            },
+            {
+                'key': QKeySequence("Ctrl+I"),
+                'description': "URL'leri dosyadan içe aktar",
+                'action': None,  # Menüde tanımlı
+                'category': 'file'
+            },
+            {
+                'key': QKeySequence("Ctrl+,"),
+                'description': 'Tercihler/Ayarlar',
+                'action': None,  # Menüde tanımlı
+                'category': 'file'
+            },
+            {
+                'key': QKeySequence("Ctrl+Q"),
+                'description': 'Uygulamadan çık',
+                'action': None,  # Menüde tanımlı
+                'category': 'file'
+            }
+        ]
+    
     def setup_keyboard_shortcuts(self):
         """Klavye kısayollarını ayarla"""
-        # Ctrl+V: URL yapıştır ve otomatik doğrula
-        paste_shortcut = QShortcut(QKeySequence.Paste, self)
-        paste_shortcut.activated.connect(self.paste_and_validate_url)
+        shortcuts = self.get_keyboard_shortcuts()
         
-        # Ctrl+Enter: Hızlı indirme başlat
-        quick_download = QShortcut(QKeySequence("Ctrl+Return"), self)
-        quick_download.activated.connect(self.quick_download)
-        
-        # Ctrl+D: Son indirilen dosyanın klasörünü aç
-        open_folder_shortcut = QShortcut(QKeySequence("Ctrl+D"), self)
-        open_folder_shortcut.activated.connect(self.open_output_folder)
-        
-        # Ctrl+H: Geçmiş sekmesine geç
-        history_tab = QShortcut(QKeySequence("Ctrl+H"), self)
-        history_tab.activated.connect(lambda: self.tab_widget.setCurrentIndex(1))
-        
-        # Ctrl+Q: Kuyruk sekmesine geç (Ctrl+Q çıkış ile çakışıyor, Ctrl+K kullanıyoruz)
-        queue_tab = QShortcut(QKeySequence("Ctrl+K"), self)
-        queue_tab.activated.connect(lambda: self.tab_widget.setCurrentIndex(2))
-        
-        # F5: Mevcut sekmeyi yenile
-        refresh = QShortcut(QKeySequence.Refresh, self)
-        refresh.activated.connect(self.refresh_current_tab)
-        
-        # F1: Yardım/Kısayollar listesi
-        help_shortcut = QShortcut(QKeySequence.HelpContents, self)
-        help_shortcut.activated.connect(self.show_shortcuts_help)
-        
-        # Esc: İşlemi iptal et/Dialogu kapat
-        escape = QShortcut(QKeySequence("Escape"), self)
-        escape.activated.connect(self.handle_escape)
-        
-        # Kuyruk yönetimi kısayolları (kuyruk sekmesi aktifken)
-        # Delete: Seçilileri sil - QueueWidget içinde ele alınacak
-        # Space: Seçilileri duraklat/devam ettir - QueueWidget içinde ele alınacak
-        # Ctrl+↑/↓: Önceliği değiştir - QueueWidget içinde ele alınacak
+        for shortcut_def in shortcuts:
+            if shortcut_def['action']:  # Eğer action tanımlıysa shortcut oluştur
+                shortcut = QShortcut(shortcut_def['key'], self)
+                shortcut.activated.connect(shortcut_def['action'])
     
     def paste_and_validate_url(self):
         """URL yapıştır ve otomatik doğrula"""
@@ -1184,22 +1226,58 @@ class MP3YapMainWindow(QMainWindow):
     
     def show_shortcuts_help(self):
         """Klavye kısayolları yardımını göster (F1)"""
-        shortcuts_text = """
-        <h3>Klavye Kısayolları</h3>
-        <table>
-        <tr><td><b>Ctrl+V</b></td><td>URL yapıştır ve otomatik doğrula</td></tr>
-        <tr><td><b>Ctrl+Enter</b></td><td>Hızlı indirme başlat</td></tr>
-        <tr><td><b>Ctrl+D</b></td><td>İndirme klasörünü aç</td></tr>
-        <tr><td><b>Ctrl+H</b></td><td>Geçmiş sekmesine geç</td></tr>
-        <tr><td><b>Ctrl+K</b></td><td>Kuyruk sekmesine geç</td></tr>
-        <tr><td><b>F5</b></td><td>Mevcut sekmeyi yenile</td></tr>
-        <tr><td><b>F1</b></td><td>Bu yardım penceresini göster</td></tr>
-        <tr><td><b>Esc</b></td><td>İndirmeyi iptal et</td></tr>
-        <tr><td><b>Ctrl+I</b></td><td>URL'leri dosyadan içe aktar</td></tr>
-        <tr><td><b>Ctrl+,</b></td><td>Tercihler/Ayarlar</td></tr>
-        <tr><td><b>Ctrl+Q</b></td><td>Uygulamadan çık</td></tr>
-        </table>
+        # Merkezi veri yapısından HTML oluştur
+        shortcuts = self.get_keyboard_shortcuts()
         
+        # Kategorilere göre grupla
+        categories = {
+            'main': {'title': 'Ana Kısayollar', 'shortcuts': []},
+            'navigation': {'title': 'Gezinme Kısayolları', 'shortcuts': []},
+            'file': {'title': 'Dosya İşlemleri', 'shortcuts': []},
+            'help': {'title': 'Yardım', 'shortcuts': []}
+        }
+        
+        for shortcut in shortcuts:
+            category = shortcut.get('category', 'main')
+            if category in categories:
+                categories[category]['shortcuts'].append(shortcut)
+        
+        # HTML oluştur
+        html = "<h3>Klavye Kısayolları</h3>"
+        
+        for _, category_data in categories.items():
+            if category_data['shortcuts']:
+                html += f"<h4>{category_data['title']}</h4>"
+                html += "<table>"
+                
+                for shortcut in category_data['shortcuts']:
+                    # Kısayol tuşunu string'e çevir
+                    key = shortcut['key']
+                    if isinstance(key, QKeySequence):
+                        key_str = key.toString()
+                    elif hasattr(key, 'value'):  # StandardKey
+                        # StandardKey'i QKeySequence'e çevir
+                        key_seq = QKeySequence(key)
+                        key_str = key_seq.toString()
+                    else:
+                        key_str = str(key)
+                    
+                    # Platform'a göre kısayol gösterimi
+                    if not key_str:
+                        # Bazı standart key'ler için manuel tanımla
+                        if key == QKeySequence.Paste:
+                            key_str = "Ctrl+V"
+                        elif key == QKeySequence.Refresh:
+                            key_str = "F5"
+                        elif key == QKeySequence.HelpContents:
+                            key_str = "F1"
+                    
+                    html += f"<tr><td><b>{key_str}</b></td><td>{shortcut['description']}</td></tr>"
+                
+                html += "</table>"
+        
+        # Kuyruk sekmesi kısayolları (widget içinde tanımlı)
+        html += """
         <h4>Kuyruk Sekmesi Kısayolları</h4>
         <table>
         <tr><td><b>Ctrl+A</b></td><td>Tümünü seç</td></tr>
@@ -1208,7 +1286,7 @@ class MP3YapMainWindow(QMainWindow):
         </table>
         """
         
-        QMessageBox.information(self, "Klavye Kısayolları", shortcuts_text)
+        QMessageBox.information(self, "Klavye Kısayolları", html)
     
     def handle_escape(self):
         """Escape tuşu işlemi"""

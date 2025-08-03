@@ -1,0 +1,306 @@
+/* Button styles for MP3Yap application */
+
+/* Base Button Style */
+QPushButton {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 13px;
+    min-height: 32px;
+    text-align: center;
+}
+
+/* Ensure consistent icon sizing */
+QPushButton::icon {
+    width: 16px;
+    height: 16px;
+}
+
+QPushButton:hover {
+    /* Hover effects handled by color changes */
+}
+
+QPushButton:pressed {
+    /* Pressed effects handled by color changes */
+}
+
+QPushButton:disabled {
+    opacity: 0.6;
+}
+
+/* Primary Button - Download, Save, Confirm */
+QPushButton#primaryButton {
+    background-color: #4CAF50;
+    color: white;
+}
+
+QPushButton#primaryButton:hover {
+    background-color: #45a049;
+}
+
+QPushButton#primaryButton:pressed {
+    background-color: #3d8b40;
+}
+
+QPushButton#primaryButton:disabled {
+    background-color: #a5d6a7;
+}
+
+/* Secondary Button - Queue, Info */
+QPushButton#secondaryButton {
+    background-color: #2196F3;
+    color: white;
+}
+
+QPushButton#secondaryButton:hover {
+    background-color: #1976D2;
+}
+
+QPushButton#secondaryButton:pressed {
+    background-color: #1565C0;
+}
+
+/* Danger Button - Cancel, Delete */
+QPushButton#dangerButton {
+    background-color: #f44336;
+    color: white;
+}
+
+QPushButton#dangerButton:hover {
+    background-color: #d32f2f;
+}
+
+QPushButton#dangerButton:pressed {
+    background-color: #c62828;
+}
+
+QPushButton#dangerButton:disabled {
+    background-color: #ef9a9a;
+}
+
+/* Warning Button - Clear, Reset */
+QPushButton#warningButton {
+    background-color: #FF9800;
+    color: white;
+}
+
+QPushButton#warningButton:hover {
+    background-color: #F57C00;
+}
+
+QPushButton#warningButton:pressed {
+    background-color: #E65100;
+}
+
+/* Accent Button - Browse, Open */
+QPushButton#accentButton {
+    background-color: #9C27B0;
+    color: white;
+}
+
+QPushButton#accentButton:hover {
+    background-color: #7B1FA2;
+}
+
+QPushButton#accentButton:pressed {
+    background-color: #6A1B9A;
+}
+
+/* Ghost Button - Outline style */
+QPushButton#ghostButton {
+    background-color: transparent;
+    color: #2196F3;
+    border: 2px solid #2196F3;
+}
+
+QPushButton#ghostButton:hover {
+    background-color: #2196F3;
+    color: white;
+}
+
+/* Icon Button - Small action buttons */
+QPushButton#iconButton {
+    padding: 4px;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+/* Specific icon button styles */
+QPushButton#browserIconButton {
+    background-color: #2196F3;
+    color: white;
+    padding: 4px;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+QPushButton#browserIconButton:hover {
+    background-color: #1976D2;
+}
+
+QPushButton#redownloadIconButton {
+    background-color: #4CAF50;
+    color: white;
+    padding: 4px;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+QPushButton#redownloadIconButton:hover {
+    background-color: #45a049;
+}
+
+QPushButton#deleteIconButton {
+    background-color: #f44336;
+    color: white;
+    padding: 4px;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+QPushButton#deleteIconButton:hover {
+    background-color: #d32f2f;
+}
+
+/* Status Bar Button */
+QPushButton#statusBarButton {
+    color: #666;
+    border: none;
+    padding: 1px 4px;
+    background: transparent;
+    font-size: 11px;
+    margin: 0;
+    text-align: left;
+    max-height: 20px;
+    min-height: 18px;
+}
+
+QPushButton#statusBarButton::icon {
+    width: 12px;
+    height: 12px;
+}
+
+QPushButton#statusBarButton:hover {
+    color: #333;
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 3px;
+}
+
+/* Queue widget specific buttons */
+QPushButton#upButton, QPushButton#downButton {
+    background-color: #2196F3;
+    color: white;
+    padding: 2px;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+}
+
+QPushButton#upButton:hover, QPushButton#downButton:hover {
+    background-color: #1976D2;
+}
+
+QPushButton#deleteButton {
+    background-color: #ff7979;
+    color: white;
+    padding: 2px;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+}
+
+QPushButton#deleteButton:hover {
+    background-color: #e17575;
+}
+
+/* Queue download button */
+QPushButton#queueDownloadButton {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 2px;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+}
+
+QPushButton#queueDownloadButton:hover {
+    background-color: #45a049;
+}
+
+/* Large Button */
+QPushButton#largeButton {
+    padding: 14px 28px;
+    font-size: 16px;
+    border-radius: 10px;
+}
+
+/* Small Button */
+QPushButton#smallButton {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+}
+
+/* Action Buttons in Tables */
+QPushButton.actionButton {
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+    min-width: 60px;
+}
+
+/* Download Button Special Style */
+QPushButton#downloadButton {
+    background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 1,
+                                stop: 0 #4CAF50, stop: 1 #45a049);
+    color: white;
+    font-weight: 600;
+    padding: 8px 16px;
+    font-size: 13px;
+    min-height: 32px;
+}
+
+QPushButton#downloadButton:hover {
+    background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 1,
+                                stop: 0 #45a049, stop: 1 #3d8b40);
+}
+
+/* Floating Action Button */
+QPushButton#fabButton {
+    min-width: 56px;
+    max-width: 56px;
+    min-height: 56px;
+    max-height: 56px;
+    border-radius: 28px;
+    background-color: #2196F3;
+    color: white;
+    font-size: 24px;
+}
+
+QPushButton#fabButton:hover {
+    background-color: #1976D2;
+}

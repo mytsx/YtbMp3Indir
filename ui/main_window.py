@@ -5,16 +5,102 @@ import yt_dlp
 from PyQt5.QtWidgets import (QMainWindow, QTextEdit, QPushButton, 
                             QVBoxLayout, QHBoxLayout, QWidget, QLabel, 
                             QProgressBar, QMessageBox, QMenuBar, QMenu,
-                            QAction, QTabWidget, QApplication)
-from PyQt5.QtGui import QDesktopServices, QColor, QIcon
-from PyQt5.QtCore import QUrl, QTimer, QThread, pyqtSignal
+                            QAction, QTabWidget, QApplication, QShortcut)
+from PyQt5.QtGui import QDesktopServices, QColor, QIcon, QKeySequence
+from PyQt5.QtCore import QUrl, QTimer, QThread, pyqtSignal, Qt
 from core.downloader import Downloader, DownloadSignals
 from ui.settings_dialog import SettingsDialog
 from ui.history_widget import HistoryWidget
 from ui.queue_widget import QueueWidget
 from ui.converter_widget import ConverterWidget
+from ui.preloader_widget import PreloaderWidget
 from utils.config import Config
 from database.manager import DatabaseManager
+from styles import style_manager
+from utils.icon_manager import icon_manager
+from utils.platform_utils import get_keyboard_icon, get_modifier_symbol, convert_shortcut_for_platform
+
+
+class QueueProcessThread(QThread):
+    """Kuyruk işleme thread'i"""
+    finished_signal = pyqtSignal(int, list)  # added_count, duplicate_videos
+    
+    def __init__(self, urls, db_manager):
+        super().__init__()
+        self.urls = urls
+        self.db_manager = db_manager
+    
+    def run(self):
+        """Thread içinde çalış"""
+        # yt-dlp seçenekleri
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': 'in_playlist',
+            'ignoreerrors': True,
+            'skip_download': True,
+        }
+        
+        # Mevcut video ID'lerini al
+        existing_video_ids = self.db_manager.get_existing_queue_video_ids()
+        
+        # Eklenecek öğeleri topla
+        items_to_add = []
+        duplicate_videos = []
+        
+        for url in self.urls:
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                    if info:
+                        if info.get('_type') == 'playlist':
+                            # Playlist ise her video için kontrol et
+                            playlist_title = info.get('title', 'İsimsiz Liste')
+                            entries = info.get('entries', [])
+                            for idx, entry in enumerate(entries):
+                                video_id = entry.get('id')
+                                video_url = entry.get('url', '')
+                                video_title = entry.get('title', f'Video {idx+1}')
+                                full_title = f"[{playlist_title}] {video_title}"
+                                
+                                # Duplicate kontrolü
+                                if video_id and video_id in existing_video_ids:
+                                    duplicate_videos.append(video_title)
+                                else:
+                                    items_to_add.append({
+                                        'url': video_url,
+                                        'video_title': full_title,
+                                        'video_id': video_id
+                                    })
+                                    if video_id:
+                                        existing_video_ids.add(video_id)
+                        else:
+                            # Tek video
+                            video_id = info.get('id')
+                            video_title = info.get('title', 'İsimsiz Video')
+                            
+                            # Duplicate kontrolü
+                            if video_id and video_id in existing_video_ids:
+                                duplicate_videos.append(video_title)
+                            else:
+                                items_to_add.append({
+                                    'url': url,
+                                    'video_title': video_title,
+                                    'video_id': video_id
+                                })
+            except Exception as e:
+                print(f"Video bilgisi alınamadı: {e}")
+                # Hata durumunda URL ile ekle
+                items_to_add.append({
+                    'url': url,
+                    'video_title': None,
+                    'video_id': None
+                })
+        
+        # Toplu ekleme yap
+        added_count = self.db_manager.add_to_queue_batch(items_to_add)
+        
+        self.finished_signal.emit(added_count, duplicate_videos)
 
 
 class MP3YapMainWindow(QMainWindow):
@@ -23,14 +109,15 @@ class MP3YapMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("YouTube MP3 İndirici")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 1000, 700)
         
         # Set window icon if it exists
         icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets', 'icon.png')
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
         
-        # Gölge efektini kaldırdık - tablolarda sorun yaratıyor
+        # Apply global stylesheet
+        self.setStyleSheet(style_manager.get_combined_stylesheet())
         
         # Config ve Database
         self.config = Config()
@@ -67,6 +154,9 @@ class MP3YapMainWindow(QMainWindow):
         
         # Arayüz kurulumu
         self.setup_ui()
+        
+        # Klavye kısayollarını kur
+        self.setup_keyboard_shortcuts()
         
         # Sinyal bağlantıları (UI kurulumundan sonra)
         self.signals.progress.connect(self.update_progress)
@@ -126,11 +216,13 @@ class MP3YapMainWindow(QMainWindow):
         
         # İndirme sekmesi
         download_tab = self.create_download_tab()
-        self.tab_widget.addTab(download_tab, "İndirme")
+        self.tab_widget.addTab(download_tab, "İndir")
         
         # Geçmiş sekmesi
         self.history_widget = HistoryWidget()
         self.history_widget.redownload_signal.connect(self.add_url_to_download)
+        self.history_widget.add_to_queue_signal.connect(self.add_urls_to_queue)
+        self.history_widget.add_to_download_signal.connect(self.add_urls_to_download_tab)
         self.tab_widget.addTab(self.history_widget, "Geçmiş")
         
         # Tab değişikliğini dinle
@@ -141,42 +233,52 @@ class MP3YapMainWindow(QMainWindow):
         self.queue_widget.start_download.connect(self.process_queue_item)
         self.queue_widget.queue_started.connect(lambda: setattr(self, 'is_queue_mode', True))
         self.queue_widget.queue_paused.connect(self.on_queue_paused)
-        self.tab_widget.addTab(self.queue_widget, "Kuyruk")
+        self.tab_widget.addTab(self.queue_widget, "Sıra")
         
         # MP3'e Dönüştür sekmesi
         self.converter_widget = ConverterWidget()
-        self.tab_widget.addTab(self.converter_widget, self.tr("MP3'e Dönüştür"))
+        self.tab_widget.addTab(self.converter_widget, self.tr("Dönüştür"))
         
         # Tab bar'ı ortalamak için
         tab_bar = self.tab_widget.tabBar()
         tab_bar.setExpanding(False)
         
-        # Tab bar'ı gerçekten ortalamak için stil
-        self.tab_widget.setStyleSheet("""
-            QTabWidget::pane {
-                border: 1px solid #C0C0C0;
-            }
-            QTabBar::tab {
-                background: #E1E1E1;
-                border: 1px solid #C0C0C0;
-                padding: 6px 12px;
-                margin-right: 2px;
-                min-width: 60px;
-            }
-            QTabBar::tab:selected {
-                background: #FFFFFF;
-                border-bottom-color: #FFFFFF;
-            }
-            QTabBar::tab:hover {
-                background: #F0F0F0;
-            }
-            QTabWidget::tab-bar {
-                alignment: center;
-            }
-        """)
+        # Tab widget styling is handled by base.qss
         
         # Ana widget olarak tab widget'ı ayarla
         self.setCentralWidget(self.tab_widget)
+        
+        # Durum çubuğu
+        self.setup_status_bar()
+    
+    def setup_status_bar(self):
+        """Durum çubuğunu ayarla"""
+        status_bar = self.statusBar()
+        
+        # Sol taraf - genel durum mesajları için
+        self.status_message = QLabel("")
+        status_bar.addWidget(self.status_message)
+        
+        # Sağ taraf - kalıcı widget'lar
+        # Klavye kısayolları butonu
+        shortcuts_hint = QPushButton("Kısayollar (F1)")
+        # Tema'ya göre renk belirle
+        theme = self.config.get('theme', 'light')
+        icon_color = style_manager.colors.DARK_TEXT_SECONDARY if theme == 'dark' else style_manager.colors.TEXT_SECONDARY
+        # Platform'a göre ikon seç
+        keyboard_icon = get_keyboard_icon()
+        # Windows için keyboard ikonu kullan (windows.svg yoksa)
+        if keyboard_icon == "windows" and not icon_manager.has_icon("windows"):
+            keyboard_icon = "keyboard"
+        shortcuts_hint.setIcon(icon_manager.get_icon(keyboard_icon, icon_color))
+        shortcuts_hint.setFlat(True)
+        shortcuts_hint.setCursor(Qt.PointingHandCursor)
+        shortcuts_hint.clicked.connect(self.show_shortcuts_help)
+        shortcuts_hint.setToolTip("Klavye kısayollarını göster")
+        shortcuts_hint.setObjectName("statusBarButton")
+        shortcuts_hint.setMaximumWidth(140)  # Genişlik arttırıldı
+        
+        status_bar.addPermanentWidget(shortcuts_hint)
     
     def create_download_tab(self):
         """İndirme sekmesini oluştur"""
@@ -186,18 +288,13 @@ class MP3YapMainWindow(QMainWindow):
         # URL giriş alanı
         url_label = QLabel("İndirilecek YouTube URL'lerini buraya yapıştırın:")
         self.url_text = QTextEdit()
+        self.url_text.setToolTip("YouTube URL'lerini buraya yapıştırın (Ctrl+V)")
         
         # Durum ve ilerleme
         status_layout = QHBoxLayout()
         self.status_label = QLabel("Hazır")
         self.status_label.setMinimumHeight(30)
-        self.status_label.setStyleSheet("""
-            QLabel {
-                padding: 5px;
-                font-size: 14px;
-                font-weight: bold;
-            }
-        """)
+        self.status_label.setObjectName("downloadStatus")
         status_layout.addWidget(self.status_label)
         
         # İndirme ilerleme çubuğu
@@ -205,123 +302,47 @@ class MP3YapMainWindow(QMainWindow):
         self.current_file_label = QLabel("Dosya: ")
         self.progress_bar = QProgressBar()
         self.progress_percent = QLabel("0%")
+        self.progress_percent.setObjectName("progressPercent")
         progress_layout.addWidget(self.current_file_label)
         progress_layout.addWidget(self.progress_bar)
         progress_layout.addWidget(self.progress_percent)
         
         # Butonlar
         button_layout = QHBoxLayout()
-        self.download_button = QPushButton("▶ İndir")
+        self.download_button = QPushButton(" İndir")
+        self.download_button.setIcon(icon_manager.get_icon("download", "#FFFFFF"))
         self.download_button.clicked.connect(self.start_download)  # type: ignore
-        self.download_button.setStyleSheet("""
-            QPushButton {
-                padding: 5px 20px;
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-            }
-            QPushButton:pressed {
-                background-color: #388e3c;
-            }
-            QPushButton:disabled {
-                background-color: #cccccc;
-                color: #666666;
-            }
-        """)
+        self.download_button.setToolTip("İndirmeyi başlat (Ctrl+Enter)")
+        style_manager.apply_button_style(self.download_button, "download")
         
         # İptal butonu
-        self.cancel_button = QPushButton("⏹ İptal")
+        self.cancel_button = QPushButton(" İptal")
+        self.cancel_button.setIcon(icon_manager.get_icon("x", "#FFFFFF"))
         self.cancel_button.clicked.connect(self.cancel_download)  # type: ignore
         self.cancel_button.setEnabled(False)
-        self.cancel_button.setStyleSheet("""
-            QPushButton {
-                padding: 5px 20px;
-                background-color: #f44336;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            QPushButton:hover:enabled {
-                background-color: #da190b;
-            }
-            QPushButton:pressed:enabled {
-                background-color: #ba000d;
-            }
-            QPushButton:disabled {
-                background-color: #cccccc;
-                color: #666666;
-            }
-        """)
+        self.cancel_button.setToolTip("İndirmeyi iptal et (Esc)")
+        style_manager.apply_button_style(self.cancel_button, "danger")
         
         # Kuyruğa ekle butonu
-        self.add_to_queue_button = QPushButton("➕ Kuyruğa Ekle")
+        self.add_to_queue_button = QPushButton(" Kuyruğa Ekle")
+        self.add_to_queue_button.setIcon(icon_manager.get_icon("plus", "#FFFFFF"))
         self.add_to_queue_button.clicked.connect(self.add_to_queue)  # type: ignore
-        self.add_to_queue_button.setStyleSheet("""
-            QPushButton {
-                padding: 5px 20px;
-                background-color: #2196F3;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #1976D2;
-            }
-            QPushButton:pressed {
-                background-color: #0D47A1;
-            }
-        """)
+        self.add_to_queue_button.setToolTip("URL'leri kuyruğa ekle")
+        style_manager.apply_button_style(self.add_to_queue_button, "secondary")
         
         # Temizle butonu
-        self.clear_button = QPushButton("🗑 Temizle")
+        self.clear_button = QPushButton(" Temizle")
+        self.clear_button.setIcon(icon_manager.get_icon("trash-2", "#FFFFFF"))
         self.clear_button.clicked.connect(self.clear_urls)  # type: ignore
-        self.clear_button.setStyleSheet("""
-            QPushButton {
-                padding: 5px 20px;
-                background-color: #FF9800;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #F57C00;
-            }
-            QPushButton:pressed {
-                background-color: #E65100;
-            }
-        """)
+        self.clear_button.setToolTip("URL listesini temizle")
+        style_manager.apply_button_style(self.clear_button, "warning")
         
         # Klasörü aç butonu
-        self.open_folder_button = QPushButton("📁 Klasörü Aç")
+        self.open_folder_button = QPushButton(" Klasörü Aç")
+        self.open_folder_button.setIcon(icon_manager.get_icon("folder", "#FFFFFF"))
         self.open_folder_button.clicked.connect(self.open_output_folder)  # type: ignore
-        self.open_folder_button.setStyleSheet("""
-            QPushButton {
-                padding: 5px 20px;
-                background-color: #9C27B0;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            QPushButton:hover:enabled {
-                background-color: #7B1FA2;
-            }
-            QPushButton:pressed:enabled {
-                background-color: #6A1B9A;
-            }
-            QPushButton:disabled {
-                background-color: #cccccc;
-                color: #666666;
-            }
-        """)
+        self.open_folder_button.setToolTip("İndirme klasörünü aç (Ctrl+D)")
+        style_manager.apply_button_style(self.open_folder_button, "accent")
         
         # Sol taraf - ana işlemler
         button_layout.addWidget(self.download_button)
@@ -337,15 +358,7 @@ class MP3YapMainWindow(QMainWindow):
         
         # URL durum çubuğu
         self.url_status_bar = QLabel("")
-        self.url_status_bar.setStyleSheet("""
-            QLabel {
-                padding: 8px;
-                background-color: #f5f5f5;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                font-size: 12px;
-            }
-        """)
+        self.url_status_bar.setObjectName("urlStatusBar")  # Base object name for consistent base styling
         self.url_status_bar.setVisible(False)
         
         # Layout'a widget'ları ekle
@@ -361,6 +374,11 @@ class MP3YapMainWindow(QMainWindow):
         self.url_check_timer.setSingleShot(True)
         self.url_check_timer.timeout.connect(self.check_urls_delayed)
         self.url_text.textChanged.connect(self.on_url_text_changed)
+        
+        # Preloader widget
+        self.preloader = PreloaderWidget(self)
+        self.preloader.canceled.connect(self.cancel_current_operation)
+        self.preloader.hide()
         
         widget.setLayout(layout)
         return widget
@@ -449,20 +467,10 @@ class MP3YapMainWindow(QMainWindow):
         if '[' in text and '/' in text:
             # Playlist progress içeriyor
             self.current_file_label.setText(f"📋 Playlist İndiriliyor - Dosya: {filename}")
-            self.progress_percent.setStyleSheet("""
-                QLabel {
-                    color: #1976D2;
-                    font-weight: bold;
-                    font-size: 14px;
-                }
-            """)
+            style_manager.set_widget_property(self.progress_percent, "progressType", "playlist")
         else:
             self.current_file_label.setText(f"Dosya: {filename}")
-            self.progress_percent.setStyleSheet("""
-                QLabel {
-                    font-size: 12px;
-                }
-            """)
+            style_manager.set_widget_property(self.progress_percent, "progressType", "file")
             
         if percent >= 0:
             self.progress_bar.setValue(int(percent))
@@ -497,18 +505,10 @@ class MP3YapMainWindow(QMainWindow):
                 current = match.group(1)
                 total = match.group(2)
                 # Status label'ı renklendir
-                self.status_label.setStyleSheet("""
-                    QLabel {
-                        color: #1976D2;
-                        font-weight: bold;
-                        padding: 5px;
-                        background-color: #E3F2FD;
-                        border-radius: 3px;
-                    }
-                """)
+                style_manager.apply_status_style(self.status_label, "info", refresh=True)
         else:
             # Normal durum için stil sıfırla
-            self.status_label.setStyleSheet("")
+            self.status_label.setObjectName("downloadStatus")
         
         # Eğer tüm indirmeler tamamlandıysa butonları güncelle
         if status == "🎉 Tüm indirmeler tamamlandı!" or status == "İndirme durduruldu":
@@ -524,14 +524,58 @@ class MP3YapMainWindow(QMainWindow):
     
     def add_url_to_download(self, url):
         """Geçmişten URL'yi indirme listesine ekle"""
-        current_text = self.url_text.toPlainText().strip()
-        if current_text:
-            self.url_text.setPlainText(current_text + '\n' + url)
-        else:
-            self.url_text.setPlainText(url)
         # İndirme sekmesine geç
         self.tab_widget.setCurrentIndex(0)
-        QMessageBox.information(self, "Başarılı", "URL indirme listesine eklendi!")
+        
+        # Mevcut URL'leri kontrol et
+        current_text = self.url_text.toPlainText().strip()
+        if current_text:
+            existing_urls = set(line.strip() for line in current_text.split('\n') if line.strip())
+            if url not in existing_urls:
+                self.url_text.setPlainText(current_text + '\n' + url)
+                self.status_label.setText("✓ URL indir sekmesine eklendi")
+                style_manager.apply_alert_style(self.status_label, "success")
+            # Zaten varsa sessizce geç
+        else:
+            self.url_text.setPlainText(url)
+            self.status_label.setText("✓ URL indir sekmesine eklendi")
+            style_manager.apply_alert_style(self.status_label, "success")
+    
+    def add_urls_to_queue(self, urls):
+        """Birden fazla URL'yi kuyruğa ekle (Geçmiş sekmesinden)"""
+        # URL'leri text widget'a yaz ve add_to_queue'u çağır
+        self.url_text.setPlainText('\n'.join(urls))
+        self.add_to_queue()
+    
+    def add_urls_to_download_tab(self, urls):
+        """Birden fazla URL'yi indir sekmesine ekle (Geçmiş sekmesinden)"""
+        # İndir sekmesine geç
+        self.tab_widget.setCurrentIndex(0)
+        
+        # Mevcut URL'leri al ve set'e çevir
+        current_text = self.url_text.toPlainText().strip()
+        existing_urls = set()
+        if current_text:
+            existing_urls = set(line.strip() for line in current_text.split('\n') if line.strip())
+        
+        # Yeni URL'leri filtrele (duplicate olmayanlar)
+        new_urls = [url for url in urls if url not in existing_urls]
+        
+        if new_urls:
+            # Sadece yeni URL'leri ekle
+            if current_text:
+                # Mevcut URL'ler varsa alt satıra ekle
+                self.url_text.setPlainText(current_text + '\n' + '\n'.join(new_urls))
+            else:
+                # Boşsa direkt ekle
+                self.url_text.setPlainText('\n'.join(new_urls))
+            
+            # Durum mesajı - sadece eklenen sayıyı göster
+            self.status_label.setText(f"✓ {len(new_urls)} video indir sekmesine eklendi")
+            style_manager.apply_alert_style(self.status_label, "success")
+        else:
+            # Hiç yeni URL yoksa sessizce geç, durum mesajı gösterme
+            pass
     
     def add_to_queue(self):
         """URL'leri kuyruğa ekle"""
@@ -542,158 +586,57 @@ class MP3YapMainWindow(QMainWindow):
             QMessageBox.warning(self, "Uyarı", "Lütfen en az bir URL girin!")
             return
         
-        # Loading göstergesi
-        self.status_label.setText("🔄 Video bilgileri alınıyor...")
-        self.status_label.setStyleSheet("""
-            QLabel {
-                background-color: #FFF3E0;
-                color: #E65100;
-                padding: 5px;
-                border-radius: 3px;
-                font-weight: bold;
-            }
-        """)
+        # Preloader göster
+        self.preloader.show_with_text(
+            f"{len(urls)} video için bilgiler alınıyor...",
+            cancelable=True
+        )
+        
+        # Butonları devre dışı bırak
         self.add_to_queue_button.setEnabled(False)
         self.download_button.setEnabled(False)
-        QApplication.processEvents()  # UI güncelleme
         
-        # yt-dlp seçenekleri
-        ydl_opts = {
-            'quiet': True,
-            'no_warnings': True,
-            'extract_flat': 'in_playlist',
-            'ignoreerrors': True,
-            'skip_download': True,
-        }
-        
-        # URL'leri kuyruğa ekle
-        added_count = 0
-        duplicate_videos = []  # Duplicate video listesi
-        
-        for url in urls:
-            try:
-                # Video başlığını al
-                video_title = None
-                try:
-                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                        info = ydl.extract_info(url, download=False)
-                        if info:
-                            if info.get('_type') == 'playlist':
-                                # Playlist ise her video için ayrı kayıt
-                                playlist_title = info.get('title', 'İsimsiz Liste')
-                                entries = info.get('entries', [])
-                                for idx, entry in enumerate(entries):
-                                    video_url = entry.get('url', '')
-                                    video_title = entry.get('title', f'Video {idx+1}')
-                                    full_title = f"[{playlist_title}] {video_title}"
-                                    result = self.db_manager.add_to_queue(video_url, full_title)
-                                    if result > 0:  # Başarılı
-                                        added_count += 1
-                                    elif result == -1:  # Duplicate
-                                        duplicate_videos.append(video_title)
-                            else:
-                                # Tek video
-                                video_title = info.get('title', 'İsimsiz Video')
-                                result = self.db_manager.add_to_queue(url, video_title)
-                                if result > 0:  # Başarılı
-                                    added_count += 1
-                                elif result == -1:  # Duplicate
-                                    duplicate_videos.append(video_title)
-                except Exception as e:
-                    print(f"Video bilgisi alınamadı: {e}")
-                    # Hata durumunda URL ile ekle
-                    result = self.db_manager.add_to_queue(url, None)
-                    if result > 0:
-                        added_count += 1
-                    elif result == -1:
-                        duplicate_videos.append(url)
-                    
-            except Exception as e:
-                print(f"URL eklenirken hata: {e}")
+        # Thread oluştur ve başlat
+        self.queue_thread = QueueProcessThread(urls, self.db_manager)
+        self.queue_thread.finished_signal.connect(self._on_queue_process_finished)
+        self.queue_thread.start()
+    
+    def _on_queue_process_finished(self, added_count, duplicate_videos):
+        """Kuyruk işleme thread'i tamamlandığında"""
+        # Preloader'ı gizle
+        self.preloader.hide_loader()
         
         # Butonları geri etkinleştir
         self.add_to_queue_button.setEnabled(True)
         self.download_button.setEnabled(True)
-        self.status_label.setStyleSheet("")  # Stili sıfırla
+        style_manager.apply_alert_style(self.status_label, "info", refresh=False)  # Varsayılan stil
         
         # Sonuç mesajı göster
-        total_urls = len(urls)
-        duplicate_count = total_urls - added_count
+        total_urls = len(self.url_text.toPlainText().strip().split('\n'))
+        duplicate_count = len(duplicate_videos)
         
         if added_count > 0 and duplicate_count == 0:
             self.status_label.setText(f"✓ {added_count} video kuyruğa eklendi")
-            self.status_label.setStyleSheet("""
-                QLabel {
-                    background-color: #E8F5E9;
-                    color: #2E7D32;
-                    padding: 5px;
-                    border-radius: 3px;
-                    font-weight: bold;
-                }
-            """)
+            style_manager.apply_alert_style(self.status_label, "success")
             self.url_text.clear()  # URL'leri temizle
             # Kuyruğu yenile
             self.queue_widget.load_queue()
             # Kuyruk sekmesine geç
             self.tab_widget.setCurrentIndex(2)
         elif added_count > 0 and duplicate_count > 0:
-            # Hem eklenen hem duplicate olanları göster
-            if duplicate_count <= 2 and duplicate_videos:
-                # Az sayıda duplicate varsa detay göster
-                dup_names = ", ".join([v[:20] + "..." if len(v) > 20 else v for v in duplicate_videos[:2]])
-                self.status_label.setText(f"✓ {added_count} eklendi | Kuyrukta: {dup_names}")
-            else:
-                self.status_label.setText(f"✓ {added_count} yeni eklendi | {duplicate_count} zaten kuyrukta")
-            
-            self.status_label.setStyleSheet("""
-                QLabel {
-                    background-color: #FFF3E0;
-                    color: #E65100;
-                    padding: 5px;
-                    border-radius: 3px;
-                    font-weight: bold;
-                }
-            """)
-            self.url_text.clear()
-            # Kuyruğu yenile
+            self.status_label.setText(f"✓ {added_count} video eklendi, {duplicate_count} video zaten kuyrukta")
+            style_manager.apply_alert_style(self.status_label, "warning")
+            self.url_text.clear()  # URL'leri temizle
             self.queue_widget.load_queue()
             self.tab_widget.setCurrentIndex(2)
-        elif added_count == 0 and duplicate_count > 0:
-            # Duplicate listesini göster
-            if duplicate_videos and len(duplicate_videos) <= 3:
-                # Az sayıda duplicate varsa isimleri göster
-                video_names = ", ".join([v[:30] + "..." if len(v) > 30 else v for v in duplicate_videos[:3]])
-                msg = f"Zaten kuyrukta: {video_names}"
-            else:
-                msg = f"Tüm videolar ({duplicate_count}) zaten kuyrukta"
-            
-            # Sadece status_label'da göster, popup açma
-            self.status_label.setText(f"UYARI: {msg}")
-            
-            self.status_label.setStyleSheet("""
-                QLabel {
-                    background-color: #FFEBEE;
-                    color: #C62828;
-                    padding: 5px;
-                    border-radius: 3px;
-                    font-weight: bold;
-                }
-            """)
-            
-            # URL'leri SİLME - kullanıcı ana ekranda indirmek isteyebilir
-            # Sekme değiştirme YAPMA
-            return  # Fonksiyondan çık
+        elif duplicate_count > 0:
+            # Sadece duplicate varsa
+            self.status_label.setText(f"ⓘ Tüm videolar ({duplicate_count}) zaten kuyrukta!")
+            style_manager.apply_alert_style(self.status_label, "warning")
         else:
-            self.status_label.setText("Hiçbir video eklenemedi")
-            self.status_label.setStyleSheet("""
-                QLabel {
-                    background-color: #FFEBEE;
-                    color: #C62828;
-                    padding: 5px;
-                    border-radius: 3px;
-                    font-weight: bold;
-                }
-            """)
+            self.status_label.setText("✗ Kuyruğa video eklenemedi")
+            style_manager.apply_alert_style(self.status_label, "error")
+    
     
     def process_queue_item(self, queue_item):
         """Kuyruktan gelen öğeyi işle"""
@@ -824,7 +767,7 @@ class MP3YapMainWindow(QMainWindow):
             # Eğer URL alanı boşsa uyarıları temizle
             if not self.url_text.toPlainText().strip():
                 self.status_label.clear()
-                self.status_label.setStyleSheet("")  # Varsayılan stile dön
+                style_manager.apply_alert_style(self.status_label, "info", refresh=False)  # Varsayılan stil
                 self.url_status_bar.setVisible(False)
     
     def cancel_download(self):
@@ -842,15 +785,7 @@ class MP3YapMainWindow(QMainWindow):
         """URL metin alanını temizle"""
         self.url_text.clear()
         self.status_label.setText("URL listesi temizlendi")
-        self.status_label.setStyleSheet("""
-            QLabel {
-                background-color: #E8F5E9;
-                color: #2E7D32;
-                padding: 5px;
-                border-radius: 3px;
-                font-weight: bold;
-            }
-        """)
+        style_manager.apply_alert_style(self.status_label, "success")
         self.url_status_bar.setVisible(False)
     
     def on_url_text_changed(self):
@@ -889,17 +824,7 @@ class MP3YapMainWindow(QMainWindow):
         
         # Hemen loading göster
         self.url_status_bar.setText("⏳ URL'ler kontrol ediliyor...")
-        self.url_status_bar.setStyleSheet("""
-            QLabel {
-                padding: 8px;
-                background-color: #fff3e0;
-                border: 1px solid #ff9800;
-                border-radius: 4px;
-                font-size: 12px;
-                color: #e65100;
-                font-weight: bold;
-            }
-        """)
+        style_manager.set_widget_property(self.url_status_bar, "statusType", "warning")
         self.url_status_bar.setVisible(True)
         QApplication.processEvents()  # UI güncelle
         
@@ -907,16 +832,7 @@ class MP3YapMainWindow(QMainWindow):
         has_playlist = any('list=' in url for url in urls)
         if has_playlist:
             self.url_status_bar.setText("⏳ Playlist bilgisi alınıyor...")
-            self.url_status_bar.setStyleSheet("""
-                QLabel {
-                    padding: 8px;
-                    background-color: #e3f2fd;
-                    border: 1px solid #2196f3;
-                    border-radius: 4px;
-                    font-size: 12px;
-                    color: #1565c0;
-                }
-            """)
+            style_manager.set_widget_property(self.url_status_bar, "statusType", "info")
             self.url_status_bar.setVisible(True)
             QApplication.processEvents()  # UI güncelle
         
@@ -1136,56 +1052,16 @@ class MP3YapMainWindow(QMainWindow):
             # Renk ayarla - öncelik sırasına göre
             if invalid_count > 0:
                 # Kırmızı - geçersiz URL var (en kritik)
-                self.url_status_bar.setStyleSheet("""
-                    QLabel {
-                        padding: 8px;
-                        background-color: #ffebee;
-                        border: 1px solid #ef5350;
-                        border-radius: 4px;
-                        font-size: 12px;
-                        color: #c62828;
-                        font-weight: bold;
-                    }
-                """)
+                style_manager.set_widget_property(self.url_status_bar, "statusType", "error")
             elif files_exist > 0 and files_missing == 0:
                 # Mavi - tüm dosyalar mevcut (bilgilendirme)
-                self.url_status_bar.setStyleSheet("""
-                    QLabel {
-                        padding: 8px;
-                        background-color: #e3f2fd;
-                        border: 1px solid #2196f3;
-                        border-radius: 4px;
-                        font-size: 12px;
-                        color: #1565c0;
-                        font-weight: bold;
-                    }
-                """)
+                style_manager.set_widget_property(self.url_status_bar, "statusType", "info")
             elif files_missing > 0:
                 # Sarı - dosyalar eksik (yeniden indirilebilir)
-                self.url_status_bar.setStyleSheet("""
-                    QLabel {
-                        padding: 8px;
-                        background-color: #fff3e0;
-                        border: 1px solid #ff9800;
-                        border-radius: 4px;
-                        font-size: 12px;
-                        color: #e65100;
-                        font-weight: bold;
-                    }
-                """)
+                style_manager.set_widget_property(self.url_status_bar, "statusType", "warning")
             else:
                 # Yeşil - yeni indirmeler için hazır
-                self.url_status_bar.setStyleSheet("""
-                    QLabel {
-                        padding: 8px;
-                        background-color: #e8f5e9;
-                        border: 1px solid #4caf50;
-                        border-radius: 4px;
-                        font-size: 12px;
-                        color: #2e7d32;
-                        font-weight: bold;
-                    }
-                """)
+                style_manager.set_widget_property(self.url_status_bar, "statusType", "success")
         else:
             self.url_status_bar.setVisible(False)
     
@@ -1249,33 +1125,190 @@ class MP3YapMainWindow(QMainWindow):
             # Renk ayarla
             if invalid_count > 0:
                 # Kırmızı
-                self.url_status_bar.setStyleSheet("""
-                    QLabel {
-                        padding: 8px;
-                        background-color: #ffebee;
-                        border: 1px solid #ef5350;
-                        border-radius: 4px;
-                        font-size: 12px;
-                        color: #c62828;
-                        font-weight: bold;
-                    }
-                """)
+                style_manager.set_widget_property(self.url_status_bar, "statusType", "error")
             else:
                 # Yeşil
-                self.url_status_bar.setStyleSheet("""
-                    QLabel {
-                        padding: 8px;
-                        background-color: #e8f5e9;
-                        border: 1px solid #4caf50;
-                        border-radius: 4px;
-                        font-size: 12px;
-                        color: #2e7d32;
-                        font-weight: bold;
-                    }
-                """)
+                style_manager.set_widget_property(self.url_status_bar, "statusType", "success")
             self.url_status_bar.setVisible(True)
         else:
             self.url_status_bar.setVisible(False)
+    
+    def get_keyboard_shortcuts(self):
+        """Get keyboard shortcuts definition."""
+        return [
+            # Ana kısayollar
+            {
+                'key': QKeySequence.Paste,
+                'description': 'URL yapıştır ve otomatik doğrula',
+                'action': self.paste_and_validate_url,
+                'category': 'main'
+            },
+            {
+                'key': QKeySequence("Ctrl+Return"),
+                'description': 'Hızlı indirme başlat',
+                'action': self.quick_download,
+                'category': 'main'
+            },
+            {
+                'key': QKeySequence("Ctrl+D"),
+                'description': 'İndirme klasörünü aç',
+                'action': self.open_output_folder,
+                'category': 'main'
+            },
+            {
+                'key': QKeySequence("Ctrl+H"),
+                'description': 'Geçmiş sekmesine geç',
+                'action': lambda: self.tab_widget.setCurrentIndex(1),
+                'category': 'navigation'
+            },
+            {
+                'key': QKeySequence("Ctrl+K"),
+                'description': 'Kuyruk sekmesine geç',
+                'action': lambda: self.tab_widget.setCurrentIndex(2),
+                'category': 'navigation'
+            },
+            {
+                'key': QKeySequence.Refresh,
+                'description': 'Mevcut sekmeyi yenile',
+                'action': self.refresh_current_tab,
+                'category': 'main'
+            },
+            {
+                'key': QKeySequence.HelpContents,
+                'description': 'Bu yardım penceresini göster',
+                'action': self.show_shortcuts_help,
+                'category': 'help'
+            },
+            {
+                'key': QKeySequence("Escape"),
+                'description': 'İndirmeyi iptal et',
+                'action': self.handle_escape,
+                'category': 'main'
+            },
+            {
+                'key': QKeySequence("Ctrl+I"),
+                'description': "URL'leri dosyadan içe aktar",
+                'action': None,  # Menüde tanımlı
+                'category': 'file'
+            },
+            {
+                'key': QKeySequence("Ctrl+,"),
+                'description': 'Tercihler/Ayarlar',
+                'action': None,  # Menüde tanımlı
+                'category': 'file'
+            },
+            {
+                'key': QKeySequence("Ctrl+Q"),
+                'description': 'Uygulamadan çık',
+                'action': None,  # Menüde tanımlı
+                'category': 'file'
+            }
+        ]
+    
+    def setup_keyboard_shortcuts(self):
+        """Klavye kısayollarını ayarla"""
+        shortcuts = self.get_keyboard_shortcuts()
+        
+        for shortcut_def in shortcuts:
+            if shortcut_def['action']:  # Eğer action tanımlıysa shortcut oluştur
+                shortcut = QShortcut(shortcut_def['key'], self)
+                shortcut.activated.connect(shortcut_def['action'])
+    
+    def paste_and_validate_url(self):
+        """URL yapıştır ve otomatik doğrula"""
+        # Sadece indirme sekmesindeyken çalışsın
+        if self.tab_widget.currentIndex() == 0:
+            clipboard = QApplication.clipboard()
+            text = clipboard.text()
+            if text:
+                # Mevcut metne ekle (yeni satırla)
+                current_text = self.url_text.toPlainText()
+                if current_text and not current_text.endswith('\n'):
+                    text = '\n' + text
+                cursor = self.url_text.textCursor()
+                cursor.movePosition(cursor.End)
+                cursor.insertText(text)
+                # URL kontrolü otomatik tetiklenecek (textChanged sinyali ile)
+    
+    def quick_download(self):
+        """Hızlı indirme başlat (Ctrl+Enter)"""
+        # Sadece indirme sekmesindeyken ve URL varken çalışsın
+        if self.tab_widget.currentIndex() == 0:
+            if self.url_text.toPlainText().strip() and self.download_button.isEnabled():
+                self.start_download()
+    
+    def refresh_current_tab(self):
+        """Mevcut sekmeyi yenile (F5)"""
+        current_index = self.tab_widget.currentIndex()
+        if current_index == 1:  # Geçmiş sekmesi
+            self.history_widget.load_history()
+        elif current_index == 2:  # Kuyruk sekmesi
+            self.queue_widget.load_queue()
+        # Diğer sekmeler için özel yenileme yok
+    
+    def show_shortcuts_help(self):
+        """Klavye kısayolları yardımını göster (F1)"""
+        # Merkezi veri yapısından HTML oluştur
+        shortcuts = self.get_keyboard_shortcuts()
+        
+        # Kategorilere göre grupla
+        categories = {
+            'main': {'title': 'Ana Kısayollar', 'shortcuts': []},
+            'navigation': {'title': 'Gezinme Kısayolları', 'shortcuts': []},
+            'file': {'title': 'Dosya İşlemleri', 'shortcuts': []},
+            'help': {'title': 'Yardım', 'shortcuts': []}
+        }
+        
+        for shortcut in shortcuts:
+            category = shortcut.get('category', 'main')
+            if category in categories:
+                categories[category]['shortcuts'].append(shortcut)
+        
+        # HTML oluştur
+        html = "<h3>Klavye Kısayolları</h3>"
+        
+        for _, category_data in categories.items():
+            if category_data['shortcuts']:
+                html += f"<h4>{category_data['title']}</h4>"
+                html += "<table>"
+                
+                for shortcut in category_data['shortcuts']:
+                    # Kısayol tuşunu string'e çevir
+                    key = shortcut['key']
+                    if not isinstance(key, QKeySequence):
+                        key = QKeySequence(key)
+                    key_str = key.toString(QKeySequence.NativeText)
+                    
+                    html += f"<tr><td><b>{key_str}</b></td><td>{shortcut['description']}</td></tr>"
+                
+                html += "</table>"
+        
+        # Kuyruk sekmesi kısayolları (widget içinde tanımlı)
+        modifier = get_modifier_symbol()
+        html += f"""
+        <h4>Kuyruk Sekmesi Kısayolları</h4>
+        <table>
+        <tr><td><b>{modifier}+A</b></td><td>Tümünü seç</td></tr>
+        <tr><td><b>Delete</b></td><td>Seçilileri sil</td></tr>
+        <tr><td><b>Space</b></td><td>Seçilileri duraklat/devam ettir</td></tr>
+        </table>
+        """
+        
+        QMessageBox.information(self, "Klavye Kısayolları", html)
+    
+    def handle_escape(self):
+        """Escape tuşu işlemi"""
+        # İndirme devam ediyorsa iptal et
+        if hasattr(self, 'downloader') and self.downloader.is_running:
+            self.cancel_download()
+        # Kuyruk indirmesi varsa iptal et
+        elif hasattr(self, 'current_queue_item') and self.current_queue_item:
+            self.queue_widget.pause_queue()
+    
+    def cancel_current_operation(self):
+        """Mevcut işlemi iptal et"""
+        # Preloader'dan gelen iptal işlemi
+        pass  # Şu an için boş, gerektiğinde implement edilecek
     
     def closeEvent(self, a0):
         """Pencere kapatılırken"""

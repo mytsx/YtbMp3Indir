@@ -1,10 +1,12 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,
                             QTableWidgetItem, QPushButton, QLineEdit, QLabel,
-                            QHeaderView, QMessageBox)
+                            QHeaderView, QMessageBox, QMenu)
 from PyQt5.QtCore import Qt, pyqtSignal, QUrl, QThread
 from PyQt5.QtGui import QDesktopServices
 from database.manager import DatabaseManager
 from datetime import datetime
+from styles import style_manager
+from utils.icon_manager import icon_manager
 
 
 class HistoryWidget(QWidget):
@@ -12,67 +14,16 @@ class HistoryWidget(QWidget):
     
     # Dosyayı tekrar indir sinyali
     redownload_signal = pyqtSignal(str)  # URL
+    # Kuyruğa ekleme sinyali
+    add_to_queue_signal = pyqtSignal(list)  # URL listesi
+    # İndir sekmesine ekleme sinyali
+    add_to_download_signal = pyqtSignal(list)  # URL listesi
     
     def __init__(self, parent=None):
         super().__init__(parent)
         self.db_manager = DatabaseManager()
         
-        # Buton stilleri (bir kere tanımla)
-        self.button_style_browser = """
-            QPushButton {
-                background-color: #2196F3;
-                color: white;
-                border: 1px solid #1976D2;
-                border-radius: 4px;
-                font-size: 16px;
-                padding: 2px;
-            }
-            QPushButton:hover {
-                background-color: #1976D2;
-                border-color: #0D47A1;
-            }
-            QPushButton:pressed {
-                background-color: #0D47A1;
-            }
-        """
-        
-        self.button_style_redownload = """
-            QPushButton {
-                background-color: #4CAF50;
-                color: white;
-                border: 1px solid #45a049;
-                border-radius: 4px;
-                font-size: 18px;
-                font-weight: bold;
-                padding: 2px;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-                border-color: #388e3c;
-            }
-            QPushButton:pressed {
-                background-color: #388e3c;
-            }
-        """
-        
-        self.button_style_delete = """
-            QPushButton {
-                background-color: #ff7979;
-                color: white;
-                border: 1px solid #e17575;
-                border-radius: 4px;
-                font-size: 20px;
-                font-weight: bold;
-                padding: 2px;
-            }
-            QPushButton:hover {
-                background-color: #e17575;
-                border-color: #d63031;
-            }
-            QPushButton:pressed {
-                background-color: #d63031;
-            }
-        """
+        # Buton stilleri artık style_manager tarafından yönetiliyor
         
         self.setup_ui()
         self.load_history()
@@ -90,41 +41,16 @@ class HistoryWidget(QWidget):
         self.search_input.textChanged.connect(self.search_history)
         search_layout.addWidget(self.search_input)
         
-        self.refresh_button = QPushButton("↻ Yenile")
+        self.refresh_button = QPushButton(" Yenile")
+        self.refresh_button.setIcon(icon_manager.get_icon("refresh-cw", "#FFFFFF"))
         self.refresh_button.clicked.connect(self.load_history)
-        self.refresh_button.setStyleSheet("""
-            QPushButton {
-                padding: 5px 10px;
-                background-color: #2196F3;
-                color: white;
-                border: 1px solid #1976D2;
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: #1976D2;
-            }
-        """)
+        style_manager.apply_button_style(self.refresh_button, "secondary")
         search_layout.addWidget(self.refresh_button)
         
-        self.clear_button = QPushButton("🗑 Geçmişi Temizle")
+        self.clear_button = QPushButton(" Geçmişi Temizle")
+        self.clear_button.setIcon(icon_manager.get_icon("trash-2", "#FFFFFF"))
         self.clear_button.clicked.connect(self.clear_history)
-        self.clear_button.setStyleSheet("""
-            QPushButton {
-                padding: 5px 10px;
-                background-color: #ff7979;
-                color: white;
-                border: 1px solid #e17575;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #e17575;
-                border-color: #d63031;
-            }
-            QPushButton:pressed {
-                background-color: #d63031;
-            }
-        """)
+        style_manager.apply_button_style(self.clear_button, "danger")
         search_layout.addWidget(self.clear_button)
         
         layout.addLayout(search_layout)
@@ -139,29 +65,36 @@ class HistoryWidget(QWidget):
         # Tablo ayarları
         header = self.table.horizontalHeader()
         header.setStretchLastSection(False)  # Son sütun gereksiz genişlemesin
-        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)  # Tarih
-        header.setSectionResizeMode(1, QHeaderView.Stretch)  # Başlık sütunu genişlesin
-        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)  # Kanal
-        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)  # Format
-        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)  # Boyut
-        header.setSectionResizeMode(5, QHeaderView.ResizeToContents)  # İşlemler
+        
+        # Sütun genişliklerini manuel olarak ayarla
+        self.table.setColumnWidth(0, 130)  # Tarih - sabit genişlik
+        header.setSectionResizeMode(1, QHeaderView.Stretch)  # Başlık - geri kalan alanı kaplasın
+        self.table.setColumnWidth(2, 120)  # Kanal - daha dar
+        self.table.setColumnWidth(3, 80)   # Format - içerik görünsün
+        self.table.setColumnWidth(4, 90)   # Boyut - içerik görünsün
+        self.table.setColumnWidth(5, 140)  # İşlemler - scrollbar'dan uzak durması için daha geniş
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)  # Düzenleme kapalı
+        
+        # Satır yüksekliğini ayarla - butonların görünmesi için
+        self.table.verticalHeader().setDefaultSectionSize(42)  # 42px yükseklik
+        self.table.verticalHeader().setMinimumSectionSize(40)  # Minimum 40px
+        
+        # Satır numarası sütununu daralt
+        self.table.verticalHeader().setMaximumWidth(25)  # Maksimum 25px genişlik
+        self.table.verticalHeader().setMinimumWidth(20)  # Minimum 20px
+        self.table.verticalHeader().setDefaultAlignment(Qt.AlignCenter)  # Sayıları ortala
+        
+        # Sağ tık menüsü
+        self.table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self.show_context_menu)
         
         layout.addWidget(self.table)
         
         # İstatistikler - tablonun altında
         self.stats_label = QLabel()
-        self.stats_label.setStyleSheet("""
-            QLabel {
-                padding: 10px;
-                background-color: #f5f5f5;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-        """)
+        self.stats_label.setObjectName("statsLabel")
         layout.addWidget(self.stats_label)
         self.setLayout(layout)
     
@@ -211,7 +144,10 @@ class HistoryWidget(QWidget):
             
             # Tarih
             date_str = datetime.fromisoformat(record['downloaded_at']).strftime('%d.%m.%Y %H:%M')
-            self.table.setItem(row_position, 0, QTableWidgetItem(date_str))
+            date_item = QTableWidgetItem(date_str)
+            # Record ID'yi sakla - bu kritik!
+            date_item.setData(Qt.UserRole, record['id'])
+            self.table.setItem(row_position, 0, date_item)
             
             # Başlık
             self.table.setItem(row_position, 1, QTableWidgetItem(record['video_title']))
@@ -230,33 +166,33 @@ class HistoryWidget(QWidget):
             # İşlemler butonu
             actions_widget = QWidget()
             actions_layout = QHBoxLayout()
-            actions_layout.setContentsMargins(5, 2, 5, 2)
-            actions_layout.setSpacing(2)
+            actions_layout.setContentsMargins(0, 0, 0, 0)
+            actions_layout.setSpacing(1)
             
             # Tarayıcıda aç butonu
             browser_btn = QPushButton()
-            browser_btn.setText("🌐")  # Globe emoji
+            browser_btn.setIcon(icon_manager.get_icon("external-link", "#FFFFFF"))
             browser_btn.setToolTip("Tarayıcıda Aç")
-            browser_btn.setFixedSize(28, 28)
-            browser_btn.setStyleSheet(self.button_style_browser)
+            browser_btn.setFixedSize(24, 24)
+            browser_btn.setObjectName("browserIconButton")
             browser_btn.clicked.connect(lambda checked, url=record['url']: self.open_in_browser(url))
             actions_layout.addWidget(browser_btn)
             
             # Tekrar indir butonu
             redownload_btn = QPushButton()
-            redownload_btn.setText("↻")  # Reload symbol
+            redownload_btn.setIcon(icon_manager.get_icon("refresh-cw", "#FFFFFF"))
             redownload_btn.setToolTip("Tekrar İndir")
-            redownload_btn.setFixedSize(28, 28)
-            redownload_btn.setStyleSheet(self.button_style_redownload)
+            redownload_btn.setFixedSize(24, 24)
+            redownload_btn.setObjectName("redownloadIconButton")
             redownload_btn.clicked.connect(lambda checked, url=record['url']: self.redownload(url))
             actions_layout.addWidget(redownload_btn)
             
             # Sil butonu
             delete_btn = QPushButton()
-            delete_btn.setText("×")  # Simple X character
+            delete_btn.setIcon(icon_manager.get_icon("x", "#FFFFFF"))
             delete_btn.setToolTip("Geçmişten Sil")
-            delete_btn.setFixedSize(28, 28)
-            delete_btn.setStyleSheet(self.button_style_delete)
+            delete_btn.setFixedSize(24, 24)
+            delete_btn.setObjectName("deleteIconButton")
             delete_btn.clicked.connect(lambda checked, id=record['id']: self.delete_record(id))
             actions_layout.addWidget(delete_btn)
             
@@ -293,30 +229,166 @@ class HistoryWidget(QWidget):
     
     def delete_record(self, record_id):
         """Kaydı sil"""
-        reply = QMessageBox.question(
-            self, 
-            "Onay", 
-            "Bu kaydı geçmişten silmek istediğinize emin misiniz?",
-            QMessageBox.Yes | QMessageBox.No
-        )
-        
-        if reply == QMessageBox.Yes:
-            if self.db_manager.delete_download(record_id):
-                self.load_history()
+        if self.db_manager.delete_download(record_id):
+            self.load_history()
     
     def clear_history(self):
         """Tüm geçmişi temizle"""
-        reply = QMessageBox.question(
-            self, 
-            "Onay", 
-            "Tüm indirme geçmişini silmek istediğinize emin misiniz?",
-            QMessageBox.Yes | QMessageBox.No
-        )
+        count = self.db_manager.clear_history()
+        QMessageBox.information(self, "Başarılı", f"{count} kayıt silindi.")
+        self.load_history()
+    
+    def add_selected_to_queue_action(self):
+        """Seçili öğeleri kuyruğa ekle"""
+        selected_rows = set()
+        for item in self.table.selectedItems():
+            selected_rows.add(item.row())
         
-        if reply == QMessageBox.Yes:
-            count = self.db_manager.clear_history()
-            QMessageBox.information(self, "Başarılı", f"{count} kayıt silindi.")
+        if not selected_rows:
+            QMessageBox.warning(self, "Uyarı", "Lütfen kuyruğa eklenecek videoları seçin.")
+            return
+        
+        # Seçili satırlardan record ID'lerini topla
+        record_ids = []
+        for row in selected_rows:
+            item = self.table.item(row, 0)  # Tarih sütunu
+            if item:
+                record_id = item.data(Qt.UserRole)
+                if record_id is not None:
+                    record_ids.append(record_id)
+        
+        if not record_ids:
+            return
+        
+        # Toplu olarak kayıtları getir
+        downloads = self.db_manager.get_downloads_by_ids(record_ids)
+        urls = [d['url'] for d in downloads if d and d.get('url')]
+        
+        # Duplicate URL'leri kaldır
+        unique_urls = list(dict.fromkeys(urls))  # Sırayı koruyarak unique yap
+        
+        if unique_urls:
+            self.add_to_queue_signal.emit(unique_urls)
+            # Başarı mesajı ana pencerede gösterilecek
+    
+    def add_all_to_queue_action(self):
+        """Tüm geçmişi kuyruğa ekle"""
+        # Tüm geçmişteki URL'leri al
+        history = self.db_manager.get_all_downloads()
+        urls = [item['url'] for item in history if item.get('url')]
+        
+        # Duplicate URL'leri kaldır
+        unique_urls = list(dict.fromkeys(urls))  # Sırayı koruyarak unique yap
+        
+        if not unique_urls:
+            QMessageBox.warning(self, "Uyarı", "Geçmişte eklenecek video bulunamadı.")
+            return
+        
+        self.add_to_queue_signal.emit(unique_urls)
+        QMessageBox.information(self, "Başarılı", f"{len(unique_urls)} video kuyruğa eklendi.")
+    
+    def add_selected_to_download_action(self):
+        """Seçili öğeleri indir sekmesine ekle"""
+        selected_rows = set()
+        for item in self.table.selectedItems():
+            selected_rows.add(item.row())
+        
+        if not selected_rows:
+            QMessageBox.warning(self, "Uyarı", "Lütfen indir sekmesine eklenecek videoları seçin.")
+            return
+        
+        # Seçili satırlardan record ID'lerini topla
+        record_ids = []
+        for row in selected_rows:
+            item = self.table.item(row, 0)  # Tarih sütunu
+            if item:
+                record_id = item.data(Qt.UserRole)
+                if record_id is not None:
+                    record_ids.append(record_id)
+        
+        if not record_ids:
+            return
+        
+        # Toplu olarak kayıtları getir
+        downloads = self.db_manager.get_downloads_by_ids(record_ids)
+        urls = [d['url'] for d in downloads if d and d.get('url')]
+        
+        # Duplicate URL'leri kaldır
+        unique_urls = list(dict.fromkeys(urls))  # Sırayı koruyarak unique yap
+        
+        if unique_urls:
+            self.add_to_download_signal.emit(unique_urls)
+            # Başarı mesajı ana pencerede gösterilecek
+    
+    def show_context_menu(self, position):
+        """Sağ tık menüsünü göster"""
+        selected_rows = set()
+        for item in self.table.selectedItems():
+            selected_rows.add(item.row())
+        
+        if not selected_rows:
+            return
+        
+        menu = QMenu()
+        
+        # Seçilileri kuyruğa ekle
+        add_to_queue_action = menu.addAction(" Seçilileri Kuyruğa Ekle")
+        add_to_queue_action.setIcon(icon_manager.get_icon("list", "#1976D2"))
+        add_to_queue_action.triggered.connect(self.add_selected_to_queue_action)
+        
+        # Seçilileri indir sekmesine ekle
+        add_to_download_action = menu.addAction(" Seçilileri İndir Sekmesine Ekle")
+        add_to_download_action.setIcon(icon_manager.get_icon("download", "#4CAF50"))
+        add_to_download_action.triggered.connect(self.add_selected_to_download_action)
+        
+        menu.addSeparator()
+        
+        # Seçilileri sil
+        delete_action = menu.addAction(" Seçilileri Sil")
+        delete_action.setIcon(icon_manager.get_icon("trash-2", "#DC3545"))
+        delete_action.triggered.connect(self.delete_selected)
+        
+        menu.exec_(self.table.mapToGlobal(position))
+    
+    def redownload_selected(self):
+        """Seçili öğeleri yeniden indir"""
+        selected_rows = set()
+        for item in self.table.selectedItems():
+            selected_rows.add(item.row())
+        
+        if selected_rows:
+            # İlk seçili satırın URL'sini al ve indir
+            first_row = min(selected_rows)
+            item = self.table.item(first_row, 0)
+            if item:
+                record_id = item.data(Qt.UserRole)
+                download = self.db_manager.get_download_by_id(record_id)
+                if download and download.get('url'):
+                    self.redownload_signal.emit(download['url'])
+    
+    def delete_selected(self):
+        """Seçili öğeleri sil"""
+        selected_rows = set()
+        for item in self.table.selectedItems():
+            selected_rows.add(item.row())
+        
+        if not selected_rows:
+            return
+        
+        # Record ID'lerini topla
+        record_ids = []
+        for row in selected_rows:
+            item = self.table.item(row, 0)
+            if item:
+                record_id = item.data(Qt.UserRole)
+                if record_id is not None:
+                    record_ids.append(record_id)
+        
+        if record_ids:
+            # Toplu silme işlemi
+            deleted_count = self.db_manager.delete_downloads_batch(record_ids)
             self.load_history()
+            QMessageBox.information(self, "Başarılı", f"{deleted_count} kayıt silindi.")
     
     def mousePressEvent(self, a0):
         """Mouse tıklaması olduğunda"""

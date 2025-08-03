@@ -190,6 +190,18 @@ class DatabaseManager:
             
             return [dict(row) for row in cursor.fetchall()]
     
+    def get_download_by_id(self, record_id: int) -> Optional[Dict]:
+        """ID'ye göre indirme kaydını getir"""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT * FROM download_history 
+                WHERE id = ? AND is_deleted = 0
+            ''', (record_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+    
     def get_statistics(self) -> Dict:
         """İndirme istatistiklerini getir"""
         with sqlite3.connect(self.db_path) as conn:
@@ -235,6 +247,41 @@ class DatabaseManager:
             cursor.execute('UPDATE download_history SET is_deleted = 1 WHERE id = ?', (download_id,))
             conn.commit()
             return cursor.rowcount > 0
+    
+    def get_downloads_by_ids(self, record_ids: List[int]) -> List[Dict]:
+        """Birden fazla indirme kaydını ID'lerine göre getir"""
+        if not record_ids:
+            return []
+        
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            # Parametre placeholder'ları oluştur
+            placeholders = ','.join('?' * len(record_ids))
+            cursor.execute(f'''
+                SELECT * FROM download_history 
+                WHERE id IN ({placeholders}) AND is_deleted = 0
+            ''', record_ids)
+            
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+    
+    def delete_downloads_batch(self, record_ids: List[int]) -> int:
+        """Birden fazla indirme kaydını soft delete yap"""
+        if not record_ids:
+            return 0
+        
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            placeholders = ','.join('?' * len(record_ids))
+            cursor.execute(f'''
+                UPDATE download_history 
+                SET is_deleted = 1 
+                WHERE id IN ({placeholders})
+            ''', record_ids)
+            conn.commit()
+            return cursor.rowcount
     
     def hard_delete_download(self, download_id: int) -> bool:
         """İndirme kaydını kalıcı olarak sil"""
@@ -338,6 +385,50 @@ class DatabaseManager:
             
             return [dict(row) for row in cursor.fetchall()]
     
+    def get_existing_queue_video_ids(self) -> set:
+        """Kuyrukta bulunan video ID'lerini set olarak getir"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT video_id FROM download_queue 
+                WHERE is_deleted = 0 AND status != 'completed' AND video_id IS NOT NULL
+            ''')
+            return {row[0] for row in cursor.fetchall()}
+    
+    def add_to_queue_batch(self, items: List[Dict]) -> int:
+        """Birden fazla öğeyi kuyruğa toplu ekle"""
+        if not items:
+            return 0
+        
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Mevcut maksimum pozisyonu bul
+            cursor.execute('SELECT MAX(position) FROM download_queue WHERE is_deleted = 0')
+            max_pos = cursor.fetchone()[0]
+            next_pos = (max_pos or 0) + 1
+            
+            # Toplu ekleme için veri hazırla
+            data = []
+            for i, item in enumerate(items):
+                data.append((
+                    item['url'],
+                    item.get('video_title'),
+                    item.get('format', 'mp3'),
+                    item.get('priority', 1),
+                    next_pos + i,
+                    item.get('video_id')
+                ))
+            
+            cursor.executemany('''
+                INSERT INTO download_queue 
+                (url, video_title, format, priority, position, video_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', data)
+            
+            conn.commit()
+            return cursor.rowcount
+    
     def update_queue_status(self, queue_id: int, status: str, 
                            error_message: Optional[str] = None) -> bool:
         """Kuyruk öğesinin durumunu güncelle"""
@@ -380,6 +471,22 @@ class DatabaseManager:
             conn.commit()
             return cursor.rowcount > 0
     
+    def remove_from_queue_batch(self, queue_ids: List[int]) -> int:
+        """Kuyruktan birden fazla öğeyi soft delete yap"""
+        if not queue_ids:
+            return 0
+        
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            placeholders = ','.join('?' * len(queue_ids))
+            cursor.execute(f'''
+                UPDATE download_queue 
+                SET is_deleted = 1 
+                WHERE id IN ({placeholders})
+            ''', queue_ids)
+            conn.commit()
+            return cursor.rowcount
+    
     def clear_queue(self, status: Optional[str] = None) -> int:
         """Kuyruğu soft delete yap"""
         with sqlite3.connect(self.db_path) as conn:
@@ -388,6 +495,14 @@ class DatabaseManager:
                 cursor.execute('UPDATE download_queue SET is_deleted = 1 WHERE status = ? AND is_deleted = 0', (status,))
             else:
                 cursor.execute('UPDATE download_queue SET is_deleted = 1 WHERE is_deleted = 0')
+            conn.commit()
+            return cursor.rowcount
+    
+    def clear_all_queue(self) -> int:
+        """Tüm kuyruğu soft delete yap"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('UPDATE download_queue SET is_deleted = 1 WHERE is_deleted = 0')
             conn.commit()
             return cursor.rowcount
     

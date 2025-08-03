@@ -191,14 +191,18 @@ class QueueWidget(QWidget):
         )
         
         if reply == QMessageBox.Yes:
-            # Seçili satırlardaki öğeleri sil
+            # Seçili satırlardaki öğelerin ID'lerini topla
+            queue_ids = []
             for row in selected_rows:
                 item_data = self.table.item(row, 0).data(Qt.UserRole)
                 if item_data:
-                    self.db.remove_from_queue(item_data['id'])
+                    queue_ids.append(item_data['id'])
             
-            self.load_queue()
-            QMessageBox.information(self, "Başarılı", f"{len(selected_rows)} öğe kuyruktan silindi.")
+            if queue_ids:
+                # Toplu silme işlemi
+                deleted_count = self.db.remove_from_queue_batch(queue_ids)
+                self.load_queue()
+                QMessageBox.information(self, "Başarılı", f"{deleted_count} öğe kuyruktan silindi.")
     
     def toggle_selected_items(self):
         """Seçili öğelerin durumunu değiştir (bekleyen/duraklatıldı)"""

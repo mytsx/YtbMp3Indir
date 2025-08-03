@@ -41,48 +41,64 @@ class QueueProcessThread(QThread):
             'skip_download': True,
         }
         
-        added_count = 0
+        # Mevcut video ID'lerini al
+        existing_video_ids = self.db_manager.get_existing_queue_video_ids()
+        
+        # Eklenecek öğeleri topla
+        items_to_add = []
         duplicate_videos = []
         
         for url in self.urls:
             try:
-                video_title = None
-                try:
-                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                        info = ydl.extract_info(url, download=False)
-                        if info:
-                            if info.get('_type') == 'playlist':
-                                # Playlist ise her video için ayrı kayıt
-                                playlist_title = info.get('title', 'İsimsiz Liste')
-                                entries = info.get('entries', [])
-                                for idx, entry in enumerate(entries):
-                                    video_url = entry.get('url', '')
-                                    video_title = entry.get('title', f'Video {idx+1}')
-                                    full_title = f"[{playlist_title}] {video_title}"
-                                    result = self.db_manager.add_to_queue(video_url, full_title)
-                                    if result > 0:  # Başarılı
-                                        added_count += 1
-                                    elif result == -1:  # Duplicate
-                                        duplicate_videos.append(video_title)
-                            else:
-                                # Tek video
-                                video_title = info.get('title', 'İsimsiz Video')
-                                result = self.db_manager.add_to_queue(url, video_title)
-                                if result > 0:  # Başarılı
-                                    added_count += 1
-                                elif result == -1:  # Duplicate
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                    if info:
+                        if info.get('_type') == 'playlist':
+                            # Playlist ise her video için kontrol et
+                            playlist_title = info.get('title', 'İsimsiz Liste')
+                            entries = info.get('entries', [])
+                            for idx, entry in enumerate(entries):
+                                video_id = entry.get('id')
+                                video_url = entry.get('url', '')
+                                video_title = entry.get('title', f'Video {idx+1}')
+                                full_title = f"[{playlist_title}] {video_title}"
+                                
+                                # Duplicate kontrolü
+                                if video_id and video_id in existing_video_ids:
                                     duplicate_videos.append(video_title)
-                except Exception as e:
-                    print(f"Video bilgisi alınamadı: {e}")
-                    # Hata durumunda URL ile ekle
-                    result = self.db_manager.add_to_queue(url, None)
-                    if result > 0:
-                        added_count += 1
-                    elif result == -1:
-                        duplicate_videos.append(url)
-                        
+                                else:
+                                    items_to_add.append({
+                                        'url': video_url,
+                                        'video_title': full_title,
+                                        'video_id': video_id
+                                    })
+                                    if video_id:
+                                        existing_video_ids.add(video_id)
+                        else:
+                            # Tek video
+                            video_id = info.get('id')
+                            video_title = info.get('title', 'İsimsiz Video')
+                            
+                            # Duplicate kontrolü
+                            if video_id and video_id in existing_video_ids:
+                                duplicate_videos.append(video_title)
+                            else:
+                                items_to_add.append({
+                                    'url': url,
+                                    'video_title': video_title,
+                                    'video_id': video_id
+                                })
             except Exception as e:
-                print(f"URL eklenirken hata: {e}")
+                print(f"Video bilgisi alınamadı: {e}")
+                # Hata durumunda URL ile ekle
+                items_to_add.append({
+                    'url': url,
+                    'video_title': None,
+                    'video_id': None
+                })
+        
+        # Toplu ekleme yap
+        added_count = self.db_manager.add_to_queue_batch(items_to_add)
         
         self.finished_signal.emit(added_count, duplicate_videos)
 

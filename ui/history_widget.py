@@ -264,16 +264,21 @@ class HistoryWidget(QWidget):
             QMessageBox.warning(self, "Uyarı", "Lütfen kuyruğa eklenecek videoları seçin.")
             return
         
-        # Seçili satırlardan URL'leri al
-        urls = []
+        # Seçili satırlardan record ID'lerini topla
+        record_ids = []
         for row in selected_rows:
             item = self.table.item(row, 0)  # Tarih sütunu
             if item:
                 record_id = item.data(Qt.UserRole)
-                # Veritabanından URL'yi al
-                download = self.db_manager.get_download_by_id(record_id)
-                if download and download.get('url'):
-                    urls.append(download['url'])
+                if record_id is not None:
+                    record_ids.append(record_id)
+        
+        if not record_ids:
+            return
+        
+        # Toplu olarak kayıtları getir
+        downloads = self.db_manager.get_downloads_by_ids(record_ids)
+        urls = [d['url'] for d in downloads if d and d.get('url')]
         
         if urls:
             # Onay dialog
@@ -322,16 +327,21 @@ class HistoryWidget(QWidget):
             QMessageBox.warning(self, "Uyarı", "Lütfen indir sekmesine eklenecek videoları seçin.")
             return
         
-        # Seçili satırlardan URL'leri al
-        urls = []
+        # Seçili satırlardan record ID'lerini topla
+        record_ids = []
         for row in selected_rows:
             item = self.table.item(row, 0)  # Tarih sütunu
             if item:
                 record_id = item.data(Qt.UserRole)
-                # Veritabanından URL'yi al
-                download = self.db_manager.get_download_by_id(record_id)
-                if download and download.get('url'):
-                    urls.append(download['url'])
+                if record_id is not None:
+                    record_ids.append(record_id)
+        
+        if not record_ids:
+            return
+        
+        # Toplu olarak kayıtları getir
+        downloads = self.db_manager.get_downloads_by_ids(record_ids)
+        urls = [d['url'] for d in downloads if d and d.get('url')]
         
         if urls:
             # Onay dialog
@@ -411,14 +421,20 @@ class HistoryWidget(QWidget):
         )
         
         if reply == QMessageBox.Yes:
+            # Record ID'lerini topla
+            record_ids = []
             for row in selected_rows:
                 item = self.table.item(row, 0)
                 if item:
                     record_id = item.data(Qt.UserRole)
-                    self.db_manager.delete_download(record_id)
+                    if record_id is not None:
+                        record_ids.append(record_id)
             
-            self.load_history()
-            QMessageBox.information(self, "Başarılı", f"{len(selected_rows)} kayıt silindi.")
+            if record_ids:
+                # Toplu silme işlemi
+                deleted_count = self.db_manager.delete_downloads_batch(record_ids)
+                self.load_history()
+                QMessageBox.information(self, "Başarılı", f"{deleted_count} kayıt silindi.")
     
     def mousePressEvent(self, a0):
         """Mouse tıklaması olduğunda"""

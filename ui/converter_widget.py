@@ -55,10 +55,10 @@ class DragDropListWidget(QListWidget):
             
             if is_dark:
                 # Koyu tema için açık gri
-                painter.setPen(QColor(120, 120, 120))
+                painter.setPen(QColor(style_manager.colors.DARK_PLACEHOLDER_TEXT))
             else:
                 # Açık tema için koyu gri
-                painter.setPen(QColor(150, 150, 150))
+                painter.setPen(QColor(style_manager.colors.PLACEHOLDER_TEXT))
             
             # Font ayarları
             font = painter.font()

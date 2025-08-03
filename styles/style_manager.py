@@ -15,6 +15,8 @@ class StyleManager:
         self.styles_dir = os.path.dirname(os.path.abspath(__file__))
         self._cache: Dict[str, str] = {}
         self.colors = Colors()
+        self._config = Config()
+        self._current_theme = self._config.get('theme', 'light')
         
     def load_stylesheet(self, filename: str) -> str:
         """Load a QSS stylesheet from file."""
@@ -35,9 +37,14 @@ class StyleManager:
         return ""
     
     def get_current_theme(self) -> str:
-        """Get the current theme name from configuration."""
-        config = Config()
-        return config.get('theme', 'light')
+        """Get the cached current theme name."""
+        return self._current_theme
+    
+    def set_theme(self, theme: str):
+        """Set the current theme and update cache."""
+        self._current_theme = theme
+        self._config.set('theme', theme)
+        self._config.save()
     
     def get_combined_stylesheet(self) -> str:
         """Get combined stylesheet for the application."""

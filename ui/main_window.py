@@ -1253,24 +1253,9 @@ class MP3YapMainWindow(QMainWindow):
                 for shortcut in category_data['shortcuts']:
                     # Kısayol tuşunu string'e çevir
                     key = shortcut['key']
-                    if isinstance(key, QKeySequence):
-                        key_str = key.toString()
-                    elif hasattr(key, 'value'):  # StandardKey
-                        # StandardKey'i QKeySequence'e çevir
-                        key_seq = QKeySequence(key)
-                        key_str = key_seq.toString()
-                    else:
-                        key_str = str(key)
-                    
-                    # Platform'a göre kısayol gösterimi
-                    if not key_str:
-                        # Bazı standart key'ler için manuel tanımla
-                        if key == QKeySequence.Paste:
-                            key_str = "Ctrl+V"
-                        elif key == QKeySequence.Refresh:
-                            key_str = "F5"
-                        elif key == QKeySequence.HelpContents:
-                            key_str = "F1"
+                    if not isinstance(key, QKeySequence):
+                        key = QKeySequence(key)
+                    key_str = key.toString(QKeySequence.NativeText)
                     
                     html += f"<tr><td><b>{key_str}</b></td><td>{shortcut['description']}</td></tr>"
                 

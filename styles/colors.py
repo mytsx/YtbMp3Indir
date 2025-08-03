@@ -42,3 +42,7 @@ class Colors:
     ACCENT_HOVER = "#7B1FA2"
     ERROR_HOVER = "#d32f2f"
     WARNING_HOVER = "#F57C00"
+    
+    # Placeholder text colors
+    PLACEHOLDER_TEXT = "#9e9e9e"  # Light theme placeholder
+    DARK_PLACEHOLDER_TEXT = "#696E82"  # Dark theme placeholder

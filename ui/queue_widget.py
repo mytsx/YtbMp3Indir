@@ -1,8 +1,8 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, 
                            QTableWidgetItem, QPushButton, QLabel, QHeaderView,
-                           QMenu, QMessageBox, QComboBox, QLineEdit)
+                           QMenu, QMessageBox, QComboBox, QLineEdit, QShortcut)
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer
-from PyQt5.QtGui import QFont, QMouseEvent
+from PyQt5.QtGui import QFont, QMouseEvent, QKeySequence
 from database.manager import DatabaseManager
 from datetime import datetime
 from styles import style_manager
@@ -22,6 +22,7 @@ class QueueWidget(QWidget):
         self.db = DatabaseManager()
         self.current_items_hash = None  # Mevcut liste hash'i
         self.init_ui()
+        self.setup_keyboard_shortcuts()
         self.load_queue()
         
         # Otomatik yenileme
@@ -50,15 +51,18 @@ class QueueWidget(QWidget):
         # Kontrol butonları
         self.start_button = QPushButton("▶ Kuyruğu Başlat")
         self.start_button.clicked.connect(self.start_queue)
+        self.start_button.setToolTip("Kuyruktaki öğeleri indirmeye başla")
         style_manager.apply_button_style(self.start_button, "primary")
         
         self.pause_button = QPushButton("⏸ Duraklat")
         self.pause_button.clicked.connect(self.pause_queue)
         self.pause_button.setEnabled(False)
+        self.pause_button.setToolTip("Kuyruk indirmesini duraklat")
         style_manager.apply_button_style(self.pause_button, "warning")
         
         self.clear_completed_button = QPushButton("✓ Tamamlananları Temizle")
         self.clear_completed_button.clicked.connect(self.clear_completed)
+        self.clear_completed_button.setToolTip("Tamamlanan indirmeleri kuyruktan kaldır")
         style_manager.apply_button_style(self.clear_completed_button, "danger")
         
         control_layout.addWidget(self.start_button)
@@ -124,6 +128,73 @@ class QueueWidget(QWidget):
         layout.addWidget(self.stats_label)
         
         self.setLayout(layout)
+        
+    def setup_keyboard_shortcuts(self):
+        """Klavye kısayollarını ayarla"""
+        # Delete tuşu: Seçili öğeleri sil
+        delete_shortcut = QShortcut(QKeySequence.Delete, self)
+        delete_shortcut.activated.connect(self.delete_selected_items)
+        
+        # Space tuşu: Seçili öğeleri duraklat/devam ettir
+        space_shortcut = QShortcut(QKeySequence("Space"), self)
+        space_shortcut.activated.connect(self.toggle_selected_items)
+        
+        # Ctrl+A: Tümünü seç
+        select_all = QShortcut(QKeySequence.SelectAll, self)
+        select_all.activated.connect(self.table.selectAll)
+        
+    def delete_selected_items(self):
+        """Seçili öğeleri sil"""
+        selected_rows = set()
+        for item in self.table.selectedItems():
+            selected_rows.add(item.row())
+        
+        if not selected_rows:
+            return
+            
+        # Onay iste
+        reply = QMessageBox.question(
+            self, 
+            'Onay', 
+            f'{len(selected_rows)} öğeyi kuyruktan silmek istediğinizden emin misiniz?',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            # Seçili satırlardaki öğeleri sil
+            for row in selected_rows:
+                item_data = self.table.item(row, 0).data(Qt.UserRole)
+                if item_data:
+                    self.db.remove_from_queue(item_data['id'])
+            
+            self.load_queue()
+            QMessageBox.information(self, "Başarılı", f"{len(selected_rows)} öğe kuyruktan silindi.")
+    
+    def toggle_selected_items(self):
+        """Seçili öğelerin durumunu değiştir (bekleyen/duraklatıldı)"""
+        selected_rows = set()
+        for item in self.table.selectedItems():
+            selected_rows.add(item.row())
+        
+        if not selected_rows:
+            return
+            
+        # Seçili öğelerin durumlarını kontrol et ve değiştir
+        toggled_count = 0
+        for row in selected_rows:
+            item_data = self.table.item(row, 0).data(Qt.UserRole)
+            if item_data and item_data['status'] == 'pending':
+                # Bekleyen öğeleri duraklatılmış yap
+                self.db.update_queue_status(item_data['id'], 'paused')
+                toggled_count += 1
+            elif item_data and item_data['status'] == 'paused':
+                # Duraklatılmış öğeleri bekleyen yap
+                self.db.update_queue_status(item_data['id'], 'pending')
+                toggled_count += 1
+        
+        if toggled_count > 0:
+            self.load_queue()
         
     def check_and_refresh(self):
         """Değişiklik varsa kuyruğu yenile"""

@@ -5,9 +5,9 @@ import yt_dlp
 from PyQt5.QtWidgets import (QMainWindow, QTextEdit, QPushButton, 
                             QVBoxLayout, QHBoxLayout, QWidget, QLabel, 
                             QProgressBar, QMessageBox, QMenuBar, QMenu,
-                            QAction, QTabWidget, QApplication)
-from PyQt5.QtGui import QDesktopServices, QColor, QIcon
-from PyQt5.QtCore import QUrl, QTimer, QThread, pyqtSignal
+                            QAction, QTabWidget, QApplication, QShortcut)
+from PyQt5.QtGui import QDesktopServices, QColor, QIcon, QKeySequence
+from PyQt5.QtCore import QUrl, QTimer, QThread, pyqtSignal, Qt
 from core.downloader import Downloader, DownloadSignals
 from ui.settings_dialog import SettingsDialog
 from ui.history_widget import HistoryWidget
@@ -16,6 +16,7 @@ from ui.converter_widget import ConverterWidget
 from utils.config import Config
 from database.manager import DatabaseManager
 from styles import style_manager
+from utils.icon_manager import icon_manager
 
 
 class MP3YapMainWindow(QMainWindow):
@@ -69,6 +70,9 @@ class MP3YapMainWindow(QMainWindow):
         
         # Arayüz kurulumu
         self.setup_ui()
+        
+        # Klavye kısayollarını kur
+        self.setup_keyboard_shortcuts()
         
         # Sinyal bağlantıları (UI kurulumundan sonra)
         self.signals.progress.connect(self.update_progress)
@@ -157,6 +161,32 @@ class MP3YapMainWindow(QMainWindow):
         
         # Ana widget olarak tab widget'ı ayarla
         self.setCentralWidget(self.tab_widget)
+        
+        # Durum çubuğu
+        self.setup_status_bar()
+    
+    def setup_status_bar(self):
+        """Durum çubuğunu ayarla"""
+        status_bar = self.statusBar()
+        
+        # Sol taraf - genel durum mesajları için
+        self.status_message = QLabel("")
+        status_bar.addWidget(self.status_message)
+        
+        # Sağ taraf - kalıcı widget'lar
+        # Klavye kısayolları butonu
+        shortcuts_hint = QPushButton(" Kısayollar (F1)")
+        # Tema'ya göre renk belirle
+        theme = self.config.get('theme', 'light')
+        icon_color = "#8B92A9" if theme == 'dark' else "#666666"
+        shortcuts_hint.setIcon(icon_manager.get_icon("command", icon_color))
+        shortcuts_hint.setFlat(True)
+        shortcuts_hint.setCursor(Qt.PointingHandCursor)
+        shortcuts_hint.clicked.connect(self.show_shortcuts_help)
+        shortcuts_hint.setToolTip("Klavye kısayollarını göster")
+        shortcuts_hint.setObjectName("statusBarButton")
+        
+        status_bar.addPermanentWidget(shortcuts_hint)
     
     def create_download_tab(self):
         """İndirme sekmesini oluştur"""
@@ -166,6 +196,7 @@ class MP3YapMainWindow(QMainWindow):
         # URL giriş alanı
         url_label = QLabel("İndirilecek YouTube URL'lerini buraya yapıştırın:")
         self.url_text = QTextEdit()
+        self.url_text.setToolTip("YouTube URL'lerini buraya yapıştırın (Ctrl+V)")
         
         # Durum ve ilerleme
         status_layout = QHBoxLayout()
@@ -376,7 +407,7 @@ class MP3YapMainWindow(QMainWindow):
                 current = match.group(1)
                 total = match.group(2)
                 # Status label'ı renklendir
-                style_manager.apply_status_style(self.status_label, "info")
+                style_manager.apply_status_style(self.status_label, "info", refresh=True)
         else:
             # Normal durum için stil sıfırla
             self.status_label.setObjectName("downloadStatus")
@@ -1068,6 +1099,114 @@ class MP3YapMainWindow(QMainWindow):
             self.url_status_bar.setVisible(True)
         else:
             self.url_status_bar.setVisible(False)
+    
+    def setup_keyboard_shortcuts(self):
+        """Klavye kısayollarını ayarla"""
+        # Ctrl+V: URL yapıştır ve otomatik doğrula
+        paste_shortcut = QShortcut(QKeySequence.Paste, self)
+        paste_shortcut.activated.connect(self.paste_and_validate_url)
+        
+        # Ctrl+Enter: Hızlı indirme başlat
+        quick_download = QShortcut(QKeySequence("Ctrl+Return"), self)
+        quick_download.activated.connect(self.quick_download)
+        
+        # Ctrl+D: Son indirilen dosyanın klasörünü aç
+        open_folder_shortcut = QShortcut(QKeySequence("Ctrl+D"), self)
+        open_folder_shortcut.activated.connect(self.open_output_folder)
+        
+        # Ctrl+H: Geçmiş sekmesine geç
+        history_tab = QShortcut(QKeySequence("Ctrl+H"), self)
+        history_tab.activated.connect(lambda: self.tab_widget.setCurrentIndex(1))
+        
+        # Ctrl+Q: Kuyruk sekmesine geç (Ctrl+Q çıkış ile çakışıyor, Ctrl+K kullanıyoruz)
+        queue_tab = QShortcut(QKeySequence("Ctrl+K"), self)
+        queue_tab.activated.connect(lambda: self.tab_widget.setCurrentIndex(2))
+        
+        # F5: Mevcut sekmeyi yenile
+        refresh = QShortcut(QKeySequence.Refresh, self)
+        refresh.activated.connect(self.refresh_current_tab)
+        
+        # F1: Yardım/Kısayollar listesi
+        help_shortcut = QShortcut(QKeySequence.HelpContents, self)
+        help_shortcut.activated.connect(self.show_shortcuts_help)
+        
+        # Esc: İşlemi iptal et/Dialogu kapat
+        escape = QShortcut(QKeySequence("Escape"), self)
+        escape.activated.connect(self.handle_escape)
+        
+        # Kuyruk yönetimi kısayolları (kuyruk sekmesi aktifken)
+        # Delete: Seçilileri sil - QueueWidget içinde ele alınacak
+        # Space: Seçilileri duraklat/devam ettir - QueueWidget içinde ele alınacak
+        # Ctrl+↑/↓: Önceliği değiştir - QueueWidget içinde ele alınacak
+    
+    def paste_and_validate_url(self):
+        """URL yapıştır ve otomatik doğrula"""
+        # Sadece indirme sekmesindeyken çalışsın
+        if self.tab_widget.currentIndex() == 0:
+            clipboard = QApplication.clipboard()
+            text = clipboard.text()
+            if text:
+                # Mevcut metne ekle (yeni satırla)
+                current_text = self.url_text.toPlainText()
+                if current_text and not current_text.endswith('\n'):
+                    text = '\n' + text
+                cursor = self.url_text.textCursor()
+                cursor.movePosition(cursor.End)
+                cursor.insertText(text)
+                # URL kontrolü otomatik tetiklenecek (textChanged sinyali ile)
+    
+    def quick_download(self):
+        """Hızlı indirme başlat (Ctrl+Enter)"""
+        # Sadece indirme sekmesindeyken ve URL varken çalışsın
+        if self.tab_widget.currentIndex() == 0:
+            if self.url_text.toPlainText().strip() and self.download_button.isEnabled():
+                self.start_download()
+    
+    def refresh_current_tab(self):
+        """Mevcut sekmeyi yenile (F5)"""
+        current_index = self.tab_widget.currentIndex()
+        if current_index == 1:  # Geçmiş sekmesi
+            self.history_widget.load_history()
+        elif current_index == 2:  # Kuyruk sekmesi
+            self.queue_widget.load_queue()
+        # Diğer sekmeler için özel yenileme yok
+    
+    def show_shortcuts_help(self):
+        """Klavye kısayolları yardımını göster (F1)"""
+        shortcuts_text = """
+        <h3>Klavye Kısayolları</h3>
+        <table>
+        <tr><td><b>Ctrl+V</b></td><td>URL yapıştır ve otomatik doğrula</td></tr>
+        <tr><td><b>Ctrl+Enter</b></td><td>Hızlı indirme başlat</td></tr>
+        <tr><td><b>Ctrl+D</b></td><td>İndirme klasörünü aç</td></tr>
+        <tr><td><b>Ctrl+H</b></td><td>Geçmiş sekmesine geç</td></tr>
+        <tr><td><b>Ctrl+K</b></td><td>Kuyruk sekmesine geç</td></tr>
+        <tr><td><b>F5</b></td><td>Mevcut sekmeyi yenile</td></tr>
+        <tr><td><b>F1</b></td><td>Bu yardım penceresini göster</td></tr>
+        <tr><td><b>Esc</b></td><td>İndirmeyi iptal et</td></tr>
+        <tr><td><b>Ctrl+I</b></td><td>URL'leri dosyadan içe aktar</td></tr>
+        <tr><td><b>Ctrl+,</b></td><td>Tercihler/Ayarlar</td></tr>
+        <tr><td><b>Ctrl+Q</b></td><td>Uygulamadan çık</td></tr>
+        </table>
+        
+        <h4>Kuyruk Sekmesi Kısayolları</h4>
+        <table>
+        <tr><td><b>Ctrl+A</b></td><td>Tümünü seç</td></tr>
+        <tr><td><b>Delete</b></td><td>Seçilileri sil</td></tr>
+        <tr><td><b>Space</b></td><td>Seçilileri duraklat/devam ettir</td></tr>
+        </table>
+        """
+        
+        QMessageBox.information(self, "Klavye Kısayolları", shortcuts_text)
+    
+    def handle_escape(self):
+        """Escape tuşu işlemi"""
+        # İndirme devam ediyorsa iptal et
+        if hasattr(self, 'downloader') and self.downloader.is_running:
+            self.cancel_download()
+        # Kuyruk indirmesi varsa iptal et
+        elif hasattr(self, 'current_queue_item') and self.current_queue_item:
+            self.queue_widget.pause_queue()
     
     def closeEvent(self, a0):
         """Pencere kapatılırken"""

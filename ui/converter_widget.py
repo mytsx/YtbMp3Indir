@@ -503,23 +503,17 @@ class ConverterWidget(QWidget):
         # Update status label once after all files are processed
         if mp3_skipped_count > 0 and added_count == 0:
             self.status_label.setText(self.tr("{} MP3 dosyası atlandı").format(mp3_skipped_count))
-            self.status_label.setObjectName("alertWarning")
-            self.status_label.style().unpolish(self.status_label)
-            self.status_label.style().polish(self.status_label)
+            style_manager.apply_alert_style(self.status_label, "warning")
         elif self.selected_files and self.ffmpeg_path:
             self.convert_btn.setEnabled(True)
             if added_count > 0:
                 self.status_label.setText(self.tr("{} dosya eklendi (toplam {})").format(added_count, len(self.selected_files)))
             else:
                 self.status_label.setText(self.tr("{} dosya seçildi").format(len(self.selected_files)))
-            self.status_label.setObjectName("alertSuccess")
-            self.status_label.style().unpolish(self.status_label)
-            self.status_label.style().polish(self.status_label)
+            style_manager.apply_alert_style(self.status_label, "success")
         elif self.selected_files and not self.ffmpeg_path:
             self.status_label.setText(self.tr("FFmpeg bulunamadı - Dönüştürme yapılamaz"))
-            self.status_label.setObjectName("alertError")
-            self.status_label.style().unpolish(self.status_label)
-            self.status_label.style().polish(self.status_label)
+            style_manager.apply_alert_style(self.status_label, "error")
             
     def clear_list(self):
         """Listeyi temizle"""
@@ -576,9 +570,7 @@ class ConverterWidget(QWidget):
             status_text = html.escape(str(data))  # Fallback
             
         self.status_label.setText(status_text)
-        self.status_label.setObjectName("alertInfo")
-        self.status_label.style().unpolish(self.status_label)
-        self.status_label.style().polish(self.status_label)
+        style_manager.apply_alert_style(self.status_label, "info")
         
     def file_completed(self, input_path, output_path, is_replaced):  # output_path kept for signal compatibility
         """Dosya tamamlandığında"""
@@ -626,9 +618,7 @@ class ConverterWidget(QWidget):
         if self.conversion_worker:
             self.conversion_worker.stop()
             self.status_label.setText(self.tr("İptal ediliyor..."))
-            self.status_label.setObjectName("alertWarning")
-            self.status_label.style().unpolish(self.status_label)
-            self.status_label.style().polish(self.status_label)
+            style_manager.apply_alert_style(self.status_label, "warning")
     
     def conversion_finished(self):
         """Dönüştürme tamamlandığında"""

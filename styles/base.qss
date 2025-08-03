@@ -221,6 +221,21 @@ QStatusBar {
     min-height: 30px;
 }
 
+/* Status Bar Button */
+QPushButton#statusBarButton {
+    color: #666;
+    border: none;
+    padding: 5px 10px;
+    background: transparent;
+    font-size: 12px;
+}
+
+QPushButton#statusBarButton:hover {
+    color: #333;
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 3px;
+}
+
 /* Label */
 QLabel {
     color: #212121;

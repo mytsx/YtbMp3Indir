@@ -50,7 +50,7 @@ class StyleManager:
             ]
             return "\n".join(stylesheets)
     
-    def apply_button_style(self, button: QPushButton, style_type: str = "primary"):
+    def apply_button_style(self, button: QPushButton, style_type: str = "primary", refresh: bool = False):
         """Apply a specific style to a button."""
         style_map = {
             "primary": "primaryButton",
@@ -65,8 +65,11 @@ class StyleManager:
         
         if style_type in style_map:
             button.setObjectName(style_map[style_type])
+            if refresh:
+                button.style().unpolish(button)
+                button.style().polish(button)
     
-    def apply_status_style(self, label: QLabel, status_type: str):
+    def apply_status_style(self, label: QLabel, status_type: str, refresh: bool = False):
         """Apply status styling to a label."""
         status_map = {
             "success": "statusSuccess",
@@ -77,6 +80,32 @@ class StyleManager:
         
         if status_type in status_map:
             label.setObjectName(status_map[status_type])
+            if refresh:
+                label.style().unpolish(label)
+                label.style().polish(label)
+    
+    def apply_alert_style(self, label: QLabel, alert_type: str, refresh: bool = True):
+        """Apply alert styling to a label (convenience method).
+        
+        This is a specialized method for alert messages that automatically refreshes styles.
+        
+        Args:
+            label: The label widget to style
+            alert_type: The type of alert ('success', 'warning', 'error', 'info')
+            refresh: Whether to refresh the widget's style (default: True)
+        """
+        alert_map = {
+            "success": "alertSuccess",
+            "warning": "alertWarning", 
+            "error": "alertError",
+            "info": "alertInfo"
+        }
+        
+        if alert_type in alert_map:
+            label.setObjectName(alert_map[alert_type])
+            if refresh:
+                label.style().unpolish(label)
+                label.style().polish(label)
     
     def set_widget_property(self, widget, property_name: str, property_value: str, refresh: bool = True):
         """Set a custom property on a widget and optionally refresh its style.

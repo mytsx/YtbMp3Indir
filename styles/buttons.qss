@@ -171,6 +171,21 @@ QPushButton#deleteIconButton:hover {
     background-color: #d32f2f;
 }
 
+/* Status Bar Button */
+QPushButton#statusBarButton {
+    color: #666;
+    border: none;
+    padding: 5px 10px;
+    background: transparent;
+    font-size: 12px;
+}
+
+QPushButton#statusBarButton:hover {
+    color: #333;
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 3px;
+}
+
 /* Queue widget specific buttons */
 QPushButton#upButton, QPushButton#downButton {
     background-color: #2196F3;

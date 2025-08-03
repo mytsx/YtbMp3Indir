@@ -524,7 +524,7 @@ class MP3YapMainWindow(QMainWindow):
         download_btn = button_box.addButton("İndir", QDialogButtonBox.AcceptRole)
         later_btn = button_box.addButton("Daha Sonra", QDialogButtonBox.RejectRole)
         
-        download_btn.clicked.connect(lambda: self.open_update_url(info['url']))
+        download_btn.clicked.connect(lambda: self.open_update_url(info['download_url']))
         later_btn.clicked.connect(dialog.reject)
         
         layout.addWidget(button_box)

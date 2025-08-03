@@ -21,28 +21,27 @@ class UpdateChecker(QThread):
         """Check for updates"""
         try:
             response = requests.get(self.api_url, timeout=5)
-            if response.status_code == 200:
-                data = response.json()
-                latest_version = data.get('tag_name', '').lstrip('v')
-                
-                if latest_version and self.is_newer_version(latest_version):
-                    update_info = {
-                        'version': latest_version,
-                        'url': data.get('html_url', ''),
-                        'body': data.get('body', ''),
-                        'download_url': self.get_download_url(data),
-                        'published_at': data.get('published_at', '')
-                    }
-                    self.update_available.emit(update_info)
-                    self.check_finished.emit(True, f"Yeni sürüm mevcut: v{latest_version}")
-                else:
-                    self.check_finished.emit(True, "Güncel sürümü kullanıyorsunuz")
+            response.raise_for_status()
+            
+            data = response.json()
+            latest_version = data.get('tag_name', '').lstrip('v')
+            
+            if latest_version and self.is_newer_version(latest_version):
+                update_info = {
+                    'version': latest_version,
+                    'url': data.get('html_url', ''),
+                    'body': data.get('body', ''),
+                    'download_url': self.get_download_url(data),
+                    'published_at': data.get('published_at', '')
+                }
+                self.update_available.emit(update_info)
+                self.check_finished.emit(True, f"Yeni sürüm mevcut: v{latest_version}")
             else:
-                self.check_finished.emit(False, "Güncelleme kontrolü başarısız")
+                self.check_finished.emit(True, "Güncel sürümü kullanıyorsunuz")
         except requests.exceptions.RequestException as e:
-            self.check_finished.emit(False, f"Bağlantı hatası: {str(e)}")
+            self.check_finished.emit(False, f"Güncelleme kontrolü başarısız: {e}")
         except Exception as e:
-            self.check_finished.emit(False, f"Hata: {str(e)}")
+            self.check_finished.emit(False, f"Hata: {e}")
     
     def is_newer_version(self, latest_version):
         """Check if latest version is newer than current"""

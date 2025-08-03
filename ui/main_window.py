@@ -524,14 +524,22 @@ class MP3YapMainWindow(QMainWindow):
     
     def add_url_to_download(self, url):
         """Geçmişten URL'yi indirme listesine ekle"""
-        current_text = self.url_text.toPlainText().strip()
-        if current_text:
-            self.url_text.setPlainText(current_text + '\n' + url)
-        else:
-            self.url_text.setPlainText(url)
         # İndirme sekmesine geç
         self.tab_widget.setCurrentIndex(0)
-        QMessageBox.information(self, "Başarılı", "URL indirme listesine eklendi!")
+        
+        # Mevcut URL'leri kontrol et
+        current_text = self.url_text.toPlainText().strip()
+        if current_text:
+            existing_urls = set(line.strip() for line in current_text.split('\n') if line.strip())
+            if url not in existing_urls:
+                self.url_text.setPlainText(current_text + '\n' + url)
+                self.status_label.setText("✓ URL indir sekmesine eklendi")
+                style_manager.apply_alert_style(self.status_label, "success")
+            # Zaten varsa sessizce geç
+        else:
+            self.url_text.setPlainText(url)
+            self.status_label.setText("✓ URL indir sekmesine eklendi")
+            style_manager.apply_alert_style(self.status_label, "success")
     
     def add_urls_to_queue(self, urls):
         """Birden fazla URL'yi kuyruğa ekle (Geçmiş sekmesinden)"""
@@ -544,18 +552,30 @@ class MP3YapMainWindow(QMainWindow):
         # İndir sekmesine geç
         self.tab_widget.setCurrentIndex(0)
         
-        # URL'leri text widget'a ekle
+        # Mevcut URL'leri al ve set'e çevir
         current_text = self.url_text.toPlainText().strip()
+        existing_urls = set()
         if current_text:
-            # Mevcut URL'ler varsa alt satıra ekle
-            self.url_text.setPlainText(current_text + '\n' + '\n'.join(urls))
-        else:
-            # Boşsa direkt ekle
-            self.url_text.setPlainText('\n'.join(urls))
+            existing_urls = set(line.strip() for line in current_text.split('\n') if line.strip())
         
-        # Durum mesajı
-        self.status_label.setText(f"✓ {len(urls)} video indir sekmesine eklendi")
-        style_manager.apply_alert_style(self.status_label, "success")
+        # Yeni URL'leri filtrele (duplicate olmayanlar)
+        new_urls = [url for url in urls if url not in existing_urls]
+        
+        if new_urls:
+            # Sadece yeni URL'leri ekle
+            if current_text:
+                # Mevcut URL'ler varsa alt satıra ekle
+                self.url_text.setPlainText(current_text + '\n' + '\n'.join(new_urls))
+            else:
+                # Boşsa direkt ekle
+                self.url_text.setPlainText('\n'.join(new_urls))
+            
+            # Durum mesajı - sadece eklenen sayıyı göster
+            self.status_label.setText(f"✓ {len(new_urls)} video indir sekmesine eklendi")
+            style_manager.apply_alert_style(self.status_label, "success")
+        else:
+            # Hiç yeni URL yoksa sessizce geç, durum mesajı gösterme
+            pass
     
     def add_to_queue(self):
         """URL'leri kuyruğa ekle"""

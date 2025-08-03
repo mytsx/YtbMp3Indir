@@ -229,30 +229,14 @@ class HistoryWidget(QWidget):
     
     def delete_record(self, record_id):
         """Kaydı sil"""
-        reply = QMessageBox.question(
-            self, 
-            "Onay", 
-            "Bu kaydı geçmişten silmek istediğinize emin misiniz?",
-            QMessageBox.Yes | QMessageBox.No
-        )
-        
-        if reply == QMessageBox.Yes:
-            if self.db_manager.delete_download(record_id):
-                self.load_history()
+        if self.db_manager.delete_download(record_id):
+            self.load_history()
     
     def clear_history(self):
         """Tüm geçmişi temizle"""
-        reply = QMessageBox.question(
-            self, 
-            "Onay", 
-            "Tüm indirme geçmişini silmek istediğinize emin misiniz?",
-            QMessageBox.Yes | QMessageBox.No
-        )
-        
-        if reply == QMessageBox.Yes:
-            count = self.db_manager.clear_history()
-            QMessageBox.information(self, "Başarılı", f"{count} kayıt silindi.")
-            self.load_history()
+        count = self.db_manager.clear_history()
+        QMessageBox.information(self, "Başarılı", f"{count} kayıt silindi.")
+        self.load_history()
     
     def add_selected_to_queue_action(self):
         """Seçili öğeleri kuyruğa ekle"""
@@ -280,19 +264,12 @@ class HistoryWidget(QWidget):
         downloads = self.db_manager.get_downloads_by_ids(record_ids)
         urls = [d['url'] for d in downloads if d and d.get('url')]
         
-        if urls:
-            # Onay dialog
-            reply = QMessageBox.question(
-                self, 
-                'Onay', 
-                f'{len(urls)} videoyu kuyruğa eklemek istediğinizden emin misiniz?',
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No
-            )
-            
-            if reply == QMessageBox.Yes:
-                self.add_to_queue_signal.emit(urls)
-                # Başarı mesajı ana pencerede gösterilecek
+        # Duplicate URL'leri kaldır
+        unique_urls = list(dict.fromkeys(urls))  # Sırayı koruyarak unique yap
+        
+        if unique_urls:
+            self.add_to_queue_signal.emit(unique_urls)
+            # Başarı mesajı ana pencerede gösterilecek
     
     def add_all_to_queue_action(self):
         """Tüm geçmişi kuyruğa ekle"""
@@ -300,22 +277,15 @@ class HistoryWidget(QWidget):
         history = self.db_manager.get_all_downloads()
         urls = [item['url'] for item in history if item.get('url')]
         
-        if not urls:
+        # Duplicate URL'leri kaldır
+        unique_urls = list(dict.fromkeys(urls))  # Sırayı koruyarak unique yap
+        
+        if not unique_urls:
             QMessageBox.warning(self, "Uyarı", "Geçmişte eklenecek video bulunamadı.")
             return
         
-        # Onay dialog
-        reply = QMessageBox.question(
-            self, 
-            'Onay', 
-            f'Tüm geçmişteki {len(urls)} videoyu kuyruğa eklemek istediğinizden emin misiniz?\nBu işlem uzun sürebilir.',
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
-        )
-        
-        if reply == QMessageBox.Yes:
-            self.add_to_queue_signal.emit(urls)
-            QMessageBox.information(self, "Başarılı", f"{len(urls)} video kuyruğa eklendi.")
+        self.add_to_queue_signal.emit(unique_urls)
+        QMessageBox.information(self, "Başarılı", f"{len(unique_urls)} video kuyruğa eklendi.")
     
     def add_selected_to_download_action(self):
         """Seçili öğeleri indir sekmesine ekle"""
@@ -343,19 +313,12 @@ class HistoryWidget(QWidget):
         downloads = self.db_manager.get_downloads_by_ids(record_ids)
         urls = [d['url'] for d in downloads if d and d.get('url')]
         
-        if urls:
-            # Onay dialog
-            reply = QMessageBox.question(
-                self, 
-                'Onay', 
-                f'{len(urls)} videoyu indir sekmesine eklemek istediğinizden emin misiniz?',
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No
-            )
-            
-            if reply == QMessageBox.Yes:
-                self.add_to_download_signal.emit(urls)
-                # Başarı mesajı ana pencerede gösterilecek
+        # Duplicate URL'leri kaldır
+        unique_urls = list(dict.fromkeys(urls))  # Sırayı koruyarak unique yap
+        
+        if unique_urls:
+            self.add_to_download_signal.emit(unique_urls)
+            # Başarı mesajı ana pencerede gösterilecek
     
     def show_context_menu(self, position):
         """Sağ tık menüsünü göster"""
@@ -412,29 +375,20 @@ class HistoryWidget(QWidget):
         if not selected_rows:
             return
         
-        reply = QMessageBox.question(
-            self, 
-            'Onay', 
-            f'{len(selected_rows)} kayıtı silmek istediğinizden emin misiniz?',
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
-        )
+        # Record ID'lerini topla
+        record_ids = []
+        for row in selected_rows:
+            item = self.table.item(row, 0)
+            if item:
+                record_id = item.data(Qt.UserRole)
+                if record_id is not None:
+                    record_ids.append(record_id)
         
-        if reply == QMessageBox.Yes:
-            # Record ID'lerini topla
-            record_ids = []
-            for row in selected_rows:
-                item = self.table.item(row, 0)
-                if item:
-                    record_id = item.data(Qt.UserRole)
-                    if record_id is not None:
-                        record_ids.append(record_id)
-            
-            if record_ids:
-                # Toplu silme işlemi
-                deleted_count = self.db_manager.delete_downloads_batch(record_ids)
-                self.load_history()
-                QMessageBox.information(self, "Başarılı", f"{deleted_count} kayıt silindi.")
+        if record_ids:
+            # Toplu silme işlemi
+            deleted_count = self.db_manager.delete_downloads_batch(record_ids)
+            self.load_history()
+            QMessageBox.information(self, "Başarılı", f"{deleted_count} kayıt silindi.")
     
     def mousePressEvent(self, a0):
         """Mouse tıklaması olduğunda"""

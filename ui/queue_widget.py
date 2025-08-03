@@ -181,28 +181,18 @@ class QueueWidget(QWidget):
         if not selected_rows:
             return
             
-        # Onay iste
-        reply = QMessageBox.question(
-            self, 
-            'Onay', 
-            f'{len(selected_rows)} öğeyi kuyruktan silmek istediğinizden emin misiniz?',
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
-        )
+        # Seçili satırlardaki öğelerin ID'lerini topla
+        queue_ids = []
+        for row in selected_rows:
+            item_data = self.table.item(row, 0).data(Qt.UserRole)
+            if item_data:
+                queue_ids.append(item_data['id'])
         
-        if reply == QMessageBox.Yes:
-            # Seçili satırlardaki öğelerin ID'lerini topla
-            queue_ids = []
-            for row in selected_rows:
-                item_data = self.table.item(row, 0).data(Qt.UserRole)
-                if item_data:
-                    queue_ids.append(item_data['id'])
-            
-            if queue_ids:
-                # Toplu silme işlemi
-                deleted_count = self.db.remove_from_queue_batch(queue_ids)
-                self.load_queue()
-                QMessageBox.information(self, "Başarılı", f"{deleted_count} öğe kuyruktan silindi.")
+        if queue_ids:
+            # Toplu silme işlemi
+            deleted_count = self.db.remove_from_queue_batch(queue_ids)
+            self.load_queue()
+            QMessageBox.information(self, "Başarılı", f"{deleted_count} öğe kuyruktan silindi.")
     
     def toggle_selected_items(self):
         """Seçili öğelerin durumunu değiştir (bekleyen/duraklatıldı)"""
@@ -428,18 +418,9 @@ class QueueWidget(QWidget):
     
     def clear_all(self):
         """Tüm kuyruğu temizle"""
-        reply = QMessageBox.question(
-            self, 
-            'Onay', 
-            'Tüm kuyruğu temizlemek istediğinizden emin misiniz?\nBu işlem geri alınamaz.',
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
-        )
-        
-        if reply == QMessageBox.Yes:
-            count = self.db.clear_all_queue()
-            self.load_queue()
-            QMessageBox.information(self, "Başarılı", f"{count} öğe kuyruktan temizlendi.")
+        count = self.db.clear_all_queue()
+        self.load_queue()
+        QMessageBox.information(self, "Başarılı", f"{count} öğe kuyruktan temizlendi.")
     
     def clear_selected(self):
         """Seçili öğeleri temizle"""
@@ -451,72 +432,37 @@ class QueueWidget(QWidget):
             QMessageBox.warning(self, "Uyarı", "Lütfen temizlenecek öğeleri seçin.")
             return
         
-        reply = QMessageBox.question(
-            self, 
-            'Onay', 
-            f'{len(selected_rows)} seçili öğeyi temizlemek istediğinizden emin misiniz?',
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
-        )
+        # Seçili öğeleri sil
+        for row in selected_rows:
+            item_data = self.table.item(row, 0).data(Qt.UserRole)
+            if item_data:
+                self.db.remove_from_queue(item_data['id'])
         
-        if reply == QMessageBox.Yes:
-            for row in selected_rows:
-                item_data = self.table.item(row, 0).data(Qt.UserRole)
-                if item_data:
-                    self.db.remove_from_queue(item_data['id'])
-            
-            self.load_queue()
-            QMessageBox.information(self, "Başarılı", f"{len(selected_rows)} öğe temizlendi.")
+        self.load_queue()
+        QMessageBox.information(self, "Başarılı", f"{len(selected_rows)} öğe temizlendi.")
     
     def clear_completed(self):
         """Tamamlananları temizle"""
-        reply = QMessageBox.question(
-            self, 
-            'Onay', 
-            'Tamamlanmış tüm indirmeleri temizlemek istediğinizden emin misiniz?',
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
-        )
-        
-        if reply == QMessageBox.Yes:
-            count = self.db.clear_queue('completed')
-            self.db.reorder_queue_positions()
-            self.load_queue()
-            QMessageBox.information(self, "Başarılı", f"{count} tamamlanmış indirme temizlendi.")
+        count = self.db.clear_queue('completed')
+        self.db.reorder_queue_positions()
+        self.load_queue()
+        QMessageBox.information(self, "Başarılı", f"{count} tamamlanmış indirme temizlendi.")
     
     def clear_failed(self):
         """Başarısız indirmeleri temizle"""
-        reply = QMessageBox.question(
-            self, 
-            'Onay', 
-            'Başarısız tüm indirmeleri temizlemek istediğinizden emin misiniz?',
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
-        )
-        
-        if reply == QMessageBox.Yes:
-            count = self.db.clear_queue('failed')
-            self.db.reorder_queue_positions()
-            self.load_queue()
-            QMessageBox.information(self, "Başarılı", f"{count} başarısız indirme temizlendi.")
+        count = self.db.clear_queue('failed')
+        self.db.reorder_queue_positions()
+        self.load_queue()
+        QMessageBox.information(self, "Başarılı", f"{count} başarısız indirme temizlendi.")
     
     def clear_canceled(self):
         """Iptal edilmiş indirmeleri temizle"""
-        reply = QMessageBox.question(
-            self, 
-            'Onay', 
-            'İptal edilmiş tüm indirmeleri temizlemek istediğinizden emin misiniz?',
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
-        )
-        
-        if reply == QMessageBox.Yes:
-            # canceled ve paused durumlarını temizle
-            count = self.db.clear_queue('canceled')
-            count += self.db.clear_queue('paused')
-            self.db.reorder_queue_positions()
-            self.load_queue()
-            QMessageBox.information(self, "Başarılı", f"{count} iptal edilmiş indirme temizlendi.")
+        # canceled ve paused durumlarını temizle
+        count = self.db.clear_queue('canceled')
+        count += self.db.clear_queue('paused')
+        self.db.reorder_queue_positions()
+        self.load_queue()
+        QMessageBox.information(self, "Başarılı", f"{count} iptal edilmiş indirme temizlendi.")
     
     def move_up(self, item_id):
         """Öğeyi yukarı taşı"""
@@ -555,14 +501,9 @@ class QueueWidget(QWidget):
     
     def delete_item(self, item_id):
         """Öğeyi sil"""
-        reply = QMessageBox.question(self, "Onay", 
-                                   "Bu öğeyi kuyruktan kaldırmak istiyor musunuz?",
-                                   QMessageBox.Yes | QMessageBox.No)
-        
-        if reply == QMessageBox.Yes:
-            self.db.remove_from_queue(item_id)
-            self.load_queue()
-            self.queue_updated.emit()
+        self.db.remove_from_queue(item_id)
+        self.load_queue()
+        self.queue_updated.emit()
     
     def show_context_menu(self, position):
         """Sağ tık menüsü göster"""
@@ -694,15 +635,10 @@ class QueueWidget(QWidget):
     
     def delete_selected(self, item_ids):
         """Seçili öğeleri sil"""
-        reply = QMessageBox.question(self, "Onay", 
-                                   f"{len(item_ids)} öğeyi kuyruktan kaldırmak istiyor musunuz?",
-                                   QMessageBox.Yes | QMessageBox.No)
-        
-        if reply == QMessageBox.Yes:
-            for item_id in item_ids:
-                self.db.remove_from_queue(item_id)
-            self.load_queue()
-            self.queue_updated.emit()
+        for item_id in item_ids:
+            self.db.remove_from_queue(item_id)
+        self.load_queue()
+        self.queue_updated.emit()
     
     def search_queue(self, text):
         """Kuyrukta arama yap"""

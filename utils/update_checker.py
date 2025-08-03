@@ -2,6 +2,7 @@
 
 import platform
 import logging
+import json
 import requests
 from packaging import version
 from PyQt5.QtCore import QThread, pyqtSignal
@@ -22,7 +23,7 @@ class UpdateChecker(QThread):
     def run(self):
         """Check for updates"""
         try:
-            headers = {'User-Agent': f'{__github_repo__.split("/")[1]}/{__version__}'}
+            headers = {'User-Agent': f'{__github_repo__.split("/")[-1]}/{__version__}'}
             response = requests.get(self.api_url, timeout=5, headers=headers)
             response.raise_for_status()
             
@@ -41,7 +42,7 @@ class UpdateChecker(QThread):
                 self.check_finished.emit(True, f"Yeni sürüm mevcut: v{latest_version}")
             else:
                 self.check_finished.emit(True, "Güncel sürümü kullanıyorsunuz")
-        except requests.exceptions.JSONDecodeError as e:
+        except json.JSONDecodeError as e:
             self.check_finished.emit(False, f"Hata: API yanıtı okunamadı: {e}")
         except requests.exceptions.RequestException as e:
             self.check_finished.emit(False, f"Güncelleme kontrolü başarısız: {e}")

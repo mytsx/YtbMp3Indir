@@ -273,12 +273,12 @@ class MP3YapMainWindow(QMainWindow):
         self.update_status_widget.setCursor(Qt.PointingHandCursor)
         self.update_status_widget.setObjectName("updateStatusButton")
         self.update_status_widget.hide()  # Başlangıçta gizli
+        self.update_status_widget.clicked.connect(self.show_update_dialog)  # Signal'i burada bir kez bağla
         status_bar.addPermanentWidget(self.update_status_widget)
         
         # Versiyon etiketi (güncelleme kontrolü yapılmadan önce)
         self.version_label = QLabel(f"v{__version__}")
         self.version_label.setObjectName("versionLabel")
-        self.version_label.setStyleSheet("color: gray; padding: 0 10px;")
         status_bar.addPermanentWidget(self.version_label)
         
         # Klavye kısayolları butonu
@@ -465,7 +465,6 @@ class MP3YapMainWindow(QMainWindow):
         
         # Güncelleme butonunu göster
         self.update_status_widget.setText(f"🔄 Güncelleme Mevcut: v{update_info['version']}")
-        self.update_status_widget.clicked.connect(self.show_update_dialog)
         self.update_status_widget.show()
         
         # Versiyon etiketini gizle

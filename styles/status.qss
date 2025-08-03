@@ -168,3 +168,9 @@ QLabel#urlStatusBar[statusType="info"] {
     color: #1565C0;
     border-left-color: #2196F3;
 }
+
+/* Version Label in Status Bar */
+QLabel#versionLabel {
+    color: gray;
+    padding: 0 10px;
+}

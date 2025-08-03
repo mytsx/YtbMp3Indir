@@ -58,14 +58,17 @@ class UpdateChecker(QThread):
         assets = release_data.get('assets', [])
         system = platform.system().lower()
         
-        # Find appropriate asset based on platform
+        platform_map = {
+            'windows': ('.exe', '.msi'),
+            'darwin': ('.dmg', '.pkg'),
+            'linux': ('.appimage', '.deb')
+        }
+        
+        extensions = platform_map.get(system, ())  # Get extensions for the current system
+        
         for asset in assets:
             name = asset.get('name', '').lower()
-            if system == 'windows' and ('.exe' in name or '.msi' in name):
-                return asset.get('browser_download_url', '')
-            elif system == 'darwin' and ('.dmg' in name or '.pkg' in name):
-                return asset.get('browser_download_url', '')
-            elif system == 'linux' and ('.appimage' in name or '.deb' in name):
+            if name.endswith(extensions):
                 return asset.get('browser_download_url', '')
         
         # Fallback to release page

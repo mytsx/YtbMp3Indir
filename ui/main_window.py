@@ -144,6 +144,7 @@ class MP3YapMainWindow(QMainWindow):
         # Özel indirme listesi (sadece seçilenler için)
         self.selected_download_queue = []  # Sadece seçili öğeleri indirmek için
         self.is_queue_mode = False  # Normal kuyruk modu mu yoksa spesifik indirme mi
+        self.current_queue_item = None  # Şu anda işlenen kuyruk öğesi
         
         # Sinyaller ve downloader
         self.signals = DownloadSignals()
@@ -734,7 +735,7 @@ class MP3YapMainWindow(QMainWindow):
             self.is_queue_mode = False
         
         # Eğer başka bir indirme devam ediyorsa, bu öğeyi özel listeye ekle
-        if hasattr(self, 'current_queue_item') and self.current_queue_item:
+        if self.current_queue_item is not None:
             if not self.is_queue_mode or queue_item.get('is_specific', False):
                 # Spesifik indirme ise listeye ekle
                 if queue_item not in self.selected_download_queue:
@@ -774,7 +775,7 @@ class MP3YapMainWindow(QMainWindow):
     
     def queue_status_update(self, status):
         """Kuyruk durum güncellemesi"""
-        if hasattr(self, 'current_queue_item') and self.current_queue_item:
+        if self.current_queue_item is not None:
             # Dönüştürme durumunu kontrol et
             if "MP3'e dönüştürülüyor" in status or "Dönüştürme" in status:
                 self.queue_widget.update_download_status(
@@ -783,7 +784,7 @@ class MP3YapMainWindow(QMainWindow):
     
     def queue_download_finished(self, filename):
         """Kuyruk indirmesi tamamlandığında"""
-        if hasattr(self, 'current_queue_item') and self.current_queue_item:
+        if self.current_queue_item is not None:
             self.queue_widget.update_download_status(
                 self.current_queue_item['id'], 'completed'
             )
@@ -805,7 +806,7 @@ class MP3YapMainWindow(QMainWindow):
     
     def queue_download_error(self, filename, error):
         """Kuyruk indirmesinde hata oluştuğunda"""
-        if hasattr(self, 'current_queue_item') and self.current_queue_item:
+        if self.current_queue_item is not None:
             self.queue_widget.update_download_status(
                 self.current_queue_item['id'], 'failed', error
             )
@@ -1390,7 +1391,7 @@ class MP3YapMainWindow(QMainWindow):
         if hasattr(self, 'downloader') and self.downloader.is_running:
             self.cancel_download()
         # Kuyruk indirmesi varsa iptal et
-        elif hasattr(self, 'current_queue_item') and self.current_queue_item:
+        elif self.current_queue_item is not None:
             self.queue_widget.pause_queue()
     
     def cancel_current_operation(self):

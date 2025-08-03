@@ -1,6 +1,7 @@
 """Update checker for MP3Yap"""
 
 import platform
+import logging
 import requests
 from packaging import version
 from PyQt5.QtCore import QThread, pyqtSignal
@@ -21,7 +22,8 @@ class UpdateChecker(QThread):
     def run(self):
         """Check for updates"""
         try:
-            response = requests.get(self.api_url, timeout=5)
+            headers = {'User-Agent': f'MP3Yap/{__version__}'}
+            response = requests.get(self.api_url, timeout=5, headers=headers)
             response.raise_for_status()
             
             data = response.json()
@@ -44,6 +46,7 @@ class UpdateChecker(QThread):
         except requests.exceptions.RequestException as e:
             self.check_finished.emit(False, f"Güncelleme kontrolü başarısız: {e}")
         except Exception as e:
+            logging.exception("Unexpected error during update check")
             self.check_finished.emit(False, f"Hata: Beklenmedik bir hata oluştu: {e}")
     
     def is_newer_version(self, latest_version):

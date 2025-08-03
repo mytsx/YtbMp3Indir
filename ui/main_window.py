@@ -1,6 +1,7 @@
 import os
 import re
 import threading
+import logging
 import yt_dlp
 from PyQt5.QtWidgets import (QMainWindow, QTextEdit, QPushButton, 
                             QVBoxLayout, QHBoxLayout, QWidget, QLabel, 
@@ -19,6 +20,8 @@ from database.manager import DatabaseManager
 from styles import style_manager
 from utils.icon_manager import icon_manager
 from utils.platform_utils import get_keyboard_icon, get_modifier_symbol, convert_shortcut_for_platform
+from utils.update_checker import UpdateChecker
+from version import __version__, __app_name__, __author__
 
 
 class QueueProcessThread(QThread):
@@ -272,7 +275,6 @@ class MP3YapMainWindow(QMainWindow):
         status_bar.addPermanentWidget(self.update_status_widget)
         
         # Versiyon etiketi (güncelleme kontrolü yapılmadan önce)
-        from version import __version__
         self.version_label = QLabel(f"v{__version__}")
         self.version_label.setObjectName("versionLabel")
         self.version_label.setStyleSheet("color: gray; padding: 0 10px;")
@@ -451,8 +453,6 @@ class MP3YapMainWindow(QMainWindow):
     
     def check_for_updates(self):
         """Güncelleme kontrolü başlat"""
-        from utils.update_checker import UpdateChecker
-        
         self.update_checker = UpdateChecker()
         self.update_checker.update_available.connect(self.on_update_available)
         self.update_checker.check_finished.connect(self.on_update_check_finished)
@@ -487,7 +487,7 @@ class MP3YapMainWindow(QMainWindow):
         """Güncelleme kontrolü tamamlandığında"""
         if not success and not hasattr(self, 'latest_update_info'):
             # Hata durumunda sadece log'la, kullanıcıyı rahatsız etme
-            print(f"Update check: {message}")
+            logging.warning(f"Update check: {message}")
     
     def show_update_dialog(self):
         """Güncelleme dialogunu göster"""
@@ -533,13 +533,10 @@ class MP3YapMainWindow(QMainWindow):
     
     def open_update_url(self, url):
         """Güncelleme URL'sini aç"""
-        from PyQt5.QtCore import QUrl
-        from PyQt5.QtGui import QDesktopServices
         QDesktopServices.openUrl(QUrl(url))
     
     def show_about(self):
         """Hakkında dialogunu göster"""
-        from version import __version__, __app_name__, __author__
         QMessageBox.about(self, f"{__app_name__} Hakkında",
             f"<h3>{__app_name__}</h3>"
             f"<p>Sürüm {__version__}</p>"

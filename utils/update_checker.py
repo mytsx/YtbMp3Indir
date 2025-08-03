@@ -3,7 +3,6 @@
 import requests
 from packaging import version
 from PyQt5.QtCore import QThread, pyqtSignal
-import json
 from version import __version__, __github_repo__
 
 
@@ -49,7 +48,7 @@ class UpdateChecker(QThread):
         """Check if latest version is newer than current"""
         try:
             return version.parse(latest_version) > version.parse(self.current_version)
-        except:
+        except version.InvalidVersion:
             return False
     
     def get_download_url(self, release_data):

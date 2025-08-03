@@ -78,40 +78,22 @@ class StyleManager:
         if status_type in status_map:
             label.setObjectName(status_map[status_type])
     
-    
-    def get_status_message_style(self, message_type: str) -> str:
-        """Get style for status bar messages."""
-        styles = {
-            "success": f"""
-                background-color: {self.colors.SUCCESS_LIGHT};
-                color: {self.colors.SUCCESS_TEXT};
-                padding: 8px 12px;
-                border-radius: 4px;
-                border: 1px solid {self.colors.SUCCESS};
-            """,
-            "warning": f"""
-                background-color: {self.colors.WARNING_LIGHT};
-                color: {self.colors.WARNING_TEXT};
-                padding: 8px 12px;
-                border-radius: 4px;
-                border: 1px solid {self.colors.WARNING};
-            """,
-            "error": f"""
-                background-color: {self.colors.ERROR_LIGHT};
-                color: {self.colors.ERROR_TEXT};
-                padding: 8px 12px;
-                border-radius: 4px;
-                border: 1px solid {self.colors.ERROR};
-            """,
-            "info": f"""
-                background-color: {self.colors.INFO_LIGHT};
-                color: {self.colors.INFO_TEXT};
-                padding: 8px 12px;
-                border-radius: 4px;
-                border: 1px solid {self.colors.INFO};
-            """
-        }
-        return styles.get(message_type, styles["info"])
+    def set_widget_property(self, widget, property_name: str, property_value: str, refresh: bool = True):
+        """Set a custom property on a widget and optionally refresh its style.
+        
+        This allows for dynamic styling without overwriting the objectName,
+        preserving the base styles while adding additional styling based on properties.
+        
+        Args:
+            widget: The widget to set the property on
+            property_name: The name of the property
+            property_value: The value of the property
+            refresh: Whether to refresh the widget's style after setting the property
+        """
+        widget.setProperty(property_name, property_value)
+        if refresh:
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)
     
 
 

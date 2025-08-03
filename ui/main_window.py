@@ -224,7 +224,7 @@ class MP3YapMainWindow(QMainWindow):
         
         # URL durum çubuğu
         self.url_status_bar = QLabel("")
-        self.url_status_bar.setObjectName("alertMessage")
+        self.url_status_bar.setObjectName("urlStatusBar")  # Base object name for consistent base styling
         self.url_status_bar.setVisible(False)
         
         # Layout'a widget'ları ekle
@@ -760,7 +760,7 @@ class MP3YapMainWindow(QMainWindow):
         
         # Hemen loading göster
         self.url_status_bar.setText("⏳ URL'ler kontrol ediliyor...")
-        self.url_status_bar.setObjectName("alertWarning")
+        style_manager.set_widget_property(self.url_status_bar, "statusType", "warning")
         self.url_status_bar.setVisible(True)
         QApplication.processEvents()  # UI güncelle
         
@@ -768,7 +768,7 @@ class MP3YapMainWindow(QMainWindow):
         has_playlist = any('list=' in url for url in urls)
         if has_playlist:
             self.url_status_bar.setText("⏳ Playlist bilgisi alınıyor...")
-            self.url_status_bar.setObjectName("alertInfo")
+            style_manager.set_widget_property(self.url_status_bar, "statusType", "info")
             self.url_status_bar.setVisible(True)
             QApplication.processEvents()  # UI güncelle
         
@@ -988,16 +988,16 @@ class MP3YapMainWindow(QMainWindow):
             # Renk ayarla - öncelik sırasına göre
             if invalid_count > 0:
                 # Kırmızı - geçersiz URL var (en kritik)
-                self.url_status_bar.setObjectName("alertError")
+                style_manager.set_widget_property(self.url_status_bar, "statusType", "error")
             elif files_exist > 0 and files_missing == 0:
                 # Mavi - tüm dosyalar mevcut (bilgilendirme)
-                self.url_status_bar.setObjectName("alertInfo")
+                style_manager.set_widget_property(self.url_status_bar, "statusType", "info")
             elif files_missing > 0:
                 # Sarı - dosyalar eksik (yeniden indirilebilir)
-                self.url_status_bar.setObjectName("alertWarning")
+                style_manager.set_widget_property(self.url_status_bar, "statusType", "warning")
             else:
                 # Yeşil - yeni indirmeler için hazır
-                self.url_status_bar.setObjectName("alertSuccess")
+                style_manager.set_widget_property(self.url_status_bar, "statusType", "success")
         else:
             self.url_status_bar.setVisible(False)
     
@@ -1061,10 +1061,10 @@ class MP3YapMainWindow(QMainWindow):
             # Renk ayarla
             if invalid_count > 0:
                 # Kırmızı
-                self.url_status_bar.setObjectName("alertError")
+                style_manager.set_widget_property(self.url_status_bar, "statusType", "error")
             else:
                 # Yeşil
-                self.url_status_bar.setObjectName("alertSuccess")
+                style_manager.set_widget_property(self.url_status_bar, "statusType", "success")
             self.url_status_bar.setVisible(True)
         else:
             self.url_status_bar.setVisible(False)

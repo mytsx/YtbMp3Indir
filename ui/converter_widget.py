@@ -12,12 +12,12 @@ import threading
 from pathlib import Path
 
 import static_ffmpeg
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
-from PyQt5.QtGui import QDragEnterEvent, QDropEvent, QColor
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl, QPropertyAnimation, pyqtProperty
+from PyQt5.QtGui import QDragEnterEvent, QDropEvent, QColor, QPainter, QFont
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                            QLabel, QFileDialog, QListWidget, QListWidgetItem,
                            QProgressBar, QMessageBox, QGroupBox,
-                           QCheckBox)
+                           QCheckBox, QGraphicsDropShadowEffect)
 from styles import style_manager
 
 # Configure logging
@@ -29,10 +29,53 @@ class DragDropListWidget(QListWidget):
     """Sürükle-bırak destekli özel QListWidget"""
     
     files_dropped = pyqtSignal(list)
+    clicked_when_empty = pyqtSignal()  # Boş listeye tıklandığında sinyal
     
     def __init__(self):
         super().__init__()
         self.setAcceptDrops(True)
+        
+    def mousePressEvent(self, event):
+        """Liste'ye tıklandığında"""
+        # Eğer liste boşsa ve tıklama olursa sinyal gönder
+        if self.count() == 0:
+            self.clicked_when_empty.emit()
+        # Normal mouse press işlemini de yap
+        super().mousePressEvent(event)
+        
+    def paintEvent(self, event):
+        """Listeyi çiz - boşsa filigran ekle"""
+        # Liste boşsa filigran metni göster
+        if self.count() == 0:
+            painter = QPainter(self.viewport())
+            
+            # Theme'e göre renk ayarla
+            # Arka plan rengini al ve tersine göre metin rengini belirle
+            bg_color = self.palette().color(self.backgroundRole())
+            # Koyu tema mı kontrol et (arka plan koyuysa)
+            is_dark = bg_color.value() < 128
+            
+            if is_dark:
+                # Koyu tema için açık gri
+                painter.setPen(QColor(120, 120, 120))
+            else:
+                # Açık tema için koyu gri
+                painter.setPen(QColor(150, 150, 150))
+            
+            # Font ayarları
+            font = painter.font()
+            font.setItalic(True)
+            font.setPointSize(12)
+            painter.setFont(font)
+            
+            # Metni ortala ve çiz
+            text = self.tr("Dönüştürülecek dosyaları sürükleyip bırakın\nveya tıklayarak seçin")
+            rect = self.viewport().rect()
+            painter.drawText(rect, Qt.AlignCenter, text)
+            painter.end()
+        
+        # Normal paint işlemini yap
+        super().paintEvent(event)
         
     def _handle_drag_event(self, event):
         """Handle drag events uniformly"""
@@ -287,6 +330,7 @@ class ConverterWidget(QWidget):
         # Set object name for theme-specific styling
         self.file_list.setObjectName("converterFileList")
         self.file_list.files_dropped.connect(self.add_files)
+        self.file_list.clicked_when_empty.connect(self.select_files)  # Boş listeye tıklandığında dosya seç
         
         content_layout.addWidget(self.file_list)
         

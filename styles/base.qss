@@ -114,16 +114,8 @@ QCheckBox::indicator {
 QCheckBox::indicator:checked {
     background-color: #2196F3;
     border-color: #2196F3;
-}
-
-QCheckBox::indicator:checked:after {
-    content: "✓";
-    color: white;
-    font-size: 14px;
-    font-weight: bold;
-    position: absolute;
-    left: 3px;
-    top: -2px;
+    /* Note: To show a checkmark, use an image file */
+    /* image: url(:/icons/checkmark.png); */
 }
 
 /* Progress Bar */
@@ -242,4 +234,23 @@ QToolTip {
     padding: 8px 12px;
     border-radius: 4px;
     font-size: 13px;
+}
+
+/* Converter File List Widget */
+QListWidget#converterFileList {
+    border: 2px dashed #ccc;
+    border-radius: 5px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    min-height: 200px;
+}
+
+QListWidget#converterFileList::item {
+    padding: 5px;
+    margin: 2px;
+}
+
+QListWidget#converterFileList:hover {
+    border-color: #999;
+    background-color: #f5f5f5;
 }

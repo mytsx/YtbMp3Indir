@@ -160,8 +160,7 @@ class HistoryWidget(QWidget):
             browser_btn.setText("🌐")  # Globe emoji
             browser_btn.setToolTip("Tarayıcıda Aç")
             browser_btn.setFixedSize(24, 24)
-            style_manager.apply_button_style(browser_btn, "icon")
-            browser_btn.setStyleSheet(browser_btn.styleSheet() + "\nQPushButton { background-color: #2196F3; }")
+            browser_btn.setObjectName("browserIconButton")
             browser_btn.clicked.connect(lambda checked, url=record['url']: self.open_in_browser(url))
             actions_layout.addWidget(browser_btn)
             
@@ -170,8 +169,7 @@ class HistoryWidget(QWidget):
             redownload_btn.setText("↻")  # Reload symbol
             redownload_btn.setToolTip("Tekrar İndir")
             redownload_btn.setFixedSize(24, 24)
-            style_manager.apply_button_style(redownload_btn, "icon")
-            redownload_btn.setStyleSheet(redownload_btn.styleSheet() + "\nQPushButton { background-color: #4CAF50; }")
+            redownload_btn.setObjectName("redownloadIconButton")
             redownload_btn.clicked.connect(lambda checked, url=record['url']: self.redownload(url))
             actions_layout.addWidget(redownload_btn)
             
@@ -180,8 +178,7 @@ class HistoryWidget(QWidget):
             delete_btn.setText("×")  # Simple X character
             delete_btn.setToolTip("Geçmişten Sil")
             delete_btn.setFixedSize(24, 24)
-            style_manager.apply_button_style(delete_btn, "icon")
-            delete_btn.setStyleSheet(delete_btn.styleSheet() + "\nQPushButton { background-color: #f44336; }")
+            delete_btn.setObjectName("deleteIconButton")
             delete_btn.clicked.connect(lambda checked, id=record['id']: self.delete_record(id))
             actions_layout.addWidget(delete_btn)
             

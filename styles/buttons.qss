@@ -7,23 +7,18 @@ QPushButton {
     border-radius: 8px;
     font-weight: 500;
     font-size: 14px;
-    cursor: pointer;
-    transition: all 0.3s ease;
 }
 
 QPushButton:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    /* Hover effects handled by color changes */
 }
 
 QPushButton:pressed {
-    transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    /* Pressed effects handled by color changes */
 }
 
 QPushButton:disabled {
     opacity: 0.6;
-    cursor: not-allowed;
 }
 
 /* Primary Button - Download, Save, Confirm */
@@ -127,6 +122,108 @@ QPushButton#iconButton {
     font-size: 12px;
 }
 
+/* Specific icon button styles */
+QPushButton#browserIconButton {
+    background-color: #2196F3;
+    color: white;
+    padding: 4px;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+QPushButton#browserIconButton:hover {
+    background-color: #1976D2;
+}
+
+QPushButton#redownloadIconButton {
+    background-color: #4CAF50;
+    color: white;
+    padding: 4px;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+QPushButton#redownloadIconButton:hover {
+    background-color: #45a049;
+}
+
+QPushButton#deleteIconButton {
+    background-color: #f44336;
+    color: white;
+    padding: 4px;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+QPushButton#deleteIconButton:hover {
+    background-color: #d32f2f;
+}
+
+/* Queue widget specific buttons */
+QPushButton#upButton, QPushButton#downButton {
+    background-color: #2196F3;
+    color: white;
+    padding: 2px;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+QPushButton#upButton:hover, QPushButton#downButton:hover {
+    background-color: #1976D2;
+}
+
+QPushButton#deleteButton {
+    background-color: #ff7979;
+    color: white;
+    padding: 2px;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+QPushButton#deleteButton:hover {
+    background-color: #e17575;
+}
+
+/* Queue download button */
+QPushButton#queueDownloadButton {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px;
+    min-width: 50px;
+    min-height: 24px;
+    max-height: 24px;
+}
+
+QPushButton#queueDownloadButton:hover {
+    background-color: #45a049;
+}
+
 /* Large Button */
 QPushButton#largeButton {
     padding: 14px 28px;
@@ -174,10 +271,8 @@ QPushButton#fabButton {
     background-color: #2196F3;
     color: white;
     font-size: 24px;
-    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
 }
 
 QPushButton#fabButton:hover {
     background-color: #1976D2;
-    box-shadow: 0 6px 16px rgba(33, 150, 243, 0.5);
 }

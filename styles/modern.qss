@@ -73,11 +73,11 @@ QPushButton {
 }
 
 QPushButton:hover {
-    margin-top: -2px;
+    /* Hover effects handled by color changes */
 }
 
 QPushButton:pressed {
-    margin-top: 0px;
+    /* Pressed effects handled by color changes */
 }
 
 /* Primary Button - Download/Main Actions */
@@ -156,6 +156,107 @@ QPushButton#iconButton:hover {
     color: #FFFFFF;
 }
 
+/* Specific icon buttons for dark theme */
+QPushButton#browserIconButton {
+    background-color: #2196F3;
+    color: white;
+    padding: 4px;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+QPushButton#browserIconButton:hover {
+    background-color: #1976D2;
+}
+
+QPushButton#redownloadIconButton {
+    background-color: #4CAF50;
+    color: white;
+    padding: 4px;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+QPushButton#redownloadIconButton:hover {
+    background-color: #45a049;
+}
+
+QPushButton#deleteIconButton {
+    background-color: #ff7979;
+    color: white;
+    padding: 4px;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+QPushButton#deleteIconButton:hover {
+    background-color: #e17575;
+}
+
+/* Queue widget buttons */
+QPushButton#upButton, QPushButton#downButton {
+    background-color: #2196F3;
+    color: white;
+    padding: 2px;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+QPushButton#upButton:hover, QPushButton#downButton:hover {
+    background-color: #1976D2;
+}
+
+QPushButton#deleteButton {
+    background-color: #ff7979;
+    color: white;
+    padding: 2px;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+QPushButton#deleteButton:hover {
+    background-color: #e17575;
+}
+
+QPushButton#queueDownloadButton {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px;
+    min-width: 50px;
+    min-height: 24px;
+    max-height: 24px;
+}
+
+QPushButton#queueDownloadButton:hover {
+    background-color: #45a049;
+}
+
 /* Input Fields */
 QLineEdit, QTextEdit {
     background-color: #2D3142;
@@ -165,6 +266,28 @@ QLineEdit, QTextEdit {
     color: #FFFFFF;
     font-size: 14px;
     selection-background-color: #6C63FF;
+}
+
+/* Drag Drop List Widget for Converter Tab */
+QListWidget#converterFileList {
+    background-color: #2D3142;
+    border: 2px dashed #3A3E50;
+    border-radius: 5px;
+    padding: 10px;
+    color: #FFFFFF;
+    min-height: 200px;
+}
+
+QListWidget#converterFileList::item {
+    padding: 5px;
+    margin: 2px;
+    color: #FFFFFF;
+    background-color: transparent;
+}
+
+QListWidget#converterFileList:hover {
+    border-color: #4A4E60;
+    background-color: #333747;
 }
 
 QLineEdit:focus, QTextEdit:focus {
@@ -237,6 +360,7 @@ QTableWidget {
     border: none;
     border-radius: 12px;
     gridline-color: #2D3142;
+    alternate-background-color: #2A2E3F; /* Slightly lighter than background */
 }
 
 QHeaderView {
@@ -255,10 +379,15 @@ QTableWidget::item {
     padding: 4px;
     border-bottom: 1px solid #2D3142;
     color: #FFFFFF;
+    background-color: transparent;
+}
+
+QTableWidget::item:alternate {
+    background-color: #2A2E3F;
 }
 
 QTableWidget::item:selected {
-    background-color: rgba(108, 99, 255, 0.2);
+    background-color: rgba(108, 99, 255, 0.3);
     color: #FFFFFF;
 }
 

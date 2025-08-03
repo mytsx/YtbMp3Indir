@@ -209,20 +209,7 @@ class QueueWidget(QWidget):
                 download_button = QPushButton("İndir")
                 download_button.setFixedSize(50, 24)
                 download_button.setToolTip("Şimdi İndir")
-                download_button.setStyleSheet("""
-                    QPushButton {
-                        background-color: #4CAF50;
-                        color: white;
-                        border: none;
-                        border-radius: 4px;
-                        font-size: 11px;
-                        font-weight: bold;
-                        padding: 2px;
-                    }
-                    QPushButton:hover {
-                        background-color: #45a049;
-                    }
-                """)
+                download_button.setObjectName("queueDownloadButton")
                 download_button.clicked.connect(lambda checked, id=item['id']: self.download_now(id))
                 action_layout.addWidget(download_button)
                 action_layout.addSpacing(4)  # İndir butonu ile diğerleri arasına ekstra boşluk
@@ -231,30 +218,21 @@ class QueueWidget(QWidget):
             up_button = QPushButton("↑")
             up_button.setFixedSize(24, 24)
             up_button.setToolTip("Yukarı Taşı")
-            style_manager.apply_button_style(up_button, "icon")
-            # Apply custom blue background for up/down buttons
-            up_button.setStyleSheet(style_manager.get_dynamic_button_style("#2196F3", "#1976D2") + 
-                                   "QPushButton { padding: 2px; font-size: 16px; font-weight: bold; }")
+            up_button.setObjectName("upButton")
             up_button.clicked.connect(lambda checked, id=item['id']: self.move_up(id))
             
             # Aşağı taşı
             down_button = QPushButton("↓")
             down_button.setFixedSize(24, 24)
             down_button.setToolTip("Aşağı Taşı")
-            style_manager.apply_button_style(down_button, "icon")
-            # Apply custom blue background for up/down buttons
-            down_button.setStyleSheet(style_manager.get_dynamic_button_style("#2196F3", "#1976D2") + 
-                                     "QPushButton { padding: 2px; font-size: 16px; font-weight: bold; }")
+            down_button.setObjectName("downButton")
             down_button.clicked.connect(lambda checked, id=item['id']: self.move_down(id))
             
             # Sil
             delete_button = QPushButton("×")
             delete_button.setFixedSize(24, 24)
             delete_button.setToolTip("Kuyruktan Kaldır")
-            style_manager.apply_button_style(delete_button, "icon")
-            # Apply custom red background for delete button
-            delete_button.setStyleSheet(style_manager.get_dynamic_button_style("#ff7979", "#e17575") + 
-                                       "QPushButton { padding: 2px; font-size: 18px; font-weight: bold; }")
+            delete_button.setObjectName("deleteButton")
             delete_button.clicked.connect(lambda checked, id=item['id']: self.delete_item(id))
             
             action_layout.addWidget(up_button)

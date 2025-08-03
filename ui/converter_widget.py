@@ -23,24 +23,6 @@ from styles import style_manager
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Stylesheet constants - only keep FILE_LIST_STYLE for drag-drop visual feedback
-FILE_LIST_STYLE = """
-    QListWidget {
-        border: 2px dashed #ccc;
-        border-radius: 5px;
-        padding: 10px;
-        background-color: #f9f9f9;
-        min-height: 200px;
-    }
-    QListWidget::item {
-        padding: 5px;
-        margin: 2px;
-    }
-    QListWidget:hover {
-        border-color: #999;
-        background-color: #f5f5f5;
-    }
-"""
 
 
 class DragDropListWidget(QListWidget):
@@ -302,8 +284,8 @@ class ConverterWidget(QWidget):
         
         # Dosya listesi - genişleyebilir alan
         self.file_list = DragDropListWidget()
-        # File list style is kept as is for drag-drop visual feedback
-        self.file_list.setStyleSheet(FILE_LIST_STYLE)
+        # Set object name for theme-specific styling
+        self.file_list.setObjectName("converterFileList")
         self.file_list.files_dropped.connect(self.add_files)
         
         content_layout.addWidget(self.file_list)

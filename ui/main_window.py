@@ -6,7 +6,8 @@ import yt_dlp
 from PyQt5.QtWidgets import (QMainWindow, QTextEdit, QPushButton, 
                             QVBoxLayout, QHBoxLayout, QWidget, QLabel, 
                             QProgressBar, QMessageBox, QMenuBar, QMenu,
-                            QAction, QTabWidget, QApplication, QShortcut)
+                            QAction, QTabWidget, QApplication, QShortcut,
+                            QDialog, QDialogButtonBox)
 from PyQt5.QtGui import QDesktopServices, QColor, QIcon, QKeySequence
 from PyQt5.QtCore import QUrl, QTimer, QThread, pyqtSignal, Qt
 from core.downloader import Downloader, DownloadSignals
@@ -464,19 +465,6 @@ class MP3YapMainWindow(QMainWindow):
         
         # Güncelleme butonunu göster
         self.update_status_widget.setText(f"🔄 Güncelleme Mevcut: v{update_info['version']}")
-        self.update_status_widget.setStyleSheet("""
-            QPushButton {
-                color: #4CAF50;
-                background-color: rgba(76, 175, 80, 0.1);
-                border: 1px solid #4CAF50;
-                border-radius: 3px;
-                padding: 2px 10px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: rgba(76, 175, 80, 0.2);
-            }
-        """)
         self.update_status_widget.clicked.connect(self.show_update_dialog)
         self.update_status_widget.show()
         
@@ -495,9 +483,6 @@ class MP3YapMainWindow(QMainWindow):
             return
         
         info = self.latest_update_info
-        from PyQt5.QtWidgets import QDialog, QVBoxLayout, QTextEdit, QDialogButtonBox
-        from PyQt5.QtCore import QUrl
-        from PyQt5.QtGui import QDesktopServices
         
         dialog = QDialog(self)
         dialog.setWindowTitle("Güncelleme Mevcut")

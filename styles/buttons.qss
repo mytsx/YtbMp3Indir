@@ -304,3 +304,17 @@ QPushButton#fabButton {
 QPushButton#fabButton:hover {
     background-color: #1976D2;
 }
+
+/* Update Status Button */
+QPushButton#updateStatusButton {
+    color: #4CAF50;
+    background-color: rgba(76, 175, 80, 0.1);
+    border: 1px solid #4CAF50;
+    border-radius: 3px;
+    padding: 2px 10px;
+    font-weight: bold;
+}
+
+QPushButton#updateStatusButton:hover {
+    background-color: rgba(76, 175, 80, 0.2);
+}

@@ -1,5 +1,6 @@
 """Update checker for MP3Yap"""
 
+import platform
 import requests
 from packaging import version
 from PyQt5.QtCore import QThread, pyqtSignal
@@ -38,10 +39,12 @@ class UpdateChecker(QThread):
                 self.check_finished.emit(True, f"Yeni sürüm mevcut: v{latest_version}")
             else:
                 self.check_finished.emit(True, "Güncel sürümü kullanıyorsunuz")
+        except requests.exceptions.JSONDecodeError as e:
+            self.check_finished.emit(False, f"Hata: API yanıtı okunamadı: {e}")
         except requests.exceptions.RequestException as e:
             self.check_finished.emit(False, f"Güncelleme kontrolü başarısız: {e}")
         except Exception as e:
-            self.check_finished.emit(False, f"Hata: {e}")
+            self.check_finished.emit(False, f"Hata: Beklenmedik bir hata oluştu: {e}")
     
     def is_newer_version(self, latest_version):
         """Check if latest version is newer than current"""
@@ -52,8 +55,6 @@ class UpdateChecker(QThread):
     
     def get_download_url(self, release_data):
         """Get the appropriate download URL for the platform"""
-        import platform
-        
         assets = release_data.get('assets', [])
         system = platform.system().lower()
         

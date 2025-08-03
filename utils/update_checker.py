@@ -22,7 +22,7 @@ class UpdateChecker(QThread):
     def run(self):
         """Check for updates"""
         try:
-            headers = {'User-Agent': f'MP3Yap/{__version__}'}
+            headers = {'User-Agent': f'{__github_repo__.split("/")[1]}/{__version__}'}
             response = requests.get(self.api_url, timeout=5, headers=headers)
             response.raise_for_status()
             
@@ -47,7 +47,7 @@ class UpdateChecker(QThread):
             self.check_finished.emit(False, f"Güncelleme kontrolü başarısız: {e}")
         except Exception as e:
             logging.exception("Unexpected error during update check")
-            self.check_finished.emit(False, f"Hata: Beklenmedik bir hata oluştu: {e}")
+            self.check_finished.emit(False, "Hata: Beklenmedik bir hata oluştu.")
     
     def is_newer_version(self, latest_version):
         """Check if latest version is newer than current"""

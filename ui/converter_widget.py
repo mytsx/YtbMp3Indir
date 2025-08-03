@@ -46,6 +46,9 @@ class DragDropListWidget(QListWidget):
         
     def paintEvent(self, event):
         """Listeyi çiz - boşsa filigran ekle"""
+        # Önce normal paint işlemini yap, sonra üzerine çiz.
+        super().paintEvent(event)
+        
         # Liste boşsa filigran metni göster
         if self.count() == 0:
             painter = QPainter(self.viewport())
@@ -71,9 +74,6 @@ class DragDropListWidget(QListWidget):
             rect = self.viewport().rect()
             painter.drawText(rect, Qt.AlignCenter, text)
             painter.end()
-        
-        # Normal paint işlemini yap
-        super().paintEvent(event)
         
     def _handle_drag_event(self, event):
         """Handle drag events uniformly"""

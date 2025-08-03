@@ -178,7 +178,7 @@ class MP3YapMainWindow(QMainWindow):
         shortcuts_hint = QPushButton("Kısayollar (F1)")
         # Tema'ya göre renk belirle
         theme = self.config.get('theme', 'light')
-        icon_color = "#8B92A9" if theme == 'dark' else "#666666"
+        icon_color = style_manager.colors.DARK_TEXT_SECONDARY if theme == 'dark' else style_manager.colors.TEXT_SECONDARY
         shortcuts_hint.setIcon(icon_manager.get_icon("command", icon_color))
         shortcuts_hint.setFlat(True)
         shortcuts_hint.setCursor(Qt.PointingHandCursor)
@@ -211,6 +211,7 @@ class MP3YapMainWindow(QMainWindow):
         self.current_file_label = QLabel("Dosya: ")
         self.progress_bar = QProgressBar()
         self.progress_percent = QLabel("0%")
+        self.progress_percent.setObjectName("progressPercent")
         progress_layout.addWidget(self.current_file_label)
         progress_layout.addWidget(self.progress_bar)
         progress_layout.addWidget(self.progress_percent)
@@ -370,20 +371,10 @@ class MP3YapMainWindow(QMainWindow):
         if '[' in text and '/' in text:
             # Playlist progress içeriyor
             self.current_file_label.setText(f"📋 Playlist İndiriliyor - Dosya: {filename}")
-            self.progress_percent.setStyleSheet("""
-                QLabel {
-                    color: #1976D2;
-                    font-weight: bold;
-                    font-size: 14px;
-                }
-            """)
+            style_manager.set_widget_property(self.progress_percent, "progressType", "playlist")
         else:
             self.current_file_label.setText(f"Dosya: {filename}")
-            self.progress_percent.setStyleSheet("""
-                QLabel {
-                    font-size: 12px;
-                }
-            """)
+            style_manager.set_widget_property(self.progress_percent, "progressType", "file")
             
         if percent >= 0:
             self.progress_bar.setValue(int(percent))
@@ -457,15 +448,7 @@ class MP3YapMainWindow(QMainWindow):
         
         # Loading göstergesi
         self.status_label.setText("🔄 Video bilgileri alınıyor...")
-        self.status_label.setStyleSheet("""
-            QLabel {
-                background-color: #FFF3E0;
-                color: #E65100;
-                padding: 5px;
-                border-radius: 3px;
-                font-weight: bold;
-            }
-        """)
+        style_manager.apply_alert_style(self.status_label, "warning")
         self.add_to_queue_button.setEnabled(False)
         self.download_button.setEnabled(False)
         QApplication.processEvents()  # UI güncelleme
@@ -527,7 +510,7 @@ class MP3YapMainWindow(QMainWindow):
         # Butonları geri etkinleştir
         self.add_to_queue_button.setEnabled(True)
         self.download_button.setEnabled(True)
-        self.status_label.setStyleSheet("")  # Stili sıfırla
+        style_manager.apply_alert_style(self.status_label, "info", refresh=False)  # Varsayılan stil
         
         # Sonuç mesajı göster
         total_urls = len(urls)
@@ -535,15 +518,7 @@ class MP3YapMainWindow(QMainWindow):
         
         if added_count > 0 and duplicate_count == 0:
             self.status_label.setText(f"✓ {added_count} video kuyruğa eklendi")
-            self.status_label.setStyleSheet("""
-                QLabel {
-                    background-color: #E8F5E9;
-                    color: #2E7D32;
-                    padding: 5px;
-                    border-radius: 3px;
-                    font-weight: bold;
-                }
-            """)
+            style_manager.apply_alert_style(self.status_label, "success")
             self.url_text.clear()  # URL'leri temizle
             # Kuyruğu yenile
             self.queue_widget.load_queue()
@@ -558,15 +533,7 @@ class MP3YapMainWindow(QMainWindow):
             else:
                 self.status_label.setText(f"✓ {added_count} yeni eklendi | {duplicate_count} zaten kuyrukta")
             
-            self.status_label.setStyleSheet("""
-                QLabel {
-                    background-color: #FFF3E0;
-                    color: #E65100;
-                    padding: 5px;
-                    border-radius: 3px;
-                    font-weight: bold;
-                }
-            """)
+            style_manager.apply_alert_style(self.status_label, "warning")
             self.url_text.clear()
             # Kuyruğu yenile
             self.queue_widget.load_queue()
@@ -583,30 +550,14 @@ class MP3YapMainWindow(QMainWindow):
             # Sadece status_label'da göster, popup açma
             self.status_label.setText(f"UYARI: {msg}")
             
-            self.status_label.setStyleSheet("""
-                QLabel {
-                    background-color: #FFEBEE;
-                    color: #C62828;
-                    padding: 5px;
-                    border-radius: 3px;
-                    font-weight: bold;
-                }
-            """)
+            style_manager.apply_alert_style(self.status_label, "error")
             
             # URL'leri SİLME - kullanıcı ana ekranda indirmek isteyebilir
             # Sekme değiştirme YAPMA
             return  # Fonksiyondan çık
         else:
             self.status_label.setText("Hiçbir video eklenemedi")
-            self.status_label.setStyleSheet("""
-                QLabel {
-                    background-color: #FFEBEE;
-                    color: #C62828;
-                    padding: 5px;
-                    border-radius: 3px;
-                    font-weight: bold;
-                }
-            """)
+            style_manager.apply_alert_style(self.status_label, "error")
     
     def process_queue_item(self, queue_item):
         """Kuyruktan gelen öğeyi işle"""
@@ -737,7 +688,7 @@ class MP3YapMainWindow(QMainWindow):
             # Eğer URL alanı boşsa uyarıları temizle
             if not self.url_text.toPlainText().strip():
                 self.status_label.clear()
-                self.status_label.setStyleSheet("")  # Varsayılan stile dön
+                style_manager.apply_alert_style(self.status_label, "info", refresh=False)  # Varsayılan stil
                 self.url_status_bar.setVisible(False)
     
     def cancel_download(self):
@@ -755,15 +706,7 @@ class MP3YapMainWindow(QMainWindow):
         """URL metin alanını temizle"""
         self.url_text.clear()
         self.status_label.setText("URL listesi temizlendi")
-        self.status_label.setStyleSheet("""
-            QLabel {
-                background-color: #E8F5E9;
-                color: #2E7D32;
-                padding: 5px;
-                border-radius: 3px;
-                font-weight: bold;
-            }
-        """)
+        style_manager.apply_alert_style(self.status_label, "success")
         self.url_status_bar.setVisible(False)
     
     def on_url_text_changed(self):

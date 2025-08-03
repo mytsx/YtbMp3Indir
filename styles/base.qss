@@ -241,6 +241,21 @@ QLabel {
     color: #212121;
 }
 
+/* Progress Percent Label */
+QLabel#progressPercent {
+    font-size: 12px;
+}
+
+QLabel#progressPercent[progressType="playlist"] {
+    color: #1976D2;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+QLabel#progressPercent[progressType="file"] {
+    font-size: 12px;
+}
+
 /* Tool Tip */
 QToolTip {
     background-color: #424242;
@@ -249,6 +264,29 @@ QToolTip {
     padding: 8px 12px;
     border-radius: 4px;
     font-size: 13px;
+}
+
+/* Converter Widget Styles */
+QLabel#converterTitle {
+    font-size: 18px;
+    font-weight: bold;
+    padding: 10px;
+}
+
+QLabel#converterDescription {
+    color: #666;
+    padding: 0 10px 10px 10px;
+}
+
+QLabel#converterStatusLabel {
+    color: #666;
+    padding: 5px;
+}
+
+QGroupBox#converterSettingsGroup {
+    border: none;
+    margin-top: 5px;
+    margin-bottom: 5px;
 }
 
 /* Converter File List Widget */

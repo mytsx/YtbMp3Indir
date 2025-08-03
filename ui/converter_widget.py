@@ -298,14 +298,14 @@ class ConverterWidget(QWidget):
         
         # Başlık
         title = QLabel(self.tr("Her Türlü Dosyayı MP3'e Dönüştür"))
-        title.setStyleSheet("font-size: 18px; font-weight: bold; padding: 10px;")
+        title.setObjectName("converterTitle")
         layout.addWidget(title)
         
         # Açıklama
         desc = QLabel(self.tr("Video, ses ve diğer medya dosyalarınızı MP3 formatına dönüştürün. "
                      "Dosyaları sürükleyip bırakabilir veya seçebilirsiniz."))
         desc.setWordWrap(True)
-        desc.setStyleSheet("color: #666; padding: 0 10px 10px 10px;")
+        desc.setObjectName("converterDescription")
         layout.addWidget(desc)
         
         # İçerik alanı için layout - padding eklemek için
@@ -346,18 +346,12 @@ class ConverterWidget(QWidget):
         
         # Durum etiketi
         self.status_label = QLabel("")
-        self.status_label.setStyleSheet("color: #666; padding: 5px;")
+        self.status_label.setObjectName("converterStatusLabel")
         bottom_layout.addWidget(self.status_label)
         
         # Ayarlar grubu (başlıksız)
         settings_group = QGroupBox()
-        settings_group.setStyleSheet("""
-            QGroupBox {
-                border: none;
-                margin-top: 5px;
-                margin-bottom: 5px;
-            }
-        """)
+        settings_group.setObjectName("converterSettingsGroup")
         settings_layout = QVBoxLayout()
         settings_layout.setContentsMargins(10, 5, 10, 5)  # İçerik kenar boşlukları
         settings_layout.setSpacing(5)  # Widget'lar arası boşluk

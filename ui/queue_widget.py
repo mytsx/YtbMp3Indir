@@ -63,15 +63,40 @@ class QueueWidget(QWidget):
         self.pause_button.setToolTip("Kuyruk indirmesini duraklat")
         style_manager.apply_button_style(self.pause_button, "warning")
         
-        self.clear_completed_button = QPushButton(" Tamamlananları Temizle")
-        self.clear_completed_button.setIcon(icon_manager.get_icon("check-circle", "#FFFFFF"))
-        self.clear_completed_button.clicked.connect(self.clear_completed)
-        self.clear_completed_button.setToolTip("Tamamlanan indirmeleri kuyruktan kaldır")
-        style_manager.apply_button_style(self.clear_completed_button, "danger")
+        # Temizleme butonları için dropdown menü
+        self.clear_button = QPushButton(" Temizle")
+        self.clear_button.setIcon(icon_manager.get_icon("trash-2", "#FFFFFF"))
+        self.clear_button.setToolTip("Kuyruk temizleme seçenekleri")
+        style_manager.apply_button_style(self.clear_button, "danger")
+        
+        # Temizleme menüsü
+        clear_menu = QMenu(self)
+        
+        clear_all_action = clear_menu.addAction(" Tümünü Temizle")
+        clear_all_action.setIcon(icon_manager.get_icon("trash-2", "#DC3545"))
+        clear_all_action.triggered.connect(self.clear_all)
+        
+        clear_selected_action = clear_menu.addAction(" Seçilileri Temizle")
+        clear_selected_action.setIcon(icon_manager.get_icon("check-square", "#DC3545"))
+        clear_selected_action.triggered.connect(self.clear_selected)
+        
+        clear_completed_action = clear_menu.addAction(" Tamamlananları Temizle")
+        clear_completed_action.setIcon(icon_manager.get_icon("check-circle", "#28A745"))
+        clear_completed_action.triggered.connect(self.clear_completed)
+        
+        clear_failed_action = clear_menu.addAction(" Başarısızları Temizle")
+        clear_failed_action.setIcon(icon_manager.get_icon("x-circle", "#DC3545"))
+        clear_failed_action.triggered.connect(self.clear_failed)
+        
+        clear_canceled_action = clear_menu.addAction(" İptal Edilenleri Temizle")
+        clear_canceled_action.setIcon(icon_manager.get_icon("slash", "#FFC107"))
+        clear_canceled_action.triggered.connect(self.clear_canceled)
+        
+        self.clear_button.setMenu(clear_menu)
         
         control_layout.addWidget(self.start_button)
         control_layout.addWidget(self.pause_button)
-        control_layout.addWidget(self.clear_completed_button)
+        control_layout.addWidget(self.clear_button)
         
         # Arama ve filtre alanı - ayrı satırda
         search_layout = QHBoxLayout()
@@ -115,10 +140,10 @@ class QueueWidget(QWidget):
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)  # URL/Başlık - geri kalan alanı kaplasın
         self.table.setColumnWidth(1, 100)  # Durum - sabit genişlik
         self.table.setColumnWidth(2, 130)  # Eklenme Zamanı - sabit genişlik
-        self.table.setColumnWidth(3, 160)  # İşlem - butonlar için geniş alan
+        self.table.setColumnWidth(3, 140)  # İşlem - butonlar için uygun genişlik
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)  # Durum
         self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)  # Eklenme Zamanı
-        self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)  # İşlem
+        # İşlem sütunu için ResizeToContents KALDIRILDI - sabit genişlik kullanılacak
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_context_menu)
         
@@ -397,13 +422,97 @@ class QueueWidget(QWidget):
         # Kuyruk modunu kapat
         self.queue_paused.emit()  # Ana pencereye duraklatıldığını bildir
     
+    def clear_all(self):
+        """Tüm kuyruğu temizle"""
+        reply = QMessageBox.question(
+            self, 
+            'Onay', 
+            'Tüm kuyruğu temizlemek istediğinizden emin misiniz?\nBu işlem geri alınamaz.',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            count = self.db.clear_all_queue()
+            self.load_queue()
+            QMessageBox.information(self, "Başarılı", f"{count} öğe kuyruktan temizlendi.")
+    
+    def clear_selected(self):
+        """Seçili öğeleri temizle"""
+        selected_rows = set()
+        for item in self.table.selectedItems():
+            selected_rows.add(item.row())
+        
+        if not selected_rows:
+            QMessageBox.warning(self, "Uyarı", "Lütfen temizlenecek öğeleri seçin.")
+            return
+        
+        reply = QMessageBox.question(
+            self, 
+            'Onay', 
+            f'{len(selected_rows)} seçili öğeyi temizlemek istediğinizden emin misiniz?',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            for row in selected_rows:
+                item_data = self.table.item(row, 0).data(Qt.UserRole)
+                if item_data:
+                    self.db.remove_from_queue(item_data['id'])
+            
+            self.load_queue()
+            QMessageBox.information(self, "Başarılı", f"{len(selected_rows)} öğe temizlendi.")
+    
     def clear_completed(self):
         """Tamamlananları temizle"""
-        count = self.db.clear_queue('completed')
-        # Kalan öğelerin pozisyonlarını yeniden düzenle
-        self.db.reorder_queue_positions()
-        self.load_queue()
-        QMessageBox.information(self, "Bilgi", f"{count} tamamlanmış indirme kaldırıldı.")
+        reply = QMessageBox.question(
+            self, 
+            'Onay', 
+            'Tamamlanmış tüm indirmeleri temizlemek istediğinizden emin misiniz?',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            count = self.db.clear_queue('completed')
+            self.db.reorder_queue_positions()
+            self.load_queue()
+            QMessageBox.information(self, "Başarılı", f"{count} tamamlanmış indirme temizlendi.")
+    
+    def clear_failed(self):
+        """Başarısız indirmeleri temizle"""
+        reply = QMessageBox.question(
+            self, 
+            'Onay', 
+            'Başarısız tüm indirmeleri temizlemek istediğinizden emin misiniz?',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            count = self.db.clear_queue('failed')
+            self.db.reorder_queue_positions()
+            self.load_queue()
+            QMessageBox.information(self, "Başarılı", f"{count} başarısız indirme temizlendi.")
+    
+    def clear_canceled(self):
+        """Iptal edilmiş indirmeleri temizle"""
+        reply = QMessageBox.question(
+            self, 
+            'Onay', 
+            'İptal edilmiş tüm indirmeleri temizlemek istediğinizden emin misiniz?',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            # canceled ve paused durumlarını temizle
+            count = self.db.clear_queue('canceled')
+            count += self.db.clear_queue('paused')
+            self.db.reorder_queue_positions()
+            self.load_queue()
+            QMessageBox.information(self, "Başarılı", f"{count} iptal edilmiş indirme temizlendi.")
     
     def move_up(self, item_id):
         """Öğeyi yukarı taşı"""

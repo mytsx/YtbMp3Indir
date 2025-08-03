@@ -190,6 +190,18 @@ class DatabaseManager:
             
             return [dict(row) for row in cursor.fetchall()]
     
+    def get_download_by_id(self, record_id: int) -> Optional[Dict]:
+        """ID'ye göre indirme kaydını getir"""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT * FROM download_history 
+                WHERE id = ? AND is_deleted = 0
+            ''', (record_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+    
     def get_statistics(self) -> Dict:
         """İndirme istatistiklerini getir"""
         with sqlite3.connect(self.db_path) as conn:
@@ -388,6 +400,14 @@ class DatabaseManager:
                 cursor.execute('UPDATE download_queue SET is_deleted = 1 WHERE status = ? AND is_deleted = 0', (status,))
             else:
                 cursor.execute('UPDATE download_queue SET is_deleted = 1 WHERE is_deleted = 0')
+            conn.commit()
+            return cursor.rowcount
+    
+    def clear_all_queue(self) -> int:
+        """Tüm kuyruğu soft delete yap"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('UPDATE download_queue SET is_deleted = 1 WHERE is_deleted = 0')
             conn.commit()
             return cursor.rowcount
     

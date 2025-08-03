@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,
                             QTableWidgetItem, QPushButton, QLineEdit, QLabel,
-                            QHeaderView, QMessageBox)
+                            QHeaderView, QMessageBox, QMenu)
 from PyQt5.QtCore import Qt, pyqtSignal, QUrl, QThread
 from PyQt5.QtGui import QDesktopServices
 from database.manager import DatabaseManager
@@ -14,6 +14,10 @@ class HistoryWidget(QWidget):
     
     # Dosyayı tekrar indir sinyali
     redownload_signal = pyqtSignal(str)  # URL
+    # Kuyruğa ekleme sinyali
+    add_to_queue_signal = pyqtSignal(list)  # URL listesi
+    # İndir sekmesine ekleme sinyali
+    add_to_download_signal = pyqtSignal(list)  # URL listesi
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -82,6 +86,10 @@ class HistoryWidget(QWidget):
         self.table.verticalHeader().setMinimumWidth(20)  # Minimum 20px
         self.table.verticalHeader().setDefaultAlignment(Qt.AlignCenter)  # Sayıları ortala
         
+        # Sağ tık menüsü
+        self.table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self.show_context_menu)
+        
         layout.addWidget(self.table)
         
         # İstatistikler - tablonun altında
@@ -136,7 +144,10 @@ class HistoryWidget(QWidget):
             
             # Tarih
             date_str = datetime.fromisoformat(record['downloaded_at']).strftime('%d.%m.%Y %H:%M')
-            self.table.setItem(row_position, 0, QTableWidgetItem(date_str))
+            date_item = QTableWidgetItem(date_str)
+            # Record ID'yi sakla - bu kritik!
+            date_item.setData(Qt.UserRole, record['id'])
+            self.table.setItem(row_position, 0, date_item)
             
             # Başlık
             self.table.setItem(row_position, 1, QTableWidgetItem(record['video_title']))
@@ -242,6 +253,172 @@ class HistoryWidget(QWidget):
             count = self.db_manager.clear_history()
             QMessageBox.information(self, "Başarılı", f"{count} kayıt silindi.")
             self.load_history()
+    
+    def add_selected_to_queue_action(self):
+        """Seçili öğeleri kuyruğa ekle"""
+        selected_rows = set()
+        for item in self.table.selectedItems():
+            selected_rows.add(item.row())
+        
+        if not selected_rows:
+            QMessageBox.warning(self, "Uyarı", "Lütfen kuyruğa eklenecek videoları seçin.")
+            return
+        
+        # Seçili satırlardan URL'leri al
+        urls = []
+        for row in selected_rows:
+            item = self.table.item(row, 0)  # Tarih sütunu
+            if item:
+                record_id = item.data(Qt.UserRole)
+                # Veritabanından URL'yi al
+                download = self.db_manager.get_download_by_id(record_id)
+                if download and download.get('url'):
+                    urls.append(download['url'])
+        
+        if urls:
+            # Onay dialog
+            reply = QMessageBox.question(
+                self, 
+                'Onay', 
+                f'{len(urls)} videoyu kuyruğa eklemek istediğinizden emin misiniz?',
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            
+            if reply == QMessageBox.Yes:
+                self.add_to_queue_signal.emit(urls)
+                # Başarı mesajı ana pencerede gösterilecek
+    
+    def add_all_to_queue_action(self):
+        """Tüm geçmişi kuyruğa ekle"""
+        # Tüm geçmişteki URL'leri al
+        history = self.db_manager.get_all_downloads()
+        urls = [item['url'] for item in history if item.get('url')]
+        
+        if not urls:
+            QMessageBox.warning(self, "Uyarı", "Geçmişte eklenecek video bulunamadı.")
+            return
+        
+        # Onay dialog
+        reply = QMessageBox.question(
+            self, 
+            'Onay', 
+            f'Tüm geçmişteki {len(urls)} videoyu kuyruğa eklemek istediğinizden emin misiniz?\nBu işlem uzun sürebilir.',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            self.add_to_queue_signal.emit(urls)
+            QMessageBox.information(self, "Başarılı", f"{len(urls)} video kuyruğa eklendi.")
+    
+    def add_selected_to_download_action(self):
+        """Seçili öğeleri indir sekmesine ekle"""
+        selected_rows = set()
+        for item in self.table.selectedItems():
+            selected_rows.add(item.row())
+        
+        if not selected_rows:
+            QMessageBox.warning(self, "Uyarı", "Lütfen indir sekmesine eklenecek videoları seçin.")
+            return
+        
+        # Seçili satırlardan URL'leri al
+        urls = []
+        for row in selected_rows:
+            item = self.table.item(row, 0)  # Tarih sütunu
+            if item:
+                record_id = item.data(Qt.UserRole)
+                # Veritabanından URL'yi al
+                download = self.db_manager.get_download_by_id(record_id)
+                if download and download.get('url'):
+                    urls.append(download['url'])
+        
+        if urls:
+            # Onay dialog
+            reply = QMessageBox.question(
+                self, 
+                'Onay', 
+                f'{len(urls)} videoyu indir sekmesine eklemek istediğinizden emin misiniz?',
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            
+            if reply == QMessageBox.Yes:
+                self.add_to_download_signal.emit(urls)
+                # Başarı mesajı ana pencerede gösterilecek
+    
+    def show_context_menu(self, position):
+        """Sağ tık menüsünü göster"""
+        selected_rows = set()
+        for item in self.table.selectedItems():
+            selected_rows.add(item.row())
+        
+        if not selected_rows:
+            return
+        
+        menu = QMenu()
+        
+        # Seçilileri kuyruğa ekle
+        add_to_queue_action = menu.addAction(" Seçilileri Kuyruğa Ekle")
+        add_to_queue_action.setIcon(icon_manager.get_icon("list", "#1976D2"))
+        add_to_queue_action.triggered.connect(self.add_selected_to_queue_action)
+        
+        # Seçilileri indir sekmesine ekle
+        add_to_download_action = menu.addAction(" Seçilileri İndir Sekmesine Ekle")
+        add_to_download_action.setIcon(icon_manager.get_icon("download", "#4CAF50"))
+        add_to_download_action.triggered.connect(self.add_selected_to_download_action)
+        
+        menu.addSeparator()
+        
+        # Seçilileri sil
+        delete_action = menu.addAction(" Seçilileri Sil")
+        delete_action.setIcon(icon_manager.get_icon("trash-2", "#DC3545"))
+        delete_action.triggered.connect(self.delete_selected)
+        
+        menu.exec_(self.table.mapToGlobal(position))
+    
+    def redownload_selected(self):
+        """Seçili öğeleri yeniden indir"""
+        selected_rows = set()
+        for item in self.table.selectedItems():
+            selected_rows.add(item.row())
+        
+        if selected_rows:
+            # İlk seçili satırın URL'sini al ve indir
+            first_row = min(selected_rows)
+            item = self.table.item(first_row, 0)
+            if item:
+                record_id = item.data(Qt.UserRole)
+                download = self.db_manager.get_download_by_id(record_id)
+                if download and download.get('url'):
+                    self.redownload_signal.emit(download['url'])
+    
+    def delete_selected(self):
+        """Seçili öğeleri sil"""
+        selected_rows = set()
+        for item in self.table.selectedItems():
+            selected_rows.add(item.row())
+        
+        if not selected_rows:
+            return
+        
+        reply = QMessageBox.question(
+            self, 
+            'Onay', 
+            f'{len(selected_rows)} kayıtı silmek istediğinizden emin misiniz?',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            for row in selected_rows:
+                item = self.table.item(row, 0)
+                if item:
+                    record_id = item.data(Qt.UserRole)
+                    self.db_manager.delete_download(record_id)
+            
+            self.load_history()
+            QMessageBox.information(self, "Başarılı", f"{len(selected_rows)} kayıt silindi.")
     
     def mousePressEvent(self, a0):
         """Mouse tıklaması olduğunda"""

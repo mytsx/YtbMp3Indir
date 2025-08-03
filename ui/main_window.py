@@ -13,10 +13,78 @@ from ui.settings_dialog import SettingsDialog
 from ui.history_widget import HistoryWidget
 from ui.queue_widget import QueueWidget
 from ui.converter_widget import ConverterWidget
+from ui.preloader_widget import PreloaderWidget
 from utils.config import Config
 from database.manager import DatabaseManager
 from styles import style_manager
 from utils.icon_manager import icon_manager
+from utils.platform_utils import get_keyboard_icon, get_modifier_symbol, convert_shortcut_for_platform
+
+
+class QueueProcessThread(QThread):
+    """Kuyruk işleme thread'i"""
+    finished_signal = pyqtSignal(int, list)  # added_count, duplicate_videos
+    
+    def __init__(self, urls, db_manager):
+        super().__init__()
+        self.urls = urls
+        self.db_manager = db_manager
+    
+    def run(self):
+        """Thread içinde çalış"""
+        # yt-dlp seçenekleri
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': 'in_playlist',
+            'ignoreerrors': True,
+            'skip_download': True,
+        }
+        
+        added_count = 0
+        duplicate_videos = []
+        
+        for url in self.urls:
+            try:
+                video_title = None
+                try:
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        info = ydl.extract_info(url, download=False)
+                        if info:
+                            if info.get('_type') == 'playlist':
+                                # Playlist ise her video için ayrı kayıt
+                                playlist_title = info.get('title', 'İsimsiz Liste')
+                                entries = info.get('entries', [])
+                                for idx, entry in enumerate(entries):
+                                    video_url = entry.get('url', '')
+                                    video_title = entry.get('title', f'Video {idx+1}')
+                                    full_title = f"[{playlist_title}] {video_title}"
+                                    result = self.db_manager.add_to_queue(video_url, full_title)
+                                    if result > 0:  # Başarılı
+                                        added_count += 1
+                                    elif result == -1:  # Duplicate
+                                        duplicate_videos.append(video_title)
+                            else:
+                                # Tek video
+                                video_title = info.get('title', 'İsimsiz Video')
+                                result = self.db_manager.add_to_queue(url, video_title)
+                                if result > 0:  # Başarılı
+                                    added_count += 1
+                                elif result == -1:  # Duplicate
+                                    duplicate_videos.append(video_title)
+                except Exception as e:
+                    print(f"Video bilgisi alınamadı: {e}")
+                    # Hata durumunda URL ile ekle
+                    result = self.db_manager.add_to_queue(url, None)
+                    if result > 0:
+                        added_count += 1
+                    elif result == -1:
+                        duplicate_videos.append(url)
+                        
+            except Exception as e:
+                print(f"URL eklenirken hata: {e}")
+        
+        self.finished_signal.emit(added_count, duplicate_videos)
 
 
 class MP3YapMainWindow(QMainWindow):
@@ -137,6 +205,8 @@ class MP3YapMainWindow(QMainWindow):
         # Geçmiş sekmesi
         self.history_widget = HistoryWidget()
         self.history_widget.redownload_signal.connect(self.add_url_to_download)
+        self.history_widget.add_to_queue_signal.connect(self.add_urls_to_queue)
+        self.history_widget.add_to_download_signal.connect(self.add_urls_to_download_tab)
         self.tab_widget.addTab(self.history_widget, "Geçmiş")
         
         # Tab değişikliğini dinle
@@ -179,13 +249,18 @@ class MP3YapMainWindow(QMainWindow):
         # Tema'ya göre renk belirle
         theme = self.config.get('theme', 'light')
         icon_color = style_manager.colors.DARK_TEXT_SECONDARY if theme == 'dark' else style_manager.colors.TEXT_SECONDARY
-        shortcuts_hint.setIcon(icon_manager.get_icon("command", icon_color))
+        # Platform'a göre ikon seç
+        keyboard_icon = get_keyboard_icon()
+        # Windows için keyboard ikonu kullan (windows.svg yoksa)
+        if keyboard_icon == "windows" and not icon_manager.has_icon("windows"):
+            keyboard_icon = "keyboard"
+        shortcuts_hint.setIcon(icon_manager.get_icon(keyboard_icon, icon_color))
         shortcuts_hint.setFlat(True)
         shortcuts_hint.setCursor(Qt.PointingHandCursor)
         shortcuts_hint.clicked.connect(self.show_shortcuts_help)
         shortcuts_hint.setToolTip("Klavye kısayollarını göster")
         shortcuts_hint.setObjectName("statusBarButton")
-        shortcuts_hint.setMaximumWidth(110)  # Maksimum genişlik sınırı
+        shortcuts_hint.setMaximumWidth(140)  # Genişlik arttırıldı
         
         status_bar.addPermanentWidget(shortcuts_hint)
     
@@ -283,6 +358,11 @@ class MP3YapMainWindow(QMainWindow):
         self.url_check_timer.setSingleShot(True)
         self.url_check_timer.timeout.connect(self.check_urls_delayed)
         self.url_text.textChanged.connect(self.on_url_text_changed)
+        
+        # Preloader widget
+        self.preloader = PreloaderWidget(self)
+        self.preloader.canceled.connect(self.cancel_current_operation)
+        self.preloader.hide()
         
         widget.setLayout(layout)
         return widget
@@ -437,6 +517,30 @@ class MP3YapMainWindow(QMainWindow):
         self.tab_widget.setCurrentIndex(0)
         QMessageBox.information(self, "Başarılı", "URL indirme listesine eklendi!")
     
+    def add_urls_to_queue(self, urls):
+        """Birden fazla URL'yi kuyruğa ekle (Geçmiş sekmesinden)"""
+        # URL'leri text widget'a yaz ve add_to_queue'u çağır
+        self.url_text.setPlainText('\n'.join(urls))
+        self.add_to_queue()
+    
+    def add_urls_to_download_tab(self, urls):
+        """Birden fazla URL'yi indir sekmesine ekle (Geçmiş sekmesinden)"""
+        # İndir sekmesine geç
+        self.tab_widget.setCurrentIndex(0)
+        
+        # URL'leri text widget'a ekle
+        current_text = self.url_text.toPlainText().strip()
+        if current_text:
+            # Mevcut URL'ler varsa alt satıra ekle
+            self.url_text.setPlainText(current_text + '\n' + '\n'.join(urls))
+        else:
+            # Boşsa direkt ekle
+            self.url_text.setPlainText('\n'.join(urls))
+        
+        # Durum mesajı
+        self.status_label.setText(f"✓ {len(urls)} video indir sekmesine eklendi")
+        style_manager.apply_alert_style(self.status_label, "success")
+    
     def add_to_queue(self):
         """URL'leri kuyruğa ekle"""
         urls = self.url_text.toPlainText().strip().split('\n')
@@ -446,66 +550,25 @@ class MP3YapMainWindow(QMainWindow):
             QMessageBox.warning(self, "Uyarı", "Lütfen en az bir URL girin!")
             return
         
-        # Loading göstergesi
-        self.status_label.setText("🔄 Video bilgileri alınıyor...")
-        style_manager.apply_alert_style(self.status_label, "warning")
+        # Preloader göster
+        self.preloader.show_with_text(
+            f"{len(urls)} video için bilgiler alınıyor...",
+            cancelable=True
+        )
+        
+        # Butonları devre dışı bırak
         self.add_to_queue_button.setEnabled(False)
         self.download_button.setEnabled(False)
-        QApplication.processEvents()  # UI güncelleme
         
-        # yt-dlp seçenekleri
-        ydl_opts = {
-            'quiet': True,
-            'no_warnings': True,
-            'extract_flat': 'in_playlist',
-            'ignoreerrors': True,
-            'skip_download': True,
-        }
-        
-        # URL'leri kuyruğa ekle
-        added_count = 0
-        duplicate_videos = []  # Duplicate video listesi
-        
-        for url in urls:
-            try:
-                # Video başlığını al
-                video_title = None
-                try:
-                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                        info = ydl.extract_info(url, download=False)
-                        if info:
-                            if info.get('_type') == 'playlist':
-                                # Playlist ise her video için ayrı kayıt
-                                playlist_title = info.get('title', 'İsimsiz Liste')
-                                entries = info.get('entries', [])
-                                for idx, entry in enumerate(entries):
-                                    video_url = entry.get('url', '')
-                                    video_title = entry.get('title', f'Video {idx+1}')
-                                    full_title = f"[{playlist_title}] {video_title}"
-                                    result = self.db_manager.add_to_queue(video_url, full_title)
-                                    if result > 0:  # Başarılı
-                                        added_count += 1
-                                    elif result == -1:  # Duplicate
-                                        duplicate_videos.append(video_title)
-                            else:
-                                # Tek video
-                                video_title = info.get('title', 'İsimsiz Video')
-                                result = self.db_manager.add_to_queue(url, video_title)
-                                if result > 0:  # Başarılı
-                                    added_count += 1
-                                elif result == -1:  # Duplicate
-                                    duplicate_videos.append(video_title)
-                except Exception as e:
-                    print(f"Video bilgisi alınamadı: {e}")
-                    # Hata durumunda URL ile ekle
-                    result = self.db_manager.add_to_queue(url, None)
-                    if result > 0:
-                        added_count += 1
-                    elif result == -1:
-                        duplicate_videos.append(url)
-                    
-            except Exception as e:
-                print(f"URL eklenirken hata: {e}")
+        # Thread oluştur ve başlat
+        self.queue_thread = QueueProcessThread(urls, self.db_manager)
+        self.queue_thread.finished_signal.connect(self._on_queue_process_finished)
+        self.queue_thread.start()
+    
+    def _on_queue_process_finished(self, added_count, duplicate_videos):
+        """Kuyruk işleme thread'i tamamlandığında"""
+        # Preloader'ı gizle
+        self.preloader.hide_loader()
         
         # Butonları geri etkinleştir
         self.add_to_queue_button.setEnabled(True)
@@ -513,8 +576,8 @@ class MP3YapMainWindow(QMainWindow):
         style_manager.apply_alert_style(self.status_label, "info", refresh=False)  # Varsayılan stil
         
         # Sonuç mesajı göster
-        total_urls = len(urls)
-        duplicate_count = total_urls - added_count
+        total_urls = len(self.url_text.toPlainText().strip().split('\n'))
+        duplicate_count = len(duplicate_videos)
         
         if added_count > 0 and duplicate_count == 0:
             self.status_label.setText(f"✓ {added_count} video kuyruğa eklendi")
@@ -525,39 +588,19 @@ class MP3YapMainWindow(QMainWindow):
             # Kuyruk sekmesine geç
             self.tab_widget.setCurrentIndex(2)
         elif added_count > 0 and duplicate_count > 0:
-            # Hem eklenen hem duplicate olanları göster
-            if duplicate_count <= 2 and duplicate_videos:
-                # Az sayıda duplicate varsa detay göster
-                dup_names = ", ".join([v[:20] + "..." if len(v) > 20 else v for v in duplicate_videos[:2]])
-                self.status_label.setText(f"✓ {added_count} eklendi | Kuyrukta: {dup_names}")
-            else:
-                self.status_label.setText(f"✓ {added_count} yeni eklendi | {duplicate_count} zaten kuyrukta")
-            
+            self.status_label.setText(f"✓ {added_count} video eklendi, {duplicate_count} video zaten kuyrukta")
             style_manager.apply_alert_style(self.status_label, "warning")
-            self.url_text.clear()
-            # Kuyruğu yenile
+            self.url_text.clear()  # URL'leri temizle
             self.queue_widget.load_queue()
             self.tab_widget.setCurrentIndex(2)
-        elif added_count == 0 and duplicate_count > 0:
-            # Duplicate listesini göster
-            if duplicate_videos and len(duplicate_videos) <= 3:
-                # Az sayıda duplicate varsa isimleri göster
-                video_names = ", ".join([v[:30] + "..." if len(v) > 30 else v for v in duplicate_videos[:3]])
-                msg = f"Zaten kuyrukta: {video_names}"
-            else:
-                msg = f"Tüm videolar ({duplicate_count}) zaten kuyrukta"
-            
-            # Sadece status_label'da göster, popup açma
-            self.status_label.setText(f"UYARI: {msg}")
-            
-            style_manager.apply_alert_style(self.status_label, "error")
-            
-            # URL'leri SİLME - kullanıcı ana ekranda indirmek isteyebilir
-            # Sekme değiştirme YAPMA
-            return  # Fonksiyondan çık
+        elif duplicate_count > 0:
+            # Sadece duplicate varsa
+            self.status_label.setText(f"ⓘ Tüm videolar ({duplicate_count}) zaten kuyrukta!")
+            style_manager.apply_alert_style(self.status_label, "warning")
         else:
-            self.status_label.setText("Hiçbir video eklenemedi")
+            self.status_label.setText("✗ Kuyruğa video eklenemedi")
             style_manager.apply_alert_style(self.status_label, "error")
+    
     
     def process_queue_item(self, queue_item):
         """Kuyruktan gelen öğeyi işle"""
@@ -1205,10 +1248,11 @@ class MP3YapMainWindow(QMainWindow):
                 html += "</table>"
         
         # Kuyruk sekmesi kısayolları (widget içinde tanımlı)
-        html += """
+        modifier = get_modifier_symbol()
+        html += f"""
         <h4>Kuyruk Sekmesi Kısayolları</h4>
         <table>
-        <tr><td><b>Ctrl+A</b></td><td>Tümünü seç</td></tr>
+        <tr><td><b>{modifier}+A</b></td><td>Tümünü seç</td></tr>
         <tr><td><b>Delete</b></td><td>Seçilileri sil</td></tr>
         <tr><td><b>Space</b></td><td>Seçilileri duraklat/devam ettir</td></tr>
         </table>
@@ -1224,6 +1268,11 @@ class MP3YapMainWindow(QMainWindow):
         # Kuyruk indirmesi varsa iptal et
         elif hasattr(self, 'current_queue_item') and self.current_queue_item:
             self.queue_widget.pause_queue()
+    
+    def cancel_current_operation(self):
+        """Mevcut işlemi iptal et"""
+        # Preloader'dan gelen iptal işlemi
+        pass  # Şu an için boş, gerektiğinde implement edilecek
     
     def closeEvent(self, a0):
         """Pencere kapatılırken"""

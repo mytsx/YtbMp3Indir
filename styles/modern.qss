@@ -322,51 +322,74 @@ QLineEdit::placeholder {
     color: #696E82;
 }
 
-/* ComboBox */
+/* ComboBox - Modern Style */
 QComboBox {
     background-color: #2D3142;
-    border: 2px solid #3A3E50;
-    border-radius: 6px;
-    padding: 5px 12px;
+    border: 1px solid #3A3E50;
+    border-radius: 8px;
+    padding: 8px 12px;
+    padding-right: 36px; /* Space for arrow */
     color: #FFFFFF;
-    min-height: 26px;
+    min-height: 32px;
+    font-size: 13px;
 }
 
 QComboBox:hover {
     border-color: #4A4E60;
+    background-color: #333747;
 }
 
 QComboBox:focus {
     border-color: #6C63FF;
+    background-color: #333747;
 }
 
 QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 32px;
     border: none;
-    width: 30px;
+    border-left: 1px solid #3A3E50;
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+QComboBox::drop-down:hover {
+    background-color: #3A3E50;
 }
 
 QComboBox::down-arrow {
+    image: none;
     width: 0;
     height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-top: 5px solid #8B92A9;
-    border-bottom: none;
+    border-style: solid;
+    border-width: 6px 5px 0 5px;
+    border-color: #8B92A9 transparent transparent transparent;
 }
 
+QComboBox::down-arrow:hover {
+    border-color: #FFFFFF transparent transparent transparent;
+}
+
+/* Dropdown menu */
 QComboBox QAbstractItemView {
     background-color: #2D3142;
-    border: 2px solid #3A3E50;
+    border: 1px solid #3A3E50;
     border-radius: 8px;
     selection-background-color: #6C63FF;
+    selection-color: #FFFFFF;
     color: #FFFFFF;
-    padding: 5px;
+    padding: 4px;
     outline: none;
+    /* Add shadow effect */
+    margin-top: 2px;
 }
 
 QComboBox QAbstractItemView::item {
-    min-height: 26px;
-    padding: 4px 8px;
+    min-height: 30px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    margin: 2px 4px;
 }
 
 QComboBox QAbstractItemView::item:hover {
@@ -375,6 +398,14 @@ QComboBox QAbstractItemView::item:hover {
 
 QComboBox QAbstractItemView::item:selected {
     background-color: #6C63FF;
+    color: #FFFFFF;
+}
+
+/* Disabled state */
+QComboBox:disabled {
+    background-color: #1A1D29;
+    color: #696E82;
+    border-color: #2D3142;
 }
 
 /* Progress Bar */
@@ -438,6 +469,12 @@ QHeaderView::section {
     text-transform: uppercase;
     font-size: 12px;
     letter-spacing: 1px;
+}
+
+/* Table Corner Widget - Dark Theme */
+QTableCornerButton::section {
+    background-color: #1A1D29;
+    border: none;
 }
 
 /* Scroll Bar */

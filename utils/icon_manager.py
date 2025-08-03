@@ -39,6 +39,11 @@ class IconManager:
         self._cache[cache_key] = icon
         return icon
     
+    def has_icon(self, icon_name: str) -> bool:
+        """Check if an icon exists"""
+        icon_path = os.path.join(self.icons_dir, f"{icon_name}.svg")
+        return os.path.exists(icon_path)
+    
     def _load_svg_with_color(self, svg_path: str, color: str, size: int = 24) -> QPixmap:
         """Load SVG with a custom color"""
         # Read SVG content

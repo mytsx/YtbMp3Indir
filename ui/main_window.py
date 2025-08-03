@@ -15,6 +15,7 @@ from ui.queue_widget import QueueWidget
 from ui.converter_widget import ConverterWidget
 from utils.config import Config
 from database.manager import DatabaseManager
+from styles import style_manager
 
 
 class MP3YapMainWindow(QMainWindow):
@@ -23,14 +24,15 @@ class MP3YapMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("YouTube MP3 İndirici")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 1000, 700)
         
         # Set window icon if it exists
         icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets', 'icon.png')
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
         
-        # Gölge efektini kaldırdık - tablolarda sorun yaratıyor
+        # Apply global stylesheet
+        self.setStyleSheet(style_manager.get_combined_stylesheet())
         
         # Config ve Database
         self.config = Config()
@@ -126,7 +128,7 @@ class MP3YapMainWindow(QMainWindow):
         
         # İndirme sekmesi
         download_tab = self.create_download_tab()
-        self.tab_widget.addTab(download_tab, "İndirme")
+        self.tab_widget.addTab(download_tab, "İndir")
         
         # Geçmiş sekmesi
         self.history_widget = HistoryWidget()
@@ -141,39 +143,17 @@ class MP3YapMainWindow(QMainWindow):
         self.queue_widget.start_download.connect(self.process_queue_item)
         self.queue_widget.queue_started.connect(lambda: setattr(self, 'is_queue_mode', True))
         self.queue_widget.queue_paused.connect(self.on_queue_paused)
-        self.tab_widget.addTab(self.queue_widget, "Kuyruk")
+        self.tab_widget.addTab(self.queue_widget, "Sıra")
         
         # MP3'e Dönüştür sekmesi
         self.converter_widget = ConverterWidget()
-        self.tab_widget.addTab(self.converter_widget, self.tr("MP3'e Dönüştür"))
+        self.tab_widget.addTab(self.converter_widget, self.tr("Dönüştür"))
         
         # Tab bar'ı ortalamak için
         tab_bar = self.tab_widget.tabBar()
         tab_bar.setExpanding(False)
         
-        # Tab bar'ı gerçekten ortalamak için stil
-        self.tab_widget.setStyleSheet("""
-            QTabWidget::pane {
-                border: 1px solid #C0C0C0;
-            }
-            QTabBar::tab {
-                background: #E1E1E1;
-                border: 1px solid #C0C0C0;
-                padding: 6px 12px;
-                margin-right: 2px;
-                min-width: 60px;
-            }
-            QTabBar::tab:selected {
-                background: #FFFFFF;
-                border-bottom-color: #FFFFFF;
-            }
-            QTabBar::tab:hover {
-                background: #F0F0F0;
-            }
-            QTabWidget::tab-bar {
-                alignment: center;
-            }
-        """)
+        # Tab widget styling is handled by base.qss
         
         # Ana widget olarak tab widget'ı ayarla
         self.setCentralWidget(self.tab_widget)
@@ -191,13 +171,7 @@ class MP3YapMainWindow(QMainWindow):
         status_layout = QHBoxLayout()
         self.status_label = QLabel("Hazır")
         self.status_label.setMinimumHeight(30)
-        self.status_label.setStyleSheet("""
-            QLabel {
-                padding: 5px;
-                font-size: 14px;
-                font-weight: bold;
-            }
-        """)
+        self.status_label.setObjectName("downloadStatus")
         status_layout.addWidget(self.status_label)
         
         # İndirme ilerleme çubuğu
@@ -213,115 +187,28 @@ class MP3YapMainWindow(QMainWindow):
         button_layout = QHBoxLayout()
         self.download_button = QPushButton("▶ İndir")
         self.download_button.clicked.connect(self.start_download)  # type: ignore
-        self.download_button.setStyleSheet("""
-            QPushButton {
-                padding: 5px 20px;
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-            }
-            QPushButton:pressed {
-                background-color: #388e3c;
-            }
-            QPushButton:disabled {
-                background-color: #cccccc;
-                color: #666666;
-            }
-        """)
+        style_manager.apply_button_style(self.download_button, "download")
         
         # İptal butonu
         self.cancel_button = QPushButton("⏹ İptal")
         self.cancel_button.clicked.connect(self.cancel_download)  # type: ignore
         self.cancel_button.setEnabled(False)
-        self.cancel_button.setStyleSheet("""
-            QPushButton {
-                padding: 5px 20px;
-                background-color: #f44336;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            QPushButton:hover:enabled {
-                background-color: #da190b;
-            }
-            QPushButton:pressed:enabled {
-                background-color: #ba000d;
-            }
-            QPushButton:disabled {
-                background-color: #cccccc;
-                color: #666666;
-            }
-        """)
+        style_manager.apply_button_style(self.cancel_button, "danger")
         
         # Kuyruğa ekle butonu
         self.add_to_queue_button = QPushButton("➕ Kuyruğa Ekle")
         self.add_to_queue_button.clicked.connect(self.add_to_queue)  # type: ignore
-        self.add_to_queue_button.setStyleSheet("""
-            QPushButton {
-                padding: 5px 20px;
-                background-color: #2196F3;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #1976D2;
-            }
-            QPushButton:pressed {
-                background-color: #0D47A1;
-            }
-        """)
+        style_manager.apply_button_style(self.add_to_queue_button, "secondary")
         
         # Temizle butonu
         self.clear_button = QPushButton("🗑 Temizle")
         self.clear_button.clicked.connect(self.clear_urls)  # type: ignore
-        self.clear_button.setStyleSheet("""
-            QPushButton {
-                padding: 5px 20px;
-                background-color: #FF9800;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #F57C00;
-            }
-            QPushButton:pressed {
-                background-color: #E65100;
-            }
-        """)
+        style_manager.apply_button_style(self.clear_button, "warning")
         
         # Klasörü aç butonu
         self.open_folder_button = QPushButton("📁 Klasörü Aç")
         self.open_folder_button.clicked.connect(self.open_output_folder)  # type: ignore
-        self.open_folder_button.setStyleSheet("""
-            QPushButton {
-                padding: 5px 20px;
-                background-color: #9C27B0;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            QPushButton:hover:enabled {
-                background-color: #7B1FA2;
-            }
-            QPushButton:pressed:enabled {
-                background-color: #6A1B9A;
-            }
-            QPushButton:disabled {
-                background-color: #cccccc;
-                color: #666666;
-            }
-        """)
+        style_manager.apply_button_style(self.open_folder_button, "accent")
         
         # Sol taraf - ana işlemler
         button_layout.addWidget(self.download_button)
@@ -337,15 +224,7 @@ class MP3YapMainWindow(QMainWindow):
         
         # URL durum çubuğu
         self.url_status_bar = QLabel("")
-        self.url_status_bar.setStyleSheet("""
-            QLabel {
-                padding: 8px;
-                background-color: #f5f5f5;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                font-size: 12px;
-            }
-        """)
+        self.url_status_bar.setObjectName("alertMessage")
         self.url_status_bar.setVisible(False)
         
         # Layout'a widget'ları ekle
@@ -497,18 +376,10 @@ class MP3YapMainWindow(QMainWindow):
                 current = match.group(1)
                 total = match.group(2)
                 # Status label'ı renklendir
-                self.status_label.setStyleSheet("""
-                    QLabel {
-                        color: #1976D2;
-                        font-weight: bold;
-                        padding: 5px;
-                        background-color: #E3F2FD;
-                        border-radius: 3px;
-                    }
-                """)
+                style_manager.apply_status_style(self.status_label, "info")
         else:
             # Normal durum için stil sıfırla
-            self.status_label.setStyleSheet("")
+            self.status_label.setObjectName("downloadStatus")
         
         # Eğer tüm indirmeler tamamlandıysa butonları güncelle
         if status == "🎉 Tüm indirmeler tamamlandı!" or status == "İndirme durduruldu":
@@ -889,17 +760,7 @@ class MP3YapMainWindow(QMainWindow):
         
         # Hemen loading göster
         self.url_status_bar.setText("⏳ URL'ler kontrol ediliyor...")
-        self.url_status_bar.setStyleSheet("""
-            QLabel {
-                padding: 8px;
-                background-color: #fff3e0;
-                border: 1px solid #ff9800;
-                border-radius: 4px;
-                font-size: 12px;
-                color: #e65100;
-                font-weight: bold;
-            }
-        """)
+        self.url_status_bar.setObjectName("alertWarning")
         self.url_status_bar.setVisible(True)
         QApplication.processEvents()  # UI güncelle
         
@@ -907,16 +768,7 @@ class MP3YapMainWindow(QMainWindow):
         has_playlist = any('list=' in url for url in urls)
         if has_playlist:
             self.url_status_bar.setText("⏳ Playlist bilgisi alınıyor...")
-            self.url_status_bar.setStyleSheet("""
-                QLabel {
-                    padding: 8px;
-                    background-color: #e3f2fd;
-                    border: 1px solid #2196f3;
-                    border-radius: 4px;
-                    font-size: 12px;
-                    color: #1565c0;
-                }
-            """)
+            self.url_status_bar.setObjectName("alertInfo")
             self.url_status_bar.setVisible(True)
             QApplication.processEvents()  # UI güncelle
         
@@ -1136,56 +988,16 @@ class MP3YapMainWindow(QMainWindow):
             # Renk ayarla - öncelik sırasına göre
             if invalid_count > 0:
                 # Kırmızı - geçersiz URL var (en kritik)
-                self.url_status_bar.setStyleSheet("""
-                    QLabel {
-                        padding: 8px;
-                        background-color: #ffebee;
-                        border: 1px solid #ef5350;
-                        border-radius: 4px;
-                        font-size: 12px;
-                        color: #c62828;
-                        font-weight: bold;
-                    }
-                """)
+                self.url_status_bar.setObjectName("alertError")
             elif files_exist > 0 and files_missing == 0:
                 # Mavi - tüm dosyalar mevcut (bilgilendirme)
-                self.url_status_bar.setStyleSheet("""
-                    QLabel {
-                        padding: 8px;
-                        background-color: #e3f2fd;
-                        border: 1px solid #2196f3;
-                        border-radius: 4px;
-                        font-size: 12px;
-                        color: #1565c0;
-                        font-weight: bold;
-                    }
-                """)
+                self.url_status_bar.setObjectName("alertInfo")
             elif files_missing > 0:
                 # Sarı - dosyalar eksik (yeniden indirilebilir)
-                self.url_status_bar.setStyleSheet("""
-                    QLabel {
-                        padding: 8px;
-                        background-color: #fff3e0;
-                        border: 1px solid #ff9800;
-                        border-radius: 4px;
-                        font-size: 12px;
-                        color: #e65100;
-                        font-weight: bold;
-                    }
-                """)
+                self.url_status_bar.setObjectName("alertWarning")
             else:
                 # Yeşil - yeni indirmeler için hazır
-                self.url_status_bar.setStyleSheet("""
-                    QLabel {
-                        padding: 8px;
-                        background-color: #e8f5e9;
-                        border: 1px solid #4caf50;
-                        border-radius: 4px;
-                        font-size: 12px;
-                        color: #2e7d32;
-                        font-weight: bold;
-                    }
-                """)
+                self.url_status_bar.setObjectName("alertSuccess")
         else:
             self.url_status_bar.setVisible(False)
     
@@ -1249,30 +1061,10 @@ class MP3YapMainWindow(QMainWindow):
             # Renk ayarla
             if invalid_count > 0:
                 # Kırmızı
-                self.url_status_bar.setStyleSheet("""
-                    QLabel {
-                        padding: 8px;
-                        background-color: #ffebee;
-                        border: 1px solid #ef5350;
-                        border-radius: 4px;
-                        font-size: 12px;
-                        color: #c62828;
-                        font-weight: bold;
-                    }
-                """)
+                self.url_status_bar.setObjectName("alertError")
             else:
                 # Yeşil
-                self.url_status_bar.setStyleSheet("""
-                    QLabel {
-                        padding: 8px;
-                        background-color: #e8f5e9;
-                        border: 1px solid #4caf50;
-                        border-radius: 4px;
-                        font-size: 12px;
-                        color: #2e7d32;
-                        font-weight: bold;
-                    }
-                """)
+                self.url_status_bar.setObjectName("alertSuccess")
             self.url_status_bar.setVisible(True)
         else:
             self.url_status_bar.setVisible(False)

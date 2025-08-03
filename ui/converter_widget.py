@@ -18,25 +18,12 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                            QLabel, QFileDialog, QListWidget, QListWidgetItem,
                            QProgressBar, QMessageBox, QGroupBox,
                            QCheckBox)
+from styles import style_manager
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Stylesheet constants
-SELECT_BTN_STYLE = """
-    QPushButton {
-        background-color: #4CAF50;
-        color: white;
-        padding: 10px;
-        border: none;
-        border-radius: 5px;
-        font-weight: bold;
-    }
-    QPushButton:hover {
-        background-color: #45a049;
-    }
-"""
-
+# Stylesheet constants - only keep FILE_LIST_STYLE for drag-drop visual feedback
 FILE_LIST_STYLE = """
     QListWidget {
         border: 2px dashed #ccc;
@@ -52,61 +39,6 @@ FILE_LIST_STYLE = """
     QListWidget:hover {
         border-color: #999;
         background-color: #f5f5f5;
-    }
-"""
-
-WARNING_LABEL_STYLE = """
-    QLabel {
-        background-color: #fff3cd;
-        color: #856404;
-        padding: 8px;
-        border: 1px solid #ffeaa7;
-        border-radius: 5px;
-        margin-top: 5px;
-    }
-"""
-
-CONVERT_BTN_STYLE = """
-    QPushButton {
-        background-color: #2196F3;
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 5px;
-        font-weight: bold;
-    }
-    QPushButton:hover {
-        background-color: #0b7dda;
-    }
-    QPushButton:disabled {
-        background-color: #ccc;
-    }
-"""
-
-CANCEL_BTN_STYLE = """
-    QPushButton {
-        background-color: #ff9800;
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 5px;
-        font-weight: bold;
-    }
-    QPushButton:hover {
-        background-color: #e68900;
-    }
-"""
-
-CLEAR_BTN_STYLE = """
-    QPushButton {
-        background-color: #f44336;
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 5px;
-    }
-    QPushButton:hover {
-        background-color: #da190b;
     }
 """
 
@@ -339,6 +271,7 @@ class ConverterWidget(QWidget):
         """Arayüzü oluştur"""
         layout = QVBoxLayout()
         layout.setSpacing(10)  # Widget'lar arası genel boşluk
+        layout.setContentsMargins(0, 0, 0, 0)  # Ana layout margin kaldır
         
         # Başlık
         title = QLabel(self.tr("Her Türlü Dosyayı MP3'e Dönüştür"))
@@ -352,6 +285,9 @@ class ConverterWidget(QWidget):
         desc.setStyleSheet("color: #666; padding: 0 10px 10px 10px;")
         layout.addWidget(desc)
         
+        # İçerik alanı için layout - padding eklemek için
+        content_layout = QVBoxLayout()
+        content_layout.setContentsMargins(10, 0, 10, 0)  # Sol ve sağ padding
         
         # Dosya seçme butonu
         select_btn = QPushButton(self.tr("Dosya Seç"))
@@ -361,23 +297,40 @@ class ConverterWidget(QWidget):
         if not self.ffmpeg_path:
             select_btn.setEnabled(False)
             select_btn.setToolTip(self.tr("FFmpeg bulunamadı. Dosya seçimi devre dışı."))
-        select_btn.setStyleSheet(SELECT_BTN_STYLE)
-        layout.addWidget(select_btn)
+        style_manager.apply_button_style(select_btn, "primary")
+        content_layout.addWidget(select_btn)
         
-        # Dosya listesi
+        # Dosya listesi - genişleyebilir alan
         self.file_list = DragDropListWidget()
+        # File list style is kept as is for drag-drop visual feedback
         self.file_list.setStyleSheet(FILE_LIST_STYLE)
         self.file_list.files_dropped.connect(self.add_files)
         
-        layout.addWidget(self.file_list)
+        content_layout.addWidget(self.file_list)
+        
+        layout.addLayout(content_layout, 1)  # stretch factor 1 - bu alan genişleyecek
+        
+        # Alt kısım için sabit layout
+        bottom_layout = QVBoxLayout()
+        bottom_layout.setSpacing(10)
+        
+        # İlerleme çubuğu
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        bottom_layout.addWidget(self.progress_bar)
+        
+        # Durum etiketi
+        self.status_label = QLabel("")
+        self.status_label.setStyleSheet("color: #666; padding: 5px;")
+        bottom_layout.addWidget(self.status_label)
         
         # Ayarlar grubu (başlıksız)
         settings_group = QGroupBox()
         settings_group.setStyleSheet("""
             QGroupBox {
                 border: none;
-                margin-top: 10px;
-                margin-bottom: 10px;
+                margin-top: 5px;
+                margin-bottom: 5px;
             }
         """)
         settings_layout = QVBoxLayout()
@@ -396,25 +349,15 @@ class ConverterWidget(QWidget):
         self.warning_label = QLabel(self.tr("DİKKAT: Ses dosyaları (WAV, FLAC, M4A vb.) MP3'e dönüştürüldükten sonra "
                                    "orijinal dosyalar otomatik olarak silinir. Video dosyaları korunur."))
         self.warning_label.setWordWrap(True)
-        self.warning_label.setStyleSheet(WARNING_LABEL_STYLE)
+        self.warning_label.setObjectName("alertWarning")
         settings_layout.addWidget(self.warning_label)
         
         settings_group.setLayout(settings_layout)
-        layout.addWidget(settings_group)
+        bottom_layout.addWidget(settings_group)
         
-        # İlerleme çubuğu
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setVisible(False)
-        layout.addWidget(self.progress_bar)
-        
-        # Durum etiketi
-        self.status_label = QLabel("")
-        self.status_label.setStyleSheet("color: #666; padding: 5px;")
-        layout.addWidget(self.status_label)
-        
-        # Butonlar
+        # Butonlar - en altta
         button_layout = QHBoxLayout()
-        button_layout.setContentsMargins(0, 0, 0, 0)  # Buton layout'u için margin kaldır
+        button_layout.setContentsMargins(10, 0, 10, 10)  # Butonlar için yan ve alt margin
         
         self.convert_btn = QPushButton(self.tr("Dönüştürmeyi Başlat"))
         self.convert_btn.clicked.connect(self.start_conversion)
@@ -423,23 +366,25 @@ class ConverterWidget(QWidget):
         # FFmpeg yoksa butonu devre dışı bırak
         if not self.ffmpeg_path:
             self.convert_btn.setToolTip(self.tr("FFmpeg bulunamadı. Dönüştürme özelliği kullanılamaz."))
-        self.convert_btn.setStyleSheet(CONVERT_BTN_STYLE)
+        style_manager.apply_button_style(self.convert_btn, "secondary")
         button_layout.addWidget(self.convert_btn)
         
         self.cancel_btn = QPushButton(self.tr("İptal Et"))
         self.cancel_btn.clicked.connect(self.cancel_conversion)
         self.cancel_btn.setEnabled(False)
         self.cancel_btn.setVisible(False)
-        self.cancel_btn.setStyleSheet(CANCEL_BTN_STYLE)
+        style_manager.apply_button_style(self.cancel_btn, "warning")
         button_layout.addWidget(self.cancel_btn)
         
         self.clear_btn = QPushButton(self.tr("Listeyi Temizle"))
         self.clear_btn.clicked.connect(self.clear_list)
-        self.clear_btn.setStyleSheet(CLEAR_BTN_STYLE)
+        style_manager.apply_button_style(self.clear_btn, "warning")
         button_layout.addWidget(self.clear_btn)
         
-        layout.addLayout(button_layout)
-        layout.addStretch()
+        bottom_layout.addLayout(button_layout)
+        
+        # Alt layout'u ana layout'a ekle
+        layout.addLayout(bottom_layout)
         
         self.setLayout(layout)
         
@@ -532,17 +477,23 @@ class ConverterWidget(QWidget):
         # Update status label once after all files are processed
         if mp3_skipped_count > 0 and added_count == 0:
             self.status_label.setText(self.tr("{} MP3 dosyası atlandı").format(mp3_skipped_count))
-            self.status_label.setStyleSheet("color: orange; padding: 5px;")
+            self.status_label.setObjectName("alertWarning")
+            self.status_label.style().unpolish(self.status_label)
+            self.status_label.style().polish(self.status_label)
         elif self.selected_files and self.ffmpeg_path:
             self.convert_btn.setEnabled(True)
             if added_count > 0:
                 self.status_label.setText(self.tr("{} dosya eklendi (toplam {})").format(added_count, len(self.selected_files)))
             else:
                 self.status_label.setText(self.tr("{} dosya seçildi").format(len(self.selected_files)))
-            self.status_label.setStyleSheet("color: green; padding: 5px;")
+            self.status_label.setObjectName("alertSuccess")
+            self.status_label.style().unpolish(self.status_label)
+            self.status_label.style().polish(self.status_label)
         elif self.selected_files and not self.ffmpeg_path:
             self.status_label.setText(self.tr("FFmpeg bulunamadı - Dönüştürme yapılamaz"))
-            self.status_label.setStyleSheet("color: red; padding: 5px;")
+            self.status_label.setObjectName("alertError")
+            self.status_label.style().unpolish(self.status_label)
+            self.status_label.style().polish(self.status_label)
             
     def clear_list(self):
         """Listeyi temizle"""
@@ -599,7 +550,9 @@ class ConverterWidget(QWidget):
             status_text = html.escape(str(data))  # Fallback
             
         self.status_label.setText(status_text)
-        self.status_label.setStyleSheet("color: #2196F3; padding: 5px;")
+        self.status_label.setObjectName("alertInfo")
+        self.status_label.style().unpolish(self.status_label)
+        self.status_label.style().polish(self.status_label)
         
     def file_completed(self, input_path, output_path, is_replaced):  # output_path kept for signal compatibility
         """Dosya tamamlandığında"""
@@ -647,7 +600,9 @@ class ConverterWidget(QWidget):
         if self.conversion_worker:
             self.conversion_worker.stop()
             self.status_label.setText(self.tr("İptal ediliyor..."))
-            self.status_label.setStyleSheet("color: orange; padding: 5px;")
+            self.status_label.setObjectName("alertWarning")
+            self.status_label.style().unpolish(self.status_label)
+            self.status_label.style().polish(self.status_label)
     
     def conversion_finished(self):
         """Dönüştürme tamamlandığında"""

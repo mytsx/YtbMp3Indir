@@ -5,6 +5,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QUrl, QThread
 from PyQt5.QtGui import QDesktopServices
 from database.manager import DatabaseManager
 from datetime import datetime
+from styles import style_manager
 
 
 class HistoryWidget(QWidget):
@@ -17,62 +18,7 @@ class HistoryWidget(QWidget):
         super().__init__(parent)
         self.db_manager = DatabaseManager()
         
-        # Buton stilleri (bir kere tanımla)
-        self.button_style_browser = """
-            QPushButton {
-                background-color: #2196F3;
-                color: white;
-                border: 1px solid #1976D2;
-                border-radius: 4px;
-                font-size: 16px;
-                padding: 2px;
-            }
-            QPushButton:hover {
-                background-color: #1976D2;
-                border-color: #0D47A1;
-            }
-            QPushButton:pressed {
-                background-color: #0D47A1;
-            }
-        """
-        
-        self.button_style_redownload = """
-            QPushButton {
-                background-color: #4CAF50;
-                color: white;
-                border: 1px solid #45a049;
-                border-radius: 4px;
-                font-size: 18px;
-                font-weight: bold;
-                padding: 2px;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-                border-color: #388e3c;
-            }
-            QPushButton:pressed {
-                background-color: #388e3c;
-            }
-        """
-        
-        self.button_style_delete = """
-            QPushButton {
-                background-color: #ff7979;
-                color: white;
-                border: 1px solid #e17575;
-                border-radius: 4px;
-                font-size: 20px;
-                font-weight: bold;
-                padding: 2px;
-            }
-            QPushButton:hover {
-                background-color: #e17575;
-                border-color: #d63031;
-            }
-            QPushButton:pressed {
-                background-color: #d63031;
-            }
-        """
+        # Buton stilleri artık style_manager tarafından yönetiliyor
         
         self.setup_ui()
         self.load_history()
@@ -92,39 +38,12 @@ class HistoryWidget(QWidget):
         
         self.refresh_button = QPushButton("↻ Yenile")
         self.refresh_button.clicked.connect(self.load_history)
-        self.refresh_button.setStyleSheet("""
-            QPushButton {
-                padding: 5px 10px;
-                background-color: #2196F3;
-                color: white;
-                border: 1px solid #1976D2;
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: #1976D2;
-            }
-        """)
+        style_manager.apply_button_style(self.refresh_button, "secondary")
         search_layout.addWidget(self.refresh_button)
         
         self.clear_button = QPushButton("🗑 Geçmişi Temizle")
         self.clear_button.clicked.connect(self.clear_history)
-        self.clear_button.setStyleSheet("""
-            QPushButton {
-                padding: 5px 10px;
-                background-color: #ff7979;
-                color: white;
-                border: 1px solid #e17575;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #e17575;
-                border-color: #d63031;
-            }
-            QPushButton:pressed {
-                background-color: #d63031;
-            }
-        """)
+        style_manager.apply_button_style(self.clear_button, "danger")
         search_layout.addWidget(self.clear_button)
         
         layout.addLayout(search_layout)
@@ -139,29 +58,32 @@ class HistoryWidget(QWidget):
         # Tablo ayarları
         header = self.table.horizontalHeader()
         header.setStretchLastSection(False)  # Son sütun gereksiz genişlemesin
-        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)  # Tarih
-        header.setSectionResizeMode(1, QHeaderView.Stretch)  # Başlık sütunu genişlesin
-        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)  # Kanal
-        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)  # Format
-        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)  # Boyut
-        header.setSectionResizeMode(5, QHeaderView.ResizeToContents)  # İşlemler
+        
+        # Sütun genişliklerini manuel olarak ayarla
+        self.table.setColumnWidth(0, 130)  # Tarih - sabit genişlik
+        header.setSectionResizeMode(1, QHeaderView.Stretch)  # Başlık - geri kalan alanı kaplasın
+        self.table.setColumnWidth(2, 120)  # Kanal - daha dar
+        self.table.setColumnWidth(3, 80)   # Format - içerik görünsün
+        self.table.setColumnWidth(4, 90)   # Boyut - içerik görünsün
+        self.table.setColumnWidth(5, 140)  # İşlemler - scrollbar'dan uzak durması için daha geniş
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)  # Düzenleme kapalı
+        
+        # Satır yüksekliğini ayarla - butonların görünmesi için
+        self.table.verticalHeader().setDefaultSectionSize(42)  # 42px yükseklik
+        self.table.verticalHeader().setMinimumSectionSize(40)  # Minimum 40px
+        
+        # Satır numarası sütununu daralt
+        self.table.verticalHeader().setMaximumWidth(25)  # Maksimum 25px genişlik
+        self.table.verticalHeader().setMinimumWidth(20)  # Minimum 20px
+        self.table.verticalHeader().setDefaultAlignment(Qt.AlignCenter)  # Sayıları ortala
         
         layout.addWidget(self.table)
         
         # İstatistikler - tablonun altında
         self.stats_label = QLabel()
-        self.stats_label.setStyleSheet("""
-            QLabel {
-                padding: 10px;
-                background-color: #f5f5f5;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-        """)
+        self.stats_label.setObjectName("statsLabel")
         layout.addWidget(self.stats_label)
         self.setLayout(layout)
     
@@ -230,15 +152,16 @@ class HistoryWidget(QWidget):
             # İşlemler butonu
             actions_widget = QWidget()
             actions_layout = QHBoxLayout()
-            actions_layout.setContentsMargins(5, 2, 5, 2)
-            actions_layout.setSpacing(2)
+            actions_layout.setContentsMargins(0, 0, 0, 0)
+            actions_layout.setSpacing(1)
             
             # Tarayıcıda aç butonu
             browser_btn = QPushButton()
             browser_btn.setText("🌐")  # Globe emoji
             browser_btn.setToolTip("Tarayıcıda Aç")
-            browser_btn.setFixedSize(28, 28)
-            browser_btn.setStyleSheet(self.button_style_browser)
+            browser_btn.setFixedSize(24, 24)
+            style_manager.apply_button_style(browser_btn, "icon")
+            browser_btn.setStyleSheet(browser_btn.styleSheet() + "\nQPushButton { background-color: #2196F3; }")
             browser_btn.clicked.connect(lambda checked, url=record['url']: self.open_in_browser(url))
             actions_layout.addWidget(browser_btn)
             
@@ -246,8 +169,9 @@ class HistoryWidget(QWidget):
             redownload_btn = QPushButton()
             redownload_btn.setText("↻")  # Reload symbol
             redownload_btn.setToolTip("Tekrar İndir")
-            redownload_btn.setFixedSize(28, 28)
-            redownload_btn.setStyleSheet(self.button_style_redownload)
+            redownload_btn.setFixedSize(24, 24)
+            style_manager.apply_button_style(redownload_btn, "icon")
+            redownload_btn.setStyleSheet(redownload_btn.styleSheet() + "\nQPushButton { background-color: #4CAF50; }")
             redownload_btn.clicked.connect(lambda checked, url=record['url']: self.redownload(url))
             actions_layout.addWidget(redownload_btn)
             
@@ -255,8 +179,9 @@ class HistoryWidget(QWidget):
             delete_btn = QPushButton()
             delete_btn.setText("×")  # Simple X character
             delete_btn.setToolTip("Geçmişten Sil")
-            delete_btn.setFixedSize(28, 28)
-            delete_btn.setStyleSheet(self.button_style_delete)
+            delete_btn.setFixedSize(24, 24)
+            style_manager.apply_button_style(delete_btn, "icon")
+            delete_btn.setStyleSheet(delete_btn.styleSheet() + "\nQPushButton { background-color: #f44336; }")
             delete_btn.clicked.connect(lambda checked, id=record['id']: self.delete_record(id))
             actions_layout.addWidget(delete_btn)
             

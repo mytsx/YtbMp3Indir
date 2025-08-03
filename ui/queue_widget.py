@@ -5,6 +5,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from PyQt5.QtGui import QFont, QMouseEvent
 from database.manager import DatabaseManager
 from datetime import datetime
+from styles import style_manager
 
 
 class QueueWidget(QWidget):
@@ -32,44 +33,6 @@ class QueueWidget(QWidget):
         """Arayüzü oluştur"""
         layout = QVBoxLayout()
         
-        # Buton stilleri (bir kere tanımla)
-        self.button_style_up_down = """
-            QPushButton {
-                background-color: #2196F3;
-                color: white;
-                border: 1px solid #1976D2;
-                border-radius: 4px;
-                font-size: 16px;
-                font-weight: bold;
-                padding: 2px;
-            }
-            QPushButton:hover {
-                background-color: #1976D2;
-                border-color: #0D47A1;
-            }
-            QPushButton:pressed {
-                background-color: #0D47A1;
-            }
-        """
-        
-        self.button_style_delete = """
-            QPushButton {
-                background-color: #ff7979;
-                color: white;
-                border: 1px solid #e17575;
-                border-radius: 4px;
-                font-size: 18px;
-                font-weight: bold;
-                padding: 2px;
-            }
-            QPushButton:hover {
-                background-color: #e17575;
-                border-color: #d63031;
-            }
-            QPushButton:pressed {
-                background-color: #d63031;
-            }
-        """
         
         # Üst kontrol paneli
         control_layout = QHBoxLayout()
@@ -87,13 +50,16 @@ class QueueWidget(QWidget):
         # Kontrol butonları
         self.start_button = QPushButton("▶ Kuyruğu Başlat")
         self.start_button.clicked.connect(self.start_queue)
+        style_manager.apply_button_style(self.start_button, "primary")
         
         self.pause_button = QPushButton("⏸ Duraklat")
         self.pause_button.clicked.connect(self.pause_queue)
         self.pause_button.setEnabled(False)
+        style_manager.apply_button_style(self.pause_button, "warning")
         
         self.clear_completed_button = QPushButton("✓ Tamamlananları Temizle")
         self.clear_completed_button.clicked.connect(self.clear_completed)
+        style_manager.apply_button_style(self.clear_completed_button, "danger")
         
         control_layout.addWidget(self.start_button)
         control_layout.addWidget(self.pause_button)
@@ -126,10 +92,22 @@ class QueueWidget(QWidget):
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setSelectionMode(QTableWidget.ExtendedSelection)  # Çoklu seçim aktif
+        
+        # Satır yüksekliğini ayarla - butonların görünmesi için
+        self.table.verticalHeader().setDefaultSectionSize(42)  # 42px yükseklik
+        self.table.verticalHeader().setMinimumSectionSize(40)  # Minimum 40px
+        
+        # Satır numarası sütununu daralt ve ortala
+        self.table.verticalHeader().setMaximumWidth(25)  # Maksimum 25px genişlik
+        self.table.verticalHeader().setMinimumWidth(20)  # Minimum 20px
+        self.table.verticalHeader().setDefaultAlignment(Qt.AlignCenter)  # Sayıları ortala
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)  # Düzenleme kapalı
         self.table.horizontalHeader().setStretchLastSection(False)
-        # URL/Başlık sütunu genişlesin, diğerleri içerik kadar olsun
-        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)  # URL/Başlık
+        # Sütun genişliklerini manuel olarak ayarla
+        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)  # URL/Başlık - geri kalan alanı kaplasın
+        self.table.setColumnWidth(1, 100)  # Durum - sabit genişlik
+        self.table.setColumnWidth(2, 130)  # Eklenme Zamanı - sabit genişlik
+        self.table.setColumnWidth(3, 140)  # İşlem - butonlar için geniş alan
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)  # Durum
         self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)  # Eklenme Zamanı
         self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)  # İşlem
@@ -223,54 +201,60 @@ class QueueWidget(QWidget):
             # İşlem butonları - geçmiş tabındaki gibi kompakt
             action_widget = QWidget()
             action_layout = QHBoxLayout()
-            action_layout.setContentsMargins(4, 2, 4, 2)
-            action_layout.setSpacing(2)
+            action_layout.setContentsMargins(0, 0, 0, 0)
+            action_layout.setSpacing(2)  # Butonlar arası boşluk arttırıldı
             
             # Hemen indir butonu - pending, failed ve queued durumları için
             if item['status'] in ['pending', 'failed', 'queued']:
                 download_button = QPushButton("İndir")
-                download_button.setFixedSize(50, 28)
+                download_button.setFixedSize(50, 24)
                 download_button.setToolTip("Şimdi İndir")
                 download_button.setStyleSheet("""
                     QPushButton {
                         background-color: #4CAF50;
                         color: white;
-                        border: 1px solid #45a049;
+                        border: none;
                         border-radius: 4px;
-                        font-size: 16px;
+                        font-size: 11px;
                         font-weight: bold;
                         padding: 2px;
                     }
                     QPushButton:hover {
                         background-color: #45a049;
-                        border-color: #388e3c;
-                    }
-                    QPushButton:pressed {
-                        background-color: #388e3c;
                     }
                 """)
                 download_button.clicked.connect(lambda checked, id=item['id']: self.download_now(id))
                 action_layout.addWidget(download_button)
+                action_layout.addSpacing(4)  # İndir butonu ile diğerleri arasına ekstra boşluk
             
             # Yukarı taşı
             up_button = QPushButton("↑")
-            up_button.setFixedSize(28, 28)
+            up_button.setFixedSize(24, 24)
             up_button.setToolTip("Yukarı Taşı")
-            up_button.setStyleSheet(self.button_style_up_down)
+            style_manager.apply_button_style(up_button, "icon")
+            # Apply custom blue background for up/down buttons
+            up_button.setStyleSheet(style_manager.get_dynamic_button_style("#2196F3", "#1976D2") + 
+                                   "QPushButton { padding: 2px; font-size: 16px; font-weight: bold; }")
             up_button.clicked.connect(lambda checked, id=item['id']: self.move_up(id))
             
             # Aşağı taşı
             down_button = QPushButton("↓")
-            down_button.setFixedSize(28, 28)
+            down_button.setFixedSize(24, 24)
             down_button.setToolTip("Aşağı Taşı")
-            down_button.setStyleSheet(self.button_style_up_down)
+            style_manager.apply_button_style(down_button, "icon")
+            # Apply custom blue background for up/down buttons
+            down_button.setStyleSheet(style_manager.get_dynamic_button_style("#2196F3", "#1976D2") + 
+                                     "QPushButton { padding: 2px; font-size: 16px; font-weight: bold; }")
             down_button.clicked.connect(lambda checked, id=item['id']: self.move_down(id))
             
             # Sil
             delete_button = QPushButton("×")
-            delete_button.setFixedSize(28, 28)
+            delete_button.setFixedSize(24, 24)
             delete_button.setToolTip("Kuyruktan Kaldır")
-            delete_button.setStyleSheet(self.button_style_delete)
+            style_manager.apply_button_style(delete_button, "icon")
+            # Apply custom red background for delete button
+            delete_button.setStyleSheet(style_manager.get_dynamic_button_style("#ff7979", "#e17575") + 
+                                       "QPushButton { padding: 2px; font-size: 18px; font-weight: bold; }")
             delete_button.clicked.connect(lambda checked, id=item['id']: self.delete_item(id))
             
             action_layout.addWidget(up_button)

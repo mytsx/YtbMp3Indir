@@ -70,10 +70,12 @@ class UpdateChecker(QThread):
         
         extensions = platform_map.get(system, ())  # Get extensions for the current system
         
-        for asset in assets:
-            name = asset.get('name', '').lower()
-            if name.endswith(extensions):
-                return asset.get('browser_download_url', '')
+        # Iterate through preferred extensions first to enforce priority
+        for ext in extensions:
+            for asset in assets:
+                name = asset.get('name', '').lower()
+                if name.endswith(ext):
+                    return asset.get('browser_download_url', '')
         
         # Fallback to release page
         return release_data.get('html_url', '')

@@ -485,29 +485,29 @@ class MP3YapMainWindow(QMainWindow):
         info = self.latest_update_info
         
         dialog = QDialog(self)
-        dialog.setWindowTitle("Güncelleme Mevcut")
+        dialog.setWindowTitle(self.tr("Güncelleme Mevcut"))
         dialog.setMinimumWidth(500)
         dialog.setMinimumHeight(400)
         
         layout = QVBoxLayout()
         
         # Başlık
-        title = QLabel(f"<h2>Yeni Sürüm: v{info['version']}</h2>")
+        title = QLabel(f"<h2>{self.tr('Yeni Sürüm')}: v{info['version']}</h2>")
         layout.addWidget(title)
         
         # Değişiklikler
-        changes_label = QLabel("<b>Değişiklikler:</b>")
+        changes_label = QLabel(f"<b>{self.tr('Değişiklikler')}:</b>")
         layout.addWidget(changes_label)
         
         changes_text = QTextEdit()
         changes_text.setReadOnly(True)
-        changes_text.setPlainText(info['body'])
+        changes_text.setMarkdown(info['body'])
         layout.addWidget(changes_text)
         
         # Butonlar
         button_box = QDialogButtonBox()
-        download_btn = button_box.addButton("İndir", QDialogButtonBox.AcceptRole)
-        later_btn = button_box.addButton("Daha Sonra", QDialogButtonBox.RejectRole)
+        download_btn = button_box.addButton(self.tr("İndir"), QDialogButtonBox.AcceptRole)
+        later_btn = button_box.addButton(self.tr("Daha Sonra"), QDialogButtonBox.RejectRole)
         
         download_btn.clicked.connect(lambda: self.open_update_url(info['download_url']))
         later_btn.clicked.connect(dialog.reject)

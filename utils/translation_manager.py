@@ -185,6 +185,31 @@ class TranslationManager(QObject):
             return lang_info['native'] if native else lang_info['name']
         return language_code
     
+    def get_key_description(self, key: str) -> Optional[str]:
+        """
+        Get the description for a translation key
+        
+        Args:
+            key: Translation key
+        
+        Returns:
+            Description text or None if not found
+        """
+        if USE_DATABASE:
+            return translation_db.get_key_description(key)
+        return None
+    
+    def get_all_keys_with_descriptions(self) -> Dict[str, str]:
+        """
+        Get all translation keys with their descriptions
+        
+        Returns:
+            Dictionary mapping keys to descriptions
+        """
+        if USE_DATABASE:
+            return translation_db.get_all_keys_with_descriptions()
+        return {}
+    
     def get_available_languages(self, native: bool = True) -> List[tuple]:
         """
         Get list of available languages

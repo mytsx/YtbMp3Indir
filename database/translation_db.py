@@ -234,6 +234,46 @@ class TranslationDatabase:
             
             return text
     
+    def get_key_description(self, key: str) -> Optional[str]:
+        """
+        Get the description for a translation key
+        
+        Args:
+            key: Translation key
+        
+        Returns:
+            Description text or None if not found
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT description
+                FROM translation_keys
+                WHERE key_text = ?
+            """, (key,))
+            
+            result = cursor.fetchone()
+            return result[0] if result else None
+    
+    def get_all_keys_with_descriptions(self) -> Dict[str, str]:
+        """
+        Get all translation keys with their descriptions
+        
+        Returns:
+            Dictionary mapping keys to descriptions
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT key_text, description
+                FROM translation_keys
+                WHERE key_text LIKE '%.%'
+                AND description IS NOT NULL
+                AND description NOT LIKE 'Migrated from:%'
+            """)
+            
+            return {row[0]: row[1] for row in cursor.fetchall()}
+    
     def get_all_translations(self, lang_code: str = None) -> Dict[str, str]:
         """
         Belirli bir dil için tüm çevirileri al

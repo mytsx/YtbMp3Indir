@@ -275,7 +275,7 @@ class SettingsDialog(QDialog):
         """İndirme klasörü seç"""
         folder = QFileDialog.getExistingDirectory(
             self, 
-            "İndirme Klasörü Seç",
+            translation_manager.tr("Select Download Folder"),
             self.folder_edit.text()
         )
         if folder:
@@ -345,10 +345,10 @@ class SettingsDialog(QDialog):
                     # Tab widget'ları güncelle
                     if hasattr(self.parent(), 'tab_widget'):
                         # Tab başlıklarını güncelle
-                        self.parent().tab_widget.setTabText(0, translation_manager.tr("İndir"))
-                        self.parent().tab_widget.setTabText(1, translation_manager.tr("Geçmiş"))
-                        self.parent().tab_widget.setTabText(2, translation_manager.tr("Sıra"))
-                        self.parent().tab_widget.setTabText(3, translation_manager.tr("Dönüştür"))
+                        self.parent().tab_widget.setTabText(0, translation_manager.tr("Download"))
+                        self.parent().tab_widget.setTabText(1, translation_manager.tr("History"))
+                        self.parent().tab_widget.setTabText(2, translation_manager.tr("Queue"))
+                        self.parent().tab_widget.setTabText(3, translation_manager.tr("Convert"))
                         
                         # Her tab'ın retranslateUi metodunu çağır
                         for i in range(self.parent().tab_widget.count()):
@@ -365,8 +365,8 @@ class SettingsDialog(QDialog):
                 from PyQt5.QtWidgets import QMessageBox
                 QMessageBox.warning(
                     self,
-                    translation_manager.tr("Hata"),
-                    translation_manager.tr("Dil değiştirilemedi. Lütfen uygulamayı yeniden başlatın.")
+                    translation_manager.tr("Error"),
+                    translation_manager.tr("Language could not be changed. Please restart the application.")
                 )
         else:
             # Dil değişmemişse sadece kaydet

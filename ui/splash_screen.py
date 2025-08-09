@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import (QWidget, QGridLayout, QVBoxLayout, QLabel,
 from PyQt5.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, pyqtSignal, QSize
 from PyQt5.QtGui import QFont, QColor
 import random
+from utils.translation_manager import translation_manager
 
 
 class SplashScreen(QWidget):
@@ -77,7 +78,7 @@ class SplashScreen(QWidget):
         status_layout = QHBoxLayout(self.status_widget)
         status_layout.setContentsMargins(20, 0, 20, 0)
         
-        self.status_label = QLabel("Başlatılıyor...")
+        self.status_label = QLabel(translation_manager.tr("Starting..."))
         self.status_label.setAlignment(Qt.AlignCenter)
         status_font = QFont("Arial", 11)
         self.status_label.setFont(status_font)
@@ -119,7 +120,7 @@ class SplashScreen(QWidget):
     def set_app_ready(self):
         """Uygulama hazır olduğunda çağrılır"""
         self.app_ready = True
-        self.update_status("Hazır!")
+        self.update_status(translation_manager.tr("Ready!"))
         # Fade out yok - direkt kapat
         QTimer.singleShot(500, self.close_splash)
         

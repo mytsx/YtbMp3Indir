@@ -286,9 +286,9 @@ class ConverterWidget(QWidget):
         if not self.ffmpeg_path:
             QMessageBox.warning(
                 self,
-                translation_manager.tr("FFmpeg Bulunamadı"),
-                translation_manager.tr("FFmpeg bulunamadı. MP3 dönüştürme özelliği devre dışı.\n\n"
-                       "Lütfen FFmpeg'i yükleyin veya uygulamayı yeniden başlatın.")
+                translation_manager.tr("FFmpeg Not Found"),
+                translation_manager.tr("FFmpeg not found. MP3 conversion feature is disabled.\n\n"
+                       "Please install FFmpeg or restart the application.")
             )
         
     def init_ui(self):
@@ -298,32 +298,32 @@ class ConverterWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)  # Ana layout margin kaldır
         
         # Başlık
-        title = QLabel(translation_manager.tr("Convert Any File to MP3"))
-        title.setObjectName("converterTitle")
-        layout.addWidget(title)
+        self.title_label = QLabel(translation_manager.tr("Convert Any File to MP3"))
+        self.title_label.setObjectName("converterTitle")
+        layout.addWidget(self.title_label)
         
         # Açıklama
-        desc = QLabel(translation_manager.tr("Convert your video, audio and other media files to MP3 format. "
+        self.desc_label = QLabel(translation_manager.tr("Convert your video, audio and other media files to MP3 format. "
                      "You can drag and drop files or select them."))
-        desc.setWordWrap(True)
-        desc.setObjectName("converterDescription")
-        layout.addWidget(desc)
+        self.desc_label.setWordWrap(True)
+        self.desc_label.setObjectName("converterDescription")
+        layout.addWidget(self.desc_label)
         
         # İçerik alanı için layout - padding eklemek için
         content_layout = QVBoxLayout()
         content_layout.setContentsMargins(10, 0, 10, 0)  # Sol ve sağ padding
         
         # Dosya seçme butonu
-        select_btn = QPushButton(translation_manager.tr(" Select File"))
-        select_btn.setIcon(icon_manager.get_icon("file", "#FFFFFF"))
-        select_btn.clicked.connect(self.select_files)
+        self.select_btn = QPushButton(translation_manager.tr(" Select File"))
+        self.select_btn.setIcon(icon_manager.get_icon("file", "#FFFFFF"))
+        self.select_btn.clicked.connect(self.select_files)
         
         # FFmpeg yoksa dosya seçme butonunu da devre dışı bırak
         if not self.ffmpeg_path:
-            select_btn.setEnabled(False)
-            select_btn.setToolTip(translation_manager.tr("FFmpeg not found. File selection disabled."))
-        style_manager.apply_button_style(select_btn, "primary")
-        content_layout.addWidget(select_btn)
+            self.select_btn.setEnabled(False)
+            self.select_btn.setToolTip(translation_manager.tr("FFmpeg not found. File selection disabled."))
+        style_manager.apply_button_style(self.select_btn, "primary")
+        content_layout.addWidget(self.select_btn)
         
         # Dosya listesi - genişleyebilir alan
         self.file_list = DragDropListWidget()
@@ -358,18 +358,17 @@ class ConverterWidget(QWidget):
         settings_layout.setSpacing(5)  # Widget'lar arası boşluk
         
         # Orijinal dosyaları silme seçeneği
-        self.replace_checkbox = QCheckBox(translation_manager.tr("Delete original audio files"))
+        self.replace_checkbox = QCheckBox(translation_manager.tr("Delete original files after conversion"))
         self.replace_checkbox.setChecked(True)
-        self.replace_checkbox.setToolTip(translation_manager.tr("If checked, audio files will be deleted after conversion to MP3. "
-                                        "Video files are always preserved."))
+        self.replace_checkbox.setToolTip(translation_manager.tr("If checked, original files will be deleted after conversion."))
         self.replace_checkbox.stateChanged.connect(self.on_replace_checkbox_changed)
         settings_layout.addWidget(self.replace_checkbox)
         
         # Uyarı mesajı - checkbox'un hemen altında
-        self.warning_label = QLabel(translation_manager.tr("WARNING: Audio files (WAV, FLAC, M4A etc.) will be automatically deleted "
-                                   "after conversion to MP3. Video files are preserved."))
+        self.warning_label = QLabel(translation_manager.tr("WARNING: Original audio files (WAV, FLAC, M4A etc.) will be permanently deleted. Video files are always preserved."))
         self.warning_label.setWordWrap(True)
         self.warning_label.setObjectName("alertWarning")
+        self.warning_label.setVisible(self.replace_checkbox.isChecked())  # Başlangıçta checkbox durumuna göre göster/gizle
         settings_layout.addWidget(self.warning_label)
         
         settings_group.setLayout(settings_layout)
@@ -424,7 +423,7 @@ class ConverterWidget(QWidget):
             # Sadece ses dosyalarını güncelle ve henüz dönüştürülmemiş olanları
             if file_ext in ConversionWorker.AUDIO_EXTENSIONS and item.data(Qt.UserRole + 1) != 'completed':
                 if self.replace_checkbox.isChecked():
-                    item.setText("🎵 {} ({})".format(file_name, translation_manager.tr("Orijinal silinecek")))
+                    item.setText("🎵 {} ({})".format(file_name, translation_manager.tr("Original will be deleted")))
                 else:
                     item.setText("🎵 {}".format(file_name))
         
@@ -437,9 +436,9 @@ class ConverterWidget(QWidget):
         
         files, _ = QFileDialog.getOpenFileNames(
             self,
-            translation_manager.tr("Dönüştürülecek Dosyaları Seç"),
+            translation_manager.tr("Select Files to Convert"),
             "",
-            f"{translation_manager.tr('Desteklenen Dosyalar')} ({all_exts});;{translation_manager.tr('Video Dosyaları')} ({video_exts});;{translation_manager.tr('Ses Dosyaları')} ({audio_exts});;{translation_manager.tr('Tüm Dosyalar')} (*.*)"
+            f"{translation_manager.tr('Supported Files')} ({all_exts});;{translation_manager.tr('Video Files')} ({video_exts});;{translation_manager.tr('Audio Files')} ({audio_exts});;{translation_manager.tr('All Files')} (*.*)"
         )
         
         if files:
@@ -451,8 +450,8 @@ class ConverterWidget(QWidget):
         if not self.ffmpeg_path:
             QMessageBox.warning(
                 self, 
-                translation_manager.tr("FFmpeg Gerekli"), 
-                translation_manager.tr("Dönüştürme özelliği için FFmpeg gerekli. Lütfen FFmpeg'i yükleyin veya uygulamayı yeniden başlatın.")
+                translation_manager.tr("FFmpeg Required"), 
+                translation_manager.tr("FFmpeg is required for conversion feature. Please install FFmpeg or restart the application.")
             )
             return
         
@@ -480,7 +479,7 @@ class ConverterWidget(QWidget):
                     
                     if file_ext in ConversionWorker.AUDIO_EXTENSIONS:
                         if self.replace_checkbox.isChecked():
-                            display_text = "🎵 {} ({})".format(file_name, translation_manager.tr("Orijinal silinecek"))
+                            display_text = "🎵 {} ({})".format(file_name, translation_manager.tr("Original will be deleted"))
                         else:
                             display_text = "🎵 {}".format(file_name)
                     elif file_ext in ConversionWorker.VIDEO_EXTENSIONS:
@@ -499,17 +498,17 @@ class ConverterWidget(QWidget):
             
         # Update status label once after all files are processed
         if mp3_skipped_count > 0 and added_count == 0:
-            self.status_label.setText(translation_manager.tr("{} MP3 dosyası atlandı").format(mp3_skipped_count))
+            self.status_label.setText(translation_manager.tr("{} MP3 files skipped").format(mp3_skipped_count))
             style_manager.apply_alert_style(self.status_label, "warning")
         elif self.selected_files and self.ffmpeg_path:
             self.convert_btn.setEnabled(True)
             if added_count > 0:
-                self.status_label.setText(translation_manager.tr("{} dosya eklendi (toplam {})").format(added_count, len(self.selected_files)))
+                self.status_label.setText(translation_manager.tr("{} files added (total {})").format(added_count, len(self.selected_files)))
             else:
-                self.status_label.setText(translation_manager.tr("{} dosya seçildi").format(len(self.selected_files)))
+                self.status_label.setText(translation_manager.tr("{} files selected").format(len(self.selected_files)))
             style_manager.apply_alert_style(self.status_label, "success")
         elif self.selected_files and not self.ffmpeg_path:
-            self.status_label.setText(translation_manager.tr("FFmpeg bulunamadı - Dönüştürme yapılamaz"))
+            self.status_label.setText(translation_manager.tr("FFmpeg not found - Conversion not possible"))
             style_manager.apply_alert_style(self.status_label, "error")
             
     def clear_list(self):
@@ -558,11 +557,11 @@ class ConverterWidget(QWidget):
     def update_status(self, status_code, data):
         """Durum güncelle - translate status codes"""
         if status_code == "converting":
-            status_text = translation_manager.tr("Dönüştürülüyor: {}").format(html.escape(data))
+            status_text = translation_manager.tr("Converting: {}").format(html.escape(data))
         elif status_code == "completed":
-            status_text = translation_manager.tr("Dönüştürme tamamlandı!")
+            status_text = translation_manager.tr("Conversion completed!")
         elif status_code == "cancelled":
-            status_text = translation_manager.tr("İptal edildi")
+            status_text = translation_manager.tr("Cancelled")
         else:
             status_text = html.escape(str(data))  # Fallback
             
@@ -587,7 +586,7 @@ class ConverterWidget(QWidget):
             
             # Tamamlanmış metni oluştur
             if is_replaced:
-                item.setText("✓ {} {} → MP3 ({})".format(icon, file_name, translation_manager.tr("Orijinal silindi")))
+                item.setText("✓ {} {} → MP3 ({})".format(icon, file_name, translation_manager.tr("Original deleted")))
             else:
                 item.setText("✓ {} {} → MP3".format(icon, file_name))
             item.setForeground(QColor("green"))
@@ -596,15 +595,15 @@ class ConverterWidget(QWidget):
     def show_error(self, error_code, data_dict):
         """Hata göster - translate error codes"""
         if error_code == "conversion_error":
-            error_text = translation_manager.tr("Hata ({}): Dosya dönüştürülemedi. Lütfen dosyanın bozuk olmadığını veya desteklenen bir formatta olduğunu kontrol edin.").format(html.escape(data_dict.get("file_name", "Unknown")))
+            error_text = translation_manager.tr("Error ({}): File could not be converted. Please check that the file is not corrupted and is in a supported format.").format(html.escape(data_dict.get("file_name", "Unknown")))
         elif error_code == "delete_error":
             file_name = html.escape(data_dict.get("file_name", "Unknown"))
             error_str = html.escape(data_dict.get("error", "Unknown error"))
-            error_text = translation_manager.tr("Orijinal dosya silinemedi ({}): {}").format(file_name, error_str)
+            error_text = translation_manager.tr("Original file could not be deleted ({}): {}").format(file_name, error_str)
         elif error_code == "subprocess_error":
-            error_text = translation_manager.tr("Dönüştürme hatası: {}").format(data_dict.get("error", "Unknown error"))
+            error_text = translation_manager.tr("Conversion error: {}").format(data_dict.get("error", "Unknown error"))
         elif error_code == "terminate_error":
-            error_text = translation_manager.tr("FFmpeg process sonlandırılamadı: {}").format(data_dict.get("error", "Unknown error"))
+            error_text = translation_manager.tr("Could not terminate FFmpeg process: {}").format(data_dict.get("error", "Unknown error"))
         else:
             error_text = str(data_dict)  # Fallback
             
@@ -614,7 +613,7 @@ class ConverterWidget(QWidget):
         """Dönüştürme işlemini iptal et"""
         if self.conversion_worker:
             self.conversion_worker.stop()
-            self.status_label.setText(translation_manager.tr("İptal ediliyor..."))
+            self.status_label.setText(translation_manager.tr("Cancelling..."))
             style_manager.apply_alert_style(self.status_label, "warning")
     
     def conversion_finished(self):
@@ -629,15 +628,24 @@ class ConverterWidget(QWidget):
         if self.conversion_worker and self.conversion_worker.is_running:
             QMessageBox.information(
                 self,
-                translation_manager.tr("Tamamlandı"),
-                translation_manager.tr("Tüm dosyalar başarıyla MP3'e dönüştürüldü!")
+                translation_manager.tr("Completed"),
+                translation_manager.tr("All files successfully converted to MP3!")
             )
             
         self.conversion_worker = None
     
     def retranslateUi(self):
         """UI metinlerini yeniden çevir"""
+        # Başlık ve açıklama
+        if hasattr(self, 'title_label'):
+            self.title_label.setText(translation_manager.tr("Convert Any File to MP3"))
+        if hasattr(self, 'desc_label'):
+            self.desc_label.setText(translation_manager.tr("Convert your video, audio and other media files to MP3 format. "
+                                   "You can drag and drop files or select them."))
+        
         # Butonlar
+        if hasattr(self, 'select_btn'):
+            self.select_btn.setText(translation_manager.tr(" Select File"))
         if hasattr(self, 'convert_btn'):
             self.convert_btn.setText(translation_manager.tr(" Start Conversion"))
         if hasattr(self, 'cancel_btn'):
@@ -646,11 +654,11 @@ class ConverterWidget(QWidget):
             self.clear_btn.setText(translation_manager.tr(" Clear List"))
         
         # Checkbox ve uyarı
-        self.replace_checkbox.setText(translation_manager.tr("Delete original audio files"))
-        self.replace_checkbox.setToolTip(translation_manager.tr("If checked, audio files will be deleted after conversion to MP3. "
-                                                 "Video files are always preserved."))
-        self.warning_label.setText(translation_manager.tr("WARNING: Audio files (WAV, FLAC, M4A etc.) will be automatically deleted "
-                                          "after conversion to MP3. Video files are preserved."))
+        if hasattr(self, 'replace_checkbox'):
+            self.replace_checkbox.setText(translation_manager.tr("Delete original files after conversion"))
+            self.replace_checkbox.setToolTip(translation_manager.tr("If checked, original files will be deleted after conversion."))
+        if hasattr(self, 'warning_label'):
+            self.warning_label.setText(translation_manager.tr("WARNING: Original audio files (WAV, FLAC, M4A etc.) will be permanently deleted. Video files are always preserved."))
         
         # Liste widget'ı güncelle
         self.file_list.viewport().update()

@@ -38,6 +38,34 @@ TRANSLATIONS = {
         "tr": "Hakkında",
         "en": "About"
     },
+    "About {}": {
+        "tr": "{} Hakkında",
+        "en": "About {}"
+    },
+    "Version": {
+        "tr": "Sürüm",
+        "en": "Version"
+    },
+    "A modern and user-friendly tool for downloading YouTube videos in MP3 format.": {
+        "tr": "YouTube videolarını MP3 formatında indirmek için modern ve kullanıcı dostu bir araç.",
+        "en": "A modern and user-friendly tool for downloading YouTube videos in MP3 format."
+    },
+    "Developer": {
+        "tr": "Geliştirici",
+        "en": "Developer"
+    },
+    "Web": {
+        "tr": "Web",
+        "en": "Web"
+    },
+    "License": {
+        "tr": "Lisans",
+        "en": "License"
+    },
+    "Open Source": {
+        "tr": "Açık Kaynak",
+        "en": "Open Source"
+    },
     
     # Tab başlıkları
     "Download": {
@@ -287,6 +315,18 @@ TRANSLATIONS = {
     "Delete original audio files": {
         "tr": "Ses dosyalarının orijinallerini sil",
         "en": "Delete original audio files"
+    },
+    "Delete original files after conversion": {
+        "tr": "Dönüştürmeden sonra orijinal dosyaları sil",
+        "en": "Delete original files after conversion"
+    },
+    "If checked, original files will be deleted after conversion.": {
+        "tr": "İşaretlenirse, orijinal dosyalar dönüştürmeden sonra silinir.",
+        "en": "If checked, original files will be deleted after conversion."
+    },
+    "WARNING: Original audio files (WAV, FLAC, M4A etc.) will be permanently deleted. Video files are always preserved.": {
+        "tr": "UYARI: Orijinal ses dosyaları (WAV, FLAC, M4A vb.) kalıcı olarak silinecektir. Video dosyaları her zaman korunur.",
+        "en": "WARNING: Original audio files (WAV, FLAC, M4A etc.) will be permanently deleted. Video files are always preserved."
     },
     "If checked, audio files will be deleted after conversion to MP3. Video files are always preserved.": {
         "tr": "İşaretli ise, ses dosyaları MP3'e dönüştürüldükten sonra silinir. Video dosyaları her zaman korunur.",
@@ -540,7 +580,7 @@ TRANSLATIONS = {
     },
     
     # Additional widget texts from queue_widget
-    "İndirme Kuyruğu": {
+    "Download Queue": {
         "tr": "İndirme Kuyruğu",
         "en": "Download Queue"
     },
@@ -719,6 +759,30 @@ TRANSLATIONS = {
     "Seçilileri Sil": {
         "tr": "Seçilileri Sil",
         "en": "Delete Selected"
+    },
+    "Add Selected to Queue": {
+        "tr": "Seçilileri Kuyruğa Ekle",
+        "en": "Add Selected to Queue"
+    },
+    "Add Selected to Download Tab": {
+        "tr": "Seçilileri İndir Sekmesine Ekle",
+        "en": "Add Selected to Download Tab"
+    },
+    "Download Selected": {
+        "tr": "Seçilenleri İndir",
+        "en": "Download Selected"
+    },
+    "Delete Selected": {
+        "tr": "Seçilenleri Sil",
+        "en": "Delete Selected"
+    },
+    "items": {
+        "tr": "öğe",
+        "en": "items"
+    },
+    "item": {
+        "tr": "öğe",
+        "en": "item"
     },
     
     # Additional queue widget texts

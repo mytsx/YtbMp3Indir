@@ -113,7 +113,7 @@ class MP3YapMainWindow(QMainWindow):
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("YouTube MP3 İndirici")
+        self.setWindowTitle(translation_manager.tr("YouTube MP3 Downloader"))
         self.setGeometry(100, 100, 1000, 700)
         
         # Set window icon if it exists
@@ -227,14 +227,14 @@ class MP3YapMainWindow(QMainWindow):
         
         # İndirme sekmesi
         download_tab = self.create_download_tab()
-        self.tab_widget.addTab(download_tab, translation_manager.tr("İndir"))
+        self.tab_widget.addTab(download_tab, translation_manager.tr("Download"))
         
         # Geçmiş sekmesi
         self.history_widget = HistoryWidget()
         self.history_widget.redownload_signal.connect(self.add_url_to_download)
         self.history_widget.add_to_queue_signal.connect(self.add_urls_to_queue)
         self.history_widget.add_to_download_signal.connect(self.add_urls_to_download_tab)
-        self.tab_widget.addTab(self.history_widget, translation_manager.tr("Geçmiş"))
+        self.tab_widget.addTab(self.history_widget, translation_manager.tr("History"))
         
         # Tab değişikliğini dinle
         self.tab_widget.currentChanged.connect(self.on_tab_changed)
@@ -244,11 +244,11 @@ class MP3YapMainWindow(QMainWindow):
         self.queue_widget.start_download.connect(self.process_queue_item)
         self.queue_widget.queue_started.connect(lambda: setattr(self, 'is_queue_mode', True))
         self.queue_widget.queue_paused.connect(self.on_queue_paused)
-        self.tab_widget.addTab(self.queue_widget, translation_manager.tr("Sıra"))
+        self.tab_widget.addTab(self.queue_widget, translation_manager.tr("Queue"))
         
         # MP3'e Dönüştür sekmesi
         self.converter_widget = ConverterWidget()
-        self.tab_widget.addTab(self.converter_widget, translation_manager.tr("Dönüştür"))
+        self.tab_widget.addTab(self.converter_widget, translation_manager.tr("Convert"))
         
         # Tab bar'ı ortalamak için
         tab_bar = self.tab_widget.tabBar()
@@ -286,7 +286,7 @@ class MP3YapMainWindow(QMainWindow):
         status_bar.addPermanentWidget(self.version_label)
         
         # Klavye kısayolları butonu
-        shortcuts_hint = QPushButton(translation_manager.tr("Shortcuts (F1)"))
+        self.shortcuts_hint = QPushButton(translation_manager.tr("Shortcuts (F1)"))
         # Tema'ya göre renk belirle
         theme = self.config.get('theme', 'light')
         icon_color = style_manager.colors.DARK_TEXT_SECONDARY if theme == 'dark' else style_manager.colors.TEXT_SECONDARY
@@ -295,15 +295,15 @@ class MP3YapMainWindow(QMainWindow):
         # Windows için keyboard ikonu kullan (windows.svg yoksa)
         if keyboard_icon == "windows" and not icon_manager.has_icon("windows"):
             keyboard_icon = "keyboard"
-        shortcuts_hint.setIcon(icon_manager.get_icon(keyboard_icon, icon_color))
-        shortcuts_hint.setFlat(True)
-        shortcuts_hint.setCursor(Qt.PointingHandCursor)
-        shortcuts_hint.clicked.connect(self.show_shortcuts_help)
-        shortcuts_hint.setToolTip(translation_manager.tr("Show keyboard shortcuts"))
-        shortcuts_hint.setObjectName("statusBarButton")
-        shortcuts_hint.setMaximumWidth(140)  # Genişlik arttırıldı
+        self.shortcuts_hint.setIcon(icon_manager.get_icon(keyboard_icon, icon_color))
+        self.shortcuts_hint.setFlat(True)
+        self.shortcuts_hint.setCursor(Qt.PointingHandCursor)
+        self.shortcuts_hint.clicked.connect(self.show_shortcuts_help)
+        self.shortcuts_hint.setToolTip(translation_manager.tr("Show keyboard shortcuts"))
+        self.shortcuts_hint.setObjectName("statusBarButton")
+        self.shortcuts_hint.setMaximumWidth(140)  # Genişlik arttırıldı
         
-        status_bar.addPermanentWidget(shortcuts_hint)
+        status_bar.addPermanentWidget(self.shortcuts_hint)
     
     def create_download_tab(self):
         """İndirme sekmesini oluştur"""
@@ -311,7 +311,7 @@ class MP3YapMainWindow(QMainWindow):
         layout = QVBoxLayout()
         
         # URL giriş alanı
-        url_label = QLabel(translation_manager.tr("Paste YouTube URLs here (one per line)"))
+        self.url_label = QLabel(translation_manager.tr("Paste YouTube URLs here (one per line)"))
         self.url_text = QTextEdit()
         self.url_text.setToolTip(translation_manager.tr("Paste YouTube URLs here (Ctrl+V)"))
         
@@ -387,7 +387,7 @@ class MP3YapMainWindow(QMainWindow):
         self.url_status_bar.setVisible(False)
         
         # Layout'a widget'ları ekle
-        layout.addWidget(url_label)
+        layout.addWidget(self.url_label)
         layout.addWidget(self.url_text)
         layout.addLayout(status_layout)
         layout.addLayout(progress_layout)
@@ -495,11 +495,11 @@ class MP3YapMainWindow(QMainWindow):
         layout = QVBoxLayout()
         
         # Başlık
-        title = QLabel(f"<h2>{translation_manager.tr('Yeni Sürüm')}: v{info['version']}</h2>")
+        title = QLabel(f"<h2>{translation_manager.tr('New Version')}: v{info['version']}</h2>")
         layout.addWidget(title)
         
         # Değişiklikler
-        changes_label = QLabel(f"<b>{translation_manager.tr('Değişiklikler')}:</b>")
+        changes_label = QLabel(f"<b>{translation_manager.tr('Changes')}:</b>")
         layout.addWidget(changes_label)
         
         changes_text = QTextEdit()
@@ -509,7 +509,7 @@ class MP3YapMainWindow(QMainWindow):
         
         # Butonlar
         button_box = QDialogButtonBox()
-        download_btn = button_box.addButton(translation_manager.tr("İndir"), QDialogButtonBox.AcceptRole)
+        download_btn = button_box.addButton(translation_manager.tr("Download"), QDialogButtonBox.AcceptRole)
         later_btn = button_box.addButton(translation_manager.tr("Daha Sonra"), QDialogButtonBox.RejectRole)
         
         download_btn.clicked.connect(lambda: self.open_update_url(info['download_url']))
@@ -525,13 +525,13 @@ class MP3YapMainWindow(QMainWindow):
     
     def show_about(self):
         """Hakkında dialogunu göster"""
-        QMessageBox.about(self, translation_manager.tr("{} Hakkında").format(__app_name__),
+        QMessageBox.about(self, translation_manager.tr("About {}").format(__app_name__),
             f"<h3>{__app_name__}</h3>"
-            f"<p>{translation_manager.tr('Sürüm')} {__version__}</p>"
-            f"<p>{translation_manager.tr('YouTube videolarını MP3 formatında indirmek için modern ve kullanıcı dostu bir araç.')}</p>"
-            f"<p><b>{translation_manager.tr('Geliştirici')}:</b> {__author__}</p>"
+            f"<p>{translation_manager.tr('Version')} {__version__}</p>"
+            f"<p>{translation_manager.tr('A modern and user-friendly tool for downloading YouTube videos in MP3 format.')}</p>"
+            f"<p><b>{translation_manager.tr('Developer')}:</b> {__author__}</p>"
             f"<p><b>{translation_manager.tr('Web')}:</b> <a href='https://mehmetyerli.com'>mehmetyerli.com</a></p>"
-            f"<p><b>{translation_manager.tr('Lisans')}:</b> {translation_manager.tr('Açık Kaynak')}</p>")
+            f"<p><b>{translation_manager.tr('License')}:</b> {translation_manager.tr('Open Source')}</p>")
     
     def import_urls(self):
         """URL'leri metin dosyasından içe aktar"""
@@ -1346,10 +1346,10 @@ class MP3YapMainWindow(QMainWindow):
         
         # Kategorilere göre grupla
         categories = {
-            'main': {'title': translation_manager.tr('Ana Kısayollar'), 'shortcuts': []},
-            'navigation': {'title': translation_manager.tr('Gezinme Kısayolları'), 'shortcuts': []},
-            'file': {'title': translation_manager.tr('Dosya İşlemleri'), 'shortcuts': []},
-            'help': {'title': translation_manager.tr('Yardım'), 'shortcuts': []}
+            'main': {'title': translation_manager.tr('Main Shortcuts'), 'shortcuts': []},
+            'navigation': {'title': translation_manager.tr('Navigation Shortcuts'), 'shortcuts': []},
+            'file': {'title': translation_manager.tr('File Operations'), 'shortcuts': []},
+            'help': {'title': translation_manager.tr('Help'), 'shortcuts': []}
         }
         
         for shortcut in shortcuts:
@@ -1358,7 +1358,7 @@ class MP3YapMainWindow(QMainWindow):
                 categories[category]['shortcuts'].append(shortcut)
         
         # HTML oluştur
-        html = f"<h3>{translation_manager.tr('Klavye Kısayolları')}</h3>"
+        html = f"<h3>{translation_manager.tr('Keyboard Shortcuts')}</h3>"
         
         for _, category_data in categories.items():
             if category_data['shortcuts']:
@@ -1375,17 +1375,17 @@ class MP3YapMainWindow(QMainWindow):
                     # Açıklamaları çevir
                     desc = shortcut['description']
                     desc_translated = {
-                        'URL yapıştır ve otomatik doğrula': translation_manager.tr('URL yapıştır ve otomatik doğrula'),
-                        'Hızlı indirme başlat': translation_manager.tr('Hızlı indirme başlat'),
-                        'İndirme klasörünü aç': translation_manager.tr('İndirme klasörünü aç'),
-                        'Geçmiş sekmesine geç': translation_manager.tr('Geçmiş sekmesine geç'),
-                        'Kuyruk sekmesine geç': translation_manager.tr('Kuyruk sekmesine geç'),
-                        'Mevcut sekmeyi yenile': translation_manager.tr('Mevcut sekmeyi yenile'),
-                        'Bu yardım penceresini göster': translation_manager.tr('Bu yardım penceresini göster'),
-                        'İndirmeyi iptal et': translation_manager.tr('İndirmeyi iptal et'),
-                        "URL'leri dosyadan içe aktar": translation_manager.tr("URL'leri dosyadan içe aktar"),
-                        'Tercihler/Ayarlar': translation_manager.tr('Tercihler/Ayarlar'),
-                        'Uygulamadan çık': translation_manager.tr('Uygulamadan çık')
+                        'URL yapıştır ve otomatik doğrula': translation_manager.tr('Paste URL and auto validate'),
+                        'Hızlı indirme başlat': translation_manager.tr('Start quick download'),
+                        'İndirme klasörünü aç': translation_manager.tr('Open download folder'),
+                        'Geçmiş sekmesine geç': translation_manager.tr('Switch to history tab'),
+                        'Kuyruk sekmesine geç': translation_manager.tr('Switch to queue tab'),
+                        'Mevcut sekmeyi yenile': translation_manager.tr('Refresh current tab'),
+                        'Bu yardım penceresini göster': translation_manager.tr('Show this help window'),
+                        'İndirmeyi iptal et': translation_manager.tr('Cancel download'),
+                        "URL'leri dosyadan içe aktar": translation_manager.tr('Import URLs from file'),
+                        'Tercihler/Ayarlar': translation_manager.tr('Preferences/Settings'),
+                        'Uygulamadan çık': translation_manager.tr('Quit application')
                     }.get(desc, desc)
                     
                     html += f"<tr><td><b>{key_str}</b></td><td>{desc_translated}</td></tr>"
@@ -1395,11 +1395,11 @@ class MP3YapMainWindow(QMainWindow):
         # Kuyruk sekmesi kısayolları (widget içinde tanımlı)
         modifier = get_modifier_symbol()
         html += f"""
-        <h4>{translation_manager.tr('Kuyruk Sekmesi Kısayolları')}</h4>
+        <h4>{translation_manager.tr('Queue Tab Shortcuts')}</h4>
         <table>
-        <tr><td><b>{modifier}+A</b></td><td>{translation_manager.tr('Tümünü seç')}</td></tr>
-        <tr><td><b>Delete</b></td><td>{translation_manager.tr('Seçilileri sil')}</td></tr>
-        <tr><td><b>Space</b></td><td>{translation_manager.tr('Seçilileri duraklat/devam ettir')}</td></tr>
+        <tr><td><b>{modifier}+A</b></td><td>{translation_manager.tr('Select all')}</td></tr>
+        <tr><td><b>Delete</b></td><td>{translation_manager.tr('Delete selected')}</td></tr>
+        <tr><td><b>Space</b></td><td>{translation_manager.tr('Pause/resume selected')}</td></tr>
         </table>
         """
         
@@ -1460,9 +1460,10 @@ class MP3YapMainWindow(QMainWindow):
             self.help_menu.setTitle(translation_manager.tr('Help'))
             self.about_action.setText(translation_manager.tr('About'))
         
-        # Status bar'ı yeniden oluştur
-        self.statusBar().clearMessage()
-        self.setup_status_bar()
+        # Status bar widget'larının metinlerini güncelle (yeniden oluşturmadan)
+        if hasattr(self, 'shortcuts_hint'):
+            self.shortcuts_hint.setText(translation_manager.tr("Shortcuts (F1)"))
+            self.shortcuts_hint.setToolTip(translation_manager.tr("Show keyboard shortcuts"))
         
         # Tab başlıkları
         self.tab_widget.setTabText(0, translation_manager.tr("Download"))
@@ -1493,6 +1494,8 @@ class MP3YapMainWindow(QMainWindow):
         if hasattr(self, 'current_file_label'):
             self.current_file_label.setText(translation_manager.tr("File: "))
         
-        # URL giriş alanı tooltip ve placeholder güncelle
+        # URL giriş alanı label ve tooltip güncelle
+        if hasattr(self, 'url_label'):
+            self.url_label.setText(translation_manager.tr("Paste YouTube URLs here (one per line)"))
         if hasattr(self, 'url_text'):
             self.url_text.setToolTip(translation_manager.tr("Paste YouTube URLs here (Ctrl+V)"))

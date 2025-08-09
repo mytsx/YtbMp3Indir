@@ -30,7 +30,7 @@ CREATE TABLE translation_keys (
     description TEXT,                      -- Çevirmenler için açıklama
     is_active INTEGER DEFAULT 1,          -- Aktif/Pasif durumu
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (scope, key_text)
 );
 CREATE INDEX idx_translation_keys_scope ON translation_keys(scope);
@@ -47,7 +47,7 @@ CREATE TABLE translations (
     translated_text TEXT NOT NULL,        -- Çevrilmiş metin
     status VARCHAR(20) DEFAULT 'approved', -- Çeviri durumu
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (key_id) REFERENCES translation_keys(key_id),
     FOREIGN KEY (lang_code) REFERENCES languages(lang_code),
     UNIQUE (key_id, lang_code)

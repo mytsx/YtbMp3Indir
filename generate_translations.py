@@ -208,8 +208,8 @@ def main():
             qm_file = os.path.join(translations_dir, f"mp3yap_{lang}.qm")
             subprocess.run(["lrelease", ts_file, "-qm", qm_file], check=True)
             print(f"Compiled {qm_file}")
-        except:
-            print(f"Could not compile {lang}.qm - lrelease not found")
+        except (subprocess.CalledProcessError, FileNotFoundError) as e:
+            print(f"Could not compile {lang}.qm - lrelease not found or failed: {e}")
     
     print("\nTranslation files generated successfully!")
     print("Note: You may need to install Qt tools to compile .qm files:")

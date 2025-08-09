@@ -164,17 +164,8 @@ class TranslationDatabase:
             
             conn.commit()
             
-            # Önbelleği temizle - tüm diller için bu anahtarı temizle
-            keys_to_delete = []
-            # Cache key format: lang_code:scope:key or lang_code:key
-            key_suffix = f"{scope}:{key}" if scope else key
-            for cache_key in self._cache:
-                # Check if cache key ends with our key pattern (after language code)
-                parts = cache_key.split(':', 1)  # Split only on first colon to get lang_code
-                if len(parts) > 1 and parts[1] == key_suffix:
-                    keys_to_delete.append(cache_key)
-            for cache_key in keys_to_delete:
-                del self._cache[cache_key]
+            # Clear entire cache - simpler and more performant for infrequent write operations
+            self._cache.clear()
     
     def get_translation(self, key: str, lang_code: str = None, scope: str = None) -> str:
         """

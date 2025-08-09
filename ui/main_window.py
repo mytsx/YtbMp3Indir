@@ -1280,21 +1280,6 @@ class MP3YapMainWindow(QMainWindow):
         # Preloader'dan gelen iptal işlemi
         pass  # Şu an için boş, gerektiğinde implement edilecek
     
-    def changeEvent(self, a0):
-        """Olay değişikliklerini yakala"""
-        if a0.type() == a0.LanguageChange:
-            # Dil değiştiğinde tüm metinleri güncelle
-            self.retranslateUi()
-            
-            # Alt widget'ların retranslateUi metodlarını çağır
-            if hasattr(self.history_widget, 'retranslateUi'):
-                self.history_widget.retranslateUi()
-            if hasattr(self.queue_widget, 'retranslateUi'):
-                self.queue_widget.retranslateUi()
-            if hasattr(self.converter_widget, 'retranslateUi'):
-                self.converter_widget.retranslateUi()
-        
-        super().changeEvent(a0)
     
     def closeEvent(self, a0):
         """Pencere kapatılırken"""

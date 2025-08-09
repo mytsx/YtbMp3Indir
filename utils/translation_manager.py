@@ -193,7 +193,7 @@ class TranslationManager(QObject):
         from utils.config import Config
         config = Config()
         config.set('language', language_code)
-        config.save()
+        config.save_config()
     
     def load_language_from_config(self) -> str:
         """Load language preference from config"""

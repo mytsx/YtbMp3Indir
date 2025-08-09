@@ -7,6 +7,7 @@ from database.manager import DatabaseManager
 from datetime import datetime
 from styles import style_manager
 from utils.icon_manager import icon_manager
+from utils.translation_manager import translation_manager
 
 
 class HistoryWidget(QWidget):
@@ -35,19 +36,19 @@ class HistoryWidget(QWidget):
         # Arama ve filtre alanı
         search_layout = QHBoxLayout()
         
-        search_layout.addWidget(QLabel(self.tr("Search:")))
+        search_layout.addWidget(QLabel(translation_manager.tr("Search:")))
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText(self.tr("Search in title or channel name..."))
+        self.search_input.setPlaceholderText(translation_manager.tr("Search in title or channel name..."))
         self.search_input.textChanged.connect(self.search_history)
         search_layout.addWidget(self.search_input)
         
-        self.refresh_button = QPushButton(self.tr("Refresh"))
+        self.refresh_button = QPushButton(translation_manager.tr("Refresh"))
         self.refresh_button.setIcon(icon_manager.get_icon("refresh-cw", "#FFFFFF"))
         self.refresh_button.clicked.connect(self.load_history)
         style_manager.apply_button_style(self.refresh_button, "secondary")
         search_layout.addWidget(self.refresh_button)
         
-        self.clear_button = QPushButton(self.tr("Clear History"))
+        self.clear_button = QPushButton(translation_manager.tr("Clear History"))
         self.clear_button.setIcon(icon_manager.get_icon("trash-2", "#FFFFFF"))
         self.clear_button.clicked.connect(self.clear_history)
         style_manager.apply_button_style(self.clear_button, "danger")
@@ -59,8 +60,8 @@ class HistoryWidget(QWidget):
         self.table = QTableWidget()
         self.table.setColumnCount(6)
         self.table.setHorizontalHeaderLabels([
-            self.tr("Date"), self.tr("Title"), self.tr("Channel"), 
-            self.tr("Format"), self.tr("Size"), self.tr("Actions")
+            translation_manager.tr("Date"), translation_manager.tr("Title"), translation_manager.tr("Channel"), 
+            translation_manager.tr("Format"), translation_manager.tr("Size"), translation_manager.tr("Actions")
         ])
         
         # Tablo ayarları
@@ -105,7 +106,7 @@ class HistoryWidget(QWidget):
         self.table.setRowCount(0)
         loading_row = self.table.rowCount()
         self.table.insertRow(loading_row)
-        loading_item = QTableWidgetItem(self.tr("Yükleniyor..."))
+        loading_item = QTableWidgetItem(translation_manager.tr("Yükleniyor..."))
         loading_item.setTextAlignment(Qt.AlignCenter)
         self.table.setItem(loading_row, 1, loading_item)
         self.table.setSpan(loading_row, 1, 1, 5)  # Tüm sütunları kapla
@@ -173,7 +174,7 @@ class HistoryWidget(QWidget):
             # Tarayıcıda aç butonu
             browser_btn = QPushButton()
             browser_btn.setIcon(icon_manager.get_icon("external-link", "#FFFFFF"))
-            browser_btn.setToolTip(self.tr("Tarayıcıda Aç"))
+            browser_btn.setToolTip(translation_manager.tr("Tarayıcıda Aç"))
             browser_btn.setFixedSize(24, 24)
             browser_btn.setObjectName("browserIconButton")
             browser_btn.clicked.connect(lambda checked, url=record['url']: self.open_in_browser(url))
@@ -182,7 +183,7 @@ class HistoryWidget(QWidget):
             # Tekrar indir butonu
             redownload_btn = QPushButton()
             redownload_btn.setIcon(icon_manager.get_icon("refresh-cw", "#FFFFFF"))
-            redownload_btn.setToolTip(self.tr("Tekrar İndir"))
+            redownload_btn.setToolTip(translation_manager.tr("Tekrar İndir"))
             redownload_btn.setFixedSize(24, 24)
             redownload_btn.setObjectName("redownloadIconButton")
             redownload_btn.clicked.connect(lambda checked, url=record['url']: self.redownload(url))
@@ -191,7 +192,7 @@ class HistoryWidget(QWidget):
             # Sil butonu
             delete_btn = QPushButton()
             delete_btn.setIcon(icon_manager.get_icon("x", "#FFFFFF"))
-            delete_btn.setToolTip(self.tr("Geçmişten Sil"))
+            delete_btn.setToolTip(translation_manager.tr("Geçmişten Sil"))
             delete_btn.setFixedSize(24, 24)
             delete_btn.setObjectName("deleteIconButton")
             delete_btn.clicked.connect(lambda checked, id=record['id']: self.delete_record(id))
@@ -212,7 +213,7 @@ class HistoryWidget(QWidget):
         """İstatistikleri güncelle"""
         stats = self.db_manager.get_statistics()
         
-        stats_text = self.tr(
+        stats_text = translation_manager.tr(
             "Total: {} files | Size: {:.1f} MB | Today: {} files"
         ).format(stats['total_downloads'], stats['total_size_mb'], stats['today_downloads'])
         
@@ -234,7 +235,7 @@ class HistoryWidget(QWidget):
     def clear_history(self):
         """Tüm geçmişi temizle"""
         count = self.db_manager.clear_history()
-        QMessageBox.information(self, self.tr("Success"), self.tr("{} records deleted.").format(count))
+        QMessageBox.information(self, translation_manager.tr("Success"), translation_manager.tr("{} records deleted.").format(count))
         self.load_history()
     
     def add_selected_to_queue_action(self):
@@ -244,7 +245,7 @@ class HistoryWidget(QWidget):
             selected_rows.add(item.row())
         
         if not selected_rows:
-            QMessageBox.warning(self, self.tr("Warning"), self.tr("Please select videos to add to queue."))
+            QMessageBox.warning(self, translation_manager.tr("Warning"), translation_manager.tr("Please select videos to add to queue."))
             return
         
         # Seçili satırlardan record ID'lerini topla
@@ -280,11 +281,11 @@ class HistoryWidget(QWidget):
         unique_urls = list(dict.fromkeys(urls))  # Sırayı koruyarak unique yap
         
         if not unique_urls:
-            QMessageBox.warning(self, self.tr("Warning"), self.tr("No videos found in history to add."))
+            QMessageBox.warning(self, translation_manager.tr("Warning"), translation_manager.tr("No videos found in history to add."))
             return
         
         self.add_to_queue_signal.emit(unique_urls)
-        QMessageBox.information(self, self.tr("Success"), self.tr("{} videos added to queue.").format(len(unique_urls)))
+        QMessageBox.information(self, translation_manager.tr("Success"), translation_manager.tr("{} videos added to queue.").format(len(unique_urls)))
     
     def add_selected_to_download_action(self):
         """Seçili öğeleri indir sekmesine ekle"""
@@ -293,7 +294,7 @@ class HistoryWidget(QWidget):
             selected_rows.add(item.row())
         
         if not selected_rows:
-            QMessageBox.warning(self, self.tr("Warning"), self.tr("Please select videos to add to download tab."))
+            QMessageBox.warning(self, translation_manager.tr("Warning"), translation_manager.tr("Please select videos to add to download tab."))
             return
         
         # Seçili satırlardan record ID'lerini topla
@@ -331,19 +332,19 @@ class HistoryWidget(QWidget):
         menu = QMenu()
         
         # Seçilileri kuyruğa ekle
-        add_to_queue_action = menu.addAction(self.tr("Seçilileri Kuyruğa Ekle"))
+        add_to_queue_action = menu.addAction(translation_manager.tr("Seçilileri Kuyruğa Ekle"))
         add_to_queue_action.setIcon(icon_manager.get_icon("list", "#1976D2"))
         add_to_queue_action.triggered.connect(self.add_selected_to_queue_action)
         
         # Seçilileri indir sekmesine ekle
-        add_to_download_action = menu.addAction(self.tr("Seçilileri İndir Sekmesine Ekle"))
+        add_to_download_action = menu.addAction(translation_manager.tr("Seçilileri İndir Sekmesine Ekle"))
         add_to_download_action.setIcon(icon_manager.get_icon("download", "#4CAF50"))
         add_to_download_action.triggered.connect(self.add_selected_to_download_action)
         
         menu.addSeparator()
         
         # Seçilileri sil
-        delete_action = menu.addAction(self.tr("Seçilileri Sil"))
+        delete_action = menu.addAction(translation_manager.tr("Seçilileri Sil"))
         delete_action.setIcon(icon_manager.get_icon("trash-2", "#DC3545"))
         delete_action.triggered.connect(self.delete_selected)
         
@@ -387,7 +388,7 @@ class HistoryWidget(QWidget):
             # Toplu silme işlemi
             deleted_count = self.db_manager.delete_downloads_batch(record_ids)
             self.load_history()
-            QMessageBox.information(self, self.tr("Success"), self.tr("{} records deleted.").format(deleted_count))
+            QMessageBox.information(self, translation_manager.tr("Success"), translation_manager.tr("{} records deleted.").format(deleted_count))
     
     def mousePressEvent(self, a0):
         """Mouse tıklaması olduğunda"""
@@ -404,19 +405,19 @@ class HistoryWidget(QWidget):
     def retranslateUi(self):
         """UI metinlerini yeniden çevir"""
         self.table.setHorizontalHeaderLabels([
-            self.tr("Date"), self.tr("Title"), self.tr("Channel"), 
-            self.tr("Format"), self.tr("Size"), self.tr("Actions")
+            translation_manager.tr("Date"), translation_manager.tr("Title"), translation_manager.tr("Channel"), 
+            translation_manager.tr("Format"), translation_manager.tr("Size"), translation_manager.tr("Actions")
         ])
         # Arama placeholder'ı güncelle
-        self.search_input.setPlaceholderText(self.tr("Search in title or channel name..."))
+        self.search_input.setPlaceholderText(translation_manager.tr("Search in title or channel name..."))
         
         # Butonları güncelle
         if hasattr(self, 'refresh_button'):
-            self.refresh_button.setText(self.tr("Refresh"))
-            self.refresh_button.setToolTip(self.tr("Refresh history"))
+            self.refresh_button.setText(translation_manager.tr("Refresh"))
+            self.refresh_button.setToolTip(translation_manager.tr("Refresh history"))
         if hasattr(self, 'clear_button'):
-            self.clear_button.setText(self.tr("Clear History"))
-            self.clear_button.setToolTip(self.tr("Clear all history"))
+            self.clear_button.setText(translation_manager.tr("Clear History"))
+            self.clear_button.setToolTip(translation_manager.tr("Clear all history"))
         
         # İstatistikleri güncelle - tabloyu yeniden yükle
         self.load_history()

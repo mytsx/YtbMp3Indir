@@ -59,12 +59,21 @@ class TranslationManager(QObject):
             Translated text
         """
         if USE_DATABASE:
-            # Veritabanından çeviri al
+            # Veritabanından çeviri al (database kendi fallback mekanizmasına sahip)
             text = translation_db.get_translation(key, self._current_language)
         else:
-            # Python sözlüğünden çeviri al
+            # Python sözlüğünden çeviri al - database ile aynı fallback mantığı
             if key in TRANSLATIONS:
-                text = TRANSLATIONS[key].get(self._current_language, key)
+                trans_dict = TRANSLATIONS[key]
+                # Önce istenen dili dene
+                if self._current_language in trans_dict:
+                    text = trans_dict[self._current_language]
+                # Fallback dili dene (İngilizce)
+                elif 'en' in trans_dict:
+                    text = trans_dict['en']
+                # Son çare olarak anahtarı döndür
+                else:
+                    text = key
             else:
                 text = key
         

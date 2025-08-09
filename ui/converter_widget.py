@@ -660,5 +660,35 @@ class ConverterWidget(QWidget):
         if hasattr(self, 'warning_label'):
             self.warning_label.setText(translation_manager.tr("WARNING: Original audio files (WAV, FLAC, M4A etc.) will be permanently deleted. Video files are always preserved."))
         
+        # Mevcut dosya listesindeki öğeleri güncelle
+        if hasattr(self, 'file_list') and hasattr(self, 'file_items'):
+            for file_path, item in self.file_items.items():
+                # Dönüştürme durumunu kontrol et
+                conversion_state = item.data(Qt.UserRole + 1)
+                file_ext = Path(file_path).suffix.lower()
+                file_name = html.escape(os.path.basename(file_path))
+                
+                # Dosya tipine göre ikon belirle
+                if file_ext in ConversionWorker.AUDIO_EXTENSIONS:
+                    icon = "🎵"
+                elif file_ext in ConversionWorker.VIDEO_EXTENSIONS:
+                    icon = "🎬"
+                else:
+                    icon = "📄"
+                
+                # Duruma göre metni güncelle
+                if conversion_state == 'completed':
+                    # Get the original replaced state from the item text
+                    if translation_manager.tr("Original deleted") in item.text():
+                        item.setText("✓ {} {} → MP3 ({})".format(icon, file_name, translation_manager.tr("Original deleted")))
+                    else:
+                        item.setText("✓ {} {} → MP3".format(icon, file_name))
+                elif conversion_state == 'pending':
+                    # Henüz dönüştürülmemiş dosyalar
+                    if file_ext in ConversionWorker.AUDIO_EXTENSIONS and self.replace_checkbox.isChecked():
+                        item.setText("{} {} ({})".format(icon, file_name, translation_manager.tr("Original will be deleted")))
+                    else:
+                        item.setText("{} {}".format(icon, file_name))
+        
         # Liste widget'ı güncelle
         self.file_list.viewport().update()

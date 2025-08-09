@@ -23,6 +23,7 @@ from utils.icon_manager import icon_manager
 from utils.platform_utils import get_keyboard_icon, get_modifier_symbol, convert_shortcut_for_platform
 from utils.update_checker import UpdateChecker
 from utils.translation_manager import translation_manager
+from services.url_analyzer import UrlAnalysisWorker, UrlAnalysisResult
 from version import __version__, __app_name__, __author__
 
 
@@ -141,6 +142,7 @@ class MP3YapMainWindow(QMainWindow):
         self.url_cache = {}  # URL -> info dict
         self.last_checked_urls = set()  # Son kontrol edilen URL'ler
         self.MAX_CACHE_SIZE = self.config.get('max_cache_size', 500)  # Ayarlardan al, yoksa 500
+        self.url_analysis_worker = None  # Background URL analysis worker
         
         # Özel indirme listesi (sadece seçilenler için)
         self.selected_download_queue = []  # Sadece seçili öğeleri indirmek için
@@ -835,6 +837,13 @@ class MP3YapMainWindow(QMainWindow):
         
         self.url_cache[url] = info
     
+    def _trim_cache(self):
+        """Trim cache to MAX_CACHE_SIZE if needed"""
+        while len(self.url_cache) > self.MAX_CACHE_SIZE:
+            # Remove oldest entry (FIFO)
+            oldest_key = next(iter(self.url_cache))
+            del self.url_cache[oldest_key]
+    
     def on_queue_paused(self):
         """Kuyruk duraklatıldığında"""
         self.is_queue_mode = False
@@ -914,248 +923,105 @@ class MP3YapMainWindow(QMainWindow):
         
         self.last_checked_urls = current_urls
         
-        # Hemen loading göster
+        # Cancel any existing analysis
+        if self.url_analysis_worker and self.url_analysis_worker.isRunning():
+            self.url_analysis_worker.cancel()
+            self.url_analysis_worker.wait()
+        
+        # Start background analysis
+        self.url_analysis_worker = UrlAnalysisWorker(
+            urls, self.db_manager, self.config.to_dict(), self.url_cache, self
+        )
+        
+        # Connect signals
+        self.url_analysis_worker.started.connect(self.on_url_analysis_started)
+        self.url_analysis_worker.progress.connect(self.on_url_analysis_progress)
+        self.url_analysis_worker.finished.connect(self.on_url_analysis_finished)
+        self.url_analysis_worker.error.connect(self.on_url_analysis_error)
+        
+        # Start analysis
+        self.url_analysis_worker.start()
+    
+    def on_url_analysis_started(self):
+        """URL analysis started"""
         self.url_status_bar.setText(translation_manager.tr("⏳ URL'ler kontrol ediliyor..."))
         style_manager.set_widget_property(self.url_status_bar, "statusType", "warning")
         self.url_status_bar.setVisible(True)
-        QApplication.processEvents()  # UI güncelle
-        
-        # Playlist URL'si varsa hemen kontrol başlat
-        has_playlist = any('list=' in url for url in urls)
-        if has_playlist:
-            self.url_status_bar.setText("⏳ Playlist bilgisi alınıyor...")
-            style_manager.set_widget_property(self.url_status_bar, "statusType", "info")
-            self.url_status_bar.setVisible(True)
-            QApplication.processEvents()  # UI güncelle
-        
-        # URL sayısını göster
-        valid_urls = []
-        invalid_urls = []
-        
-        # Regex ile hızlı YouTube URL kontrolü
-        youtube_regex = re.compile(
-            r'(https?://)?(www\.)?(youtube\.com/(watch\?v=|shorts/|embed/)|youtu\.be/|m\.youtube\.com/watch\?v=)([a-zA-Z0-9_-]{11})'
-        )
-        
-        for url in urls:
-            # Önce regex ile hızlı kontrol
-            match = youtube_regex.search(url)
-            if match:
-                # Video ID'yi al
-                video_id = match.group(5)
-                if video_id and len(video_id) == 11:
-                    valid_urls.append(url)
-                else:
-                    # Video ID eksik veya hatalı
-                    invalid_urls.append(url)
-            else:
-                # YouTube URL'si değil
-                invalid_urls.append(url)
-        
-        # Liste URL'lerini kontrol et
-        playlist_info = []
-        
-        # yt-dlp'yi dışarıda import et
-        import yt_dlp
-        
-        for url in valid_urls:
-            if 'list=' in url:
-                # Bu bir playlist URL'si - detaylı bilgi al
-                try:
-                    ydl_opts = {
-                        'quiet': True,
-                        'no_warnings': True,
-                        'extract_flat': 'in_playlist',  # Playlist metadata'sını al
-                        'ignoreerrors': True,
-                        'skip_download': True,
-                    }
-                    
-                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                        info = ydl.extract_info(url, download=False)
-                        if info and info.get('_type') == 'playlist':
-                            # Playlist bilgisi
-                            playlist_title = info.get('title', 'İsimsiz Liste')
-                            playlist_size = info.get('playlist_count', 0)
-                            if playlist_size == 0 and 'entries' in info:
-                                playlist_size = len(info['entries'])
-                            uploader = info.get('uploader', info.get('channel', ''))
-                            
-                            # Cache'e kaydet (boyut kontrolü ile)
-                            self._add_to_cache(url, {
-                                'is_playlist': True,
-                                'title': playlist_title,
-                                'video_count': playlist_size,
-                                'uploader': uploader
-                            })
-                            
-                            playlist_info.append({
-                                'url': url,
-                                'title': playlist_title,
-                                'count': playlist_size,
-                                'uploader': uploader
-                            })
-                        else:
-                            # Playlist URL'si gibi görünüyor ama değil
-                            playlist_info.append({
-                                'url': url,
-                                'title': 'Tek Video',
-                                'count': 1
-                            })
-                except Exception as e:
-                    # Hata durumunda
-                    print(f"Playlist bilgisi alınamadı: {e}")
-                    playlist_info.append({
-                        'url': url,
-                        'title': 'Bilinmeyen',
-                        'count': 1
-                    })
-            else:
-                # Tek video
-                if url not in self.url_cache:
-                    # Cache'e ekle (boyut kontrolü ile)
-                    self._add_to_cache(url, {
-                        'is_playlist': False,
-                        'title': 'Tek Video',
-                        'video_count': 1
-                    })
-                
-                playlist_info.append({
-                    'url': url,
-                    'title': None,
-                    'count': 1
-                })
-        
-        # Durum mesajını oluştur
+    
+    def on_url_analysis_progress(self, message: str):
+        """URL analysis progress update"""
+        self.url_status_bar.setText(message)
+        style_manager.set_widget_property(self.url_status_bar, "statusType", "info")
+    
+    def on_url_analysis_error(self, error_msg: str):
+        """URL analysis error"""
+        self.url_status_bar.setText(f"❌ {error_msg}")
+        style_manager.set_widget_property(self.url_status_bar, "statusType", "error")
+    
+    def on_url_analysis_finished(self, result: UrlAnalysisResult):
+        """URL analysis finished - display results"""
         status_parts = []
         
-        # Geçerli URL sayısı ve playlist bilgisi
-        if valid_urls:
-            total_videos = sum(p['count'] for p in playlist_info)
-            playlists = [p for p in playlist_info if p.get('count', 1) > 1]
-            single_videos = [p for p in playlist_info if p.get('count', 1) == 1]
+        # Valid URLs and playlist info
+        if result.valid_urls:
+            playlists = [p for p in result.playlist_info if p.get('video_count', p.get('count', 1)) > 1]
+            single_videos = [p for p in result.playlist_info if p.get('video_count', p.get('count', 1)) == 1]
             
-            # Detaylı bilgi
-            if total_videos == len(valid_urls):
-                # Sadece tek videolar var
-                status_parts.append(f"✓ {len(valid_urls)} video indirmeye hazır")
+            if result.total_videos == len(result.valid_urls):
+                # Only single videos
+                status_parts.append(f"✓ {len(result.valid_urls)} video indirmeye hazır")
             else:
-                # Karışık (playlist + tek video)
+                # Mixed (playlists + videos)
                 parts = []
                 if playlists:
                     parts.append(f"{len(playlists)} playlist")
                 if single_videos:
                     parts.append(f"{len(single_videos)} video")
-                status_parts.append(f"✓ {' ve '.join(parts)} (toplam {total_videos} video)")
+                status_parts.append(f"✓ {' ve '.join(parts)} (toplam {result.total_videos} video)")
                 
-                # Playlist detayları
+                # Playlist details
                 for p in playlists:
-                    if p.get('title') and p['title'] != 'Bilinmeyen':
+                    if p.get('title') and p['title'] not in ['Bilinmeyen', 'Tek Video']:
                         playlist_text = f"  • {p['title'][:30]}"
                         if len(p['title']) > 30:
                             playlist_text += "..."
-                        playlist_text += f" ({p['count']} video)"
+                        playlist_text += f" ({p.get('video_count', p.get('count', 1))} video)"
                         status_parts.append(playlist_text)
         
-        # Geçersiz URL sayısı
-        invalid_count = len(invalid_urls)
-        if invalid_count > 0:
-            status_parts.append(f"✗ {invalid_count} geçersiz URL")
+        # Invalid URLs
+        if result.invalid_urls:
+            status_parts.append(f"✗ {len(result.invalid_urls)} geçersiz URL")
         
-        # Veritabanında kontrol et
-        already_downloaded = 0
-        files_exist = 0
-        files_missing = 0
+        # Database status
+        if result.files_exist > 0:
+            status_parts.append(f"✓ {result.files_exist} dosya hem indirilmiş hem de klasörde mevcut")
         
-        for url in valid_urls:
-            # Veritabanında var mı kontrol et (tam eşleşme)
-            existing = self.db_manager.get_download_by_url(url)
-            if existing:
-                already_downloaded += 1
-                # En son indirilen kaydı kontrol et (birden fazla olabilir)
-                latest_record = existing[0]  # En yeni kayıt
-                
-                # Dosya yolunu kontrol et
-                file_found = False
-                full_file_path = None
-                alt_path = None
-                
-                # file_path genellikle klasör yolu, file_name dosya adı
-                if latest_record.get('file_path') and latest_record.get('file_name'):
-                    file_path = latest_record['file_path']
-                    file_name = latest_record['file_name']
-                    
-                    # Eğer file_path tam yol değilse (sadece "music" gibi), tam yol yap
-                    if not os.path.isabs(file_path):
-                        file_path = os.path.abspath(file_path)
-                    
-                    # Tam dosya yolunu oluştur
-                    full_file_path = os.path.join(file_path, file_name)
-                    if os.path.exists(full_file_path):
-                        file_found = True
-                    
-                    # Eğer bulunamadıysa, yasaklı karakterleri değiştirip tekrar dene
-                    if not file_found:
-                        # Normal pipe'ı full-width pipe ile değiştir
-                        alt_file_name = file_name.replace('|', '｜')
-                        alt_full_path = os.path.join(file_path, alt_file_name)
-                        if os.path.exists(alt_full_path):
-                            file_found = True
-                            full_file_path = alt_full_path
-                
-                # Alternatif kontroller - config'den output_directory al
-                if not file_found and latest_record.get('file_name'):
-                    output_dir = self.config.get('output_directory', 'music')
-                    if not os.path.isabs(output_dir):
-                        output_dir = os.path.abspath(output_dir)
-                    
-                    alt_path = os.path.join(output_dir, latest_record['file_name'])
-                    if os.path.exists(alt_path):
-                        file_found = True
-                    
-                    # Pipe karakteri değişimi ile tekrar dene
-                    if not file_found:
-                        alt_file_name = latest_record['file_name'].replace('|', '｜')
-                        alt_path2 = os.path.join(output_dir, alt_file_name)
-                        if os.path.exists(alt_path2):
-                            file_found = True
-                            alt_path = alt_path2
-                
-                if file_found:
-                    files_exist += 1
-                else:
-                    files_missing += 1
+        if result.files_missing > 0:
+            status_parts.append(f"⚠ {result.files_missing} dosya daha önce indirilmiş ama klasörde bulunamadı")
         
-        if files_exist > 0:
-            status_parts.append(f"✓ {files_exist} dosya hem indirilmiş hem de klasörde mevcut")
-        
-        if files_missing > 0:
-            status_parts.append(f"⚠ {files_missing} dosya daha önce indirilmiş ama klasörde bulunamadı")
-        
-        if already_downloaded > files_exist + files_missing:
-            # Dosya yolu olmayan kayıtlar var
-            unknown = already_downloaded - files_exist - files_missing
+        if result.already_downloaded > result.files_exist + result.files_missing:
+            unknown = result.already_downloaded - result.files_exist - result.files_missing
             status_parts.append(f"? {unknown} dosya kaydı eksik bilgi içeriyor")
         
-        # Durum çubuğunu güncelle
+        # Update status bar
         if status_parts:
             self.url_status_bar.setText(" | ".join(status_parts))
             self.url_status_bar.setVisible(True)
             
-            # Renk ayarla - öncelik sırasına göre
-            if invalid_count > 0:
-                # Kırmızı - geçersiz URL var (en kritik)
+            # Set color based on priority
+            if result.invalid_urls:
                 style_manager.set_widget_property(self.url_status_bar, "statusType", "error")
-            elif files_exist > 0 and files_missing == 0:
-                # Mavi - tüm dosyalar mevcut (bilgilendirme)
+            elif result.files_exist > 0 and result.files_missing == 0:
                 style_manager.set_widget_property(self.url_status_bar, "statusType", "info")
-            elif files_missing > 0:
-                # Sarı - dosyalar eksik (yeniden indirilebilir)
+            elif result.files_missing > 0:
                 style_manager.set_widget_property(self.url_status_bar, "statusType", "warning")
             else:
-                # Yeşil - yeni indirmeler için hazır
                 style_manager.set_widget_property(self.url_status_bar, "statusType", "success")
         else:
             self.url_status_bar.setVisible(False)
+        
+        # Update cache size limit
+        self._trim_cache()
     
     def show_cached_url_status(self, urls):
         """Cache'den URL durumunu göster"""

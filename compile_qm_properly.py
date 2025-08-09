@@ -89,21 +89,6 @@ def main():
         return
     
     print("\n⚠️  Could not find Qt translation tools.")
-    print("Installing Qt5 tools...")
-    
-    # Try to install Qt5 via homebrew
-    if sys.platform == "darwin":
-        print("Attempting to install Qt5 via Homebrew...")
-        try:
-            subprocess.run(["brew", "install", "qt@5"], check=False)
-            # Try again after installation
-            lrelease = find_lrelease()
-            if lrelease:
-                compile_with_lrelease(lrelease)
-                return
-        except:
-            pass
-    
     print("\n❌ Could not compile translations.")
     print("Please install Qt5 tools manually:")
     print("  macOS: brew install qt@5")

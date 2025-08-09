@@ -69,7 +69,7 @@ def compile_ts_to_qm(ts_file, qm_file):
 
 def main():
     """Compile all .ts files to .qm"""
-    translations_dir = "/Users/yerli/Developer/mehmetyerli/mp3yap/translations"
+    translations_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "translations")
     
     # Find all .ts files
     ts_files = [f for f in os.listdir(translations_dir) if f.endswith('.ts')]

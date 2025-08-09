@@ -112,8 +112,13 @@ class QueueWidget(QWidget):
         self.filter_label = QLabel(translation_manager.tr("Filter:"))
         search_layout.addWidget(self.filter_label)
         self.status_filter = QComboBox()
-        self.status_filter.addItems([translation_manager.tr("All"), translation_manager.tr("Waiting"), translation_manager.tr("Downloading"), translation_manager.tr("Completed"), translation_manager.tr("Failed")])
-        self.status_filter.currentTextChanged.connect(self.filter_by_status)
+        # Add items with data (status values)
+        self.status_filter.addItem(translation_manager.tr("All"), None)
+        self.status_filter.addItem(translation_manager.tr("Waiting"), "pending")
+        self.status_filter.addItem(translation_manager.tr("Downloading"), "downloading")
+        self.status_filter.addItem(translation_manager.tr("Completed"), "completed")
+        self.status_filter.addItem(translation_manager.tr("Failed"), "failed")
+        self.status_filter.currentIndexChanged.connect(self.filter_by_status)
         search_layout.addWidget(self.status_filter)
         
         # Tablo
@@ -224,17 +229,8 @@ class QueueWidget(QWidget):
         
     def check_and_refresh(self):
         """Değişiklik varsa kuyruğu yenile"""
-        # Filtre durumunu al - index kullan
-        filter_status = None
-        filter_index = self.status_filter.currentIndex()
-        if filter_index > 0:  # 0 = All/Tümü
-            status_map = {
-                1: "pending",      # Waiting/Bekliyor
-                2: "downloading",  # Downloading/İndiriliyor
-                3: "completed",    # Completed/Tamamlandı
-                4: "failed"        # Failed/Başarısız
-            }
-            filter_status = status_map.get(filter_index)
+        # Filtre durumunu al - data kullan
+        filter_status = self.status_filter.currentData()
         
         # Veritabanından öğeleri al
         items = self.db.get_queue_items(filter_status)
@@ -249,17 +245,8 @@ class QueueWidget(QWidget):
     
     def load_queue(self, force_refresh=False):
         """Kuyruğu veritabanından yükle"""
-        # Filtre durumunu al - index kullan
-        filter_status = None
-        filter_index = self.status_filter.currentIndex()
-        if filter_index > 0:  # 0 = All/Tümü
-            status_map = {
-                1: "pending",      # Waiting/Bekliyor
-                2: "downloading",  # Downloading/İndiriliyor
-                3: "completed",    # Completed/Tamamlandı
-                4: "failed"        # Failed/Başarısız
-            }
-            filter_status = status_map.get(filter_index)
+        # Filtre durumunu al - data kullan
+        filter_status = self.status_filter.currentData()
         
         # Veritabanından öğeleri al
         items = self.db.get_queue_items(filter_status)
@@ -393,7 +380,7 @@ class QueueWidget(QWidget):
         else:
             return translation_manager.tr("Low")
     
-    def filter_by_status(self, status_text):
+    def filter_by_status(self):
         """Duruma göre filtrele"""
         self.load_queue()
     
@@ -703,15 +690,19 @@ class QueueWidget(QWidget):
         # Arama ve filtre
         self.search_input.setPlaceholderText(translation_manager.tr("Search song name or URL..."))
         
-        # Filtre combobox'ı yeniden doldur
-        current_index = self.status_filter.currentIndex()
+        # Filtre combobox'ı yeniden doldur - mevcut veriyi sakla
+        current_data = self.status_filter.currentData()
         self.status_filter.clear()
-        self.status_filter.addItems([
-            translation_manager.tr("All"), translation_manager.tr("Waiting"), 
-            translation_manager.tr("Downloading"), translation_manager.tr("Completed"), 
-            translation_manager.tr("Failed")
-        ])
-        self.status_filter.setCurrentIndex(current_index)
+        self.status_filter.addItem(translation_manager.tr("All"), None)
+        self.status_filter.addItem(translation_manager.tr("Waiting"), "pending")
+        self.status_filter.addItem(translation_manager.tr("Downloading"), "downloading")
+        self.status_filter.addItem(translation_manager.tr("Completed"), "completed")
+        self.status_filter.addItem(translation_manager.tr("Failed"), "failed")
+        # Önceki seçimi geri yükle (data ile)
+        for i in range(self.status_filter.count()):
+            if self.status_filter.itemData(i) == current_data:
+                self.status_filter.setCurrentIndex(i)
+                break
         
         # Clear menü action'larını güncelle
         if hasattr(self, 'clear_all_action'):

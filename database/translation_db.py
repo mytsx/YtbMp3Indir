@@ -282,15 +282,34 @@ class TranslationDatabase:
             cursor = conn.cursor()
             
             for key, langs in translations.items():
-                # Önce anahtarı ekle
+                # Önce anahtarın var olup olmadığını kontrol et
                 default_text = langs.get('en', list(langs.values())[0] if langs else None)
                 cursor.execute('''
-                    INSERT OR REPLACE INTO translation_keys (scope, key_text, default_text)
-                    VALUES (?, ?, ?)
-                ''', (scope, key, default_text))
-                key_id = cursor.lastrowid
+                    SELECT key_id FROM translation_keys 
+                    WHERE (scope = ? OR (scope IS NULL AND ? IS NULL)) 
+                    AND key_text = ?
+                ''', (scope, scope, key))
+                result = cursor.fetchone()
                 
-                # Çevirileri ekle
+                if result:
+                    # Anahtar varsa, key_id'yi al
+                    key_id = result[0]
+                    # Varolan anahtarın default_text'ini güncelle
+                    if default_text:
+                        cursor.execute('''
+                            UPDATE translation_keys 
+                            SET default_text = ?, updated_at = CURRENT_TIMESTAMP
+                            WHERE key_id = ?
+                        ''', (default_text, key_id))
+                else:
+                    # Anahtar yoksa, yeni ekle
+                    cursor.execute('''
+                        INSERT INTO translation_keys (scope, key_text, default_text)
+                        VALUES (?, ?, ?)
+                    ''', (scope, key, default_text))
+                    key_id = cursor.lastrowid
+                
+                # Çevirileri ekle veya güncelle
                 for lang_code, text in langs.items():
                     cursor.execute('''
                         INSERT OR REPLACE INTO translations (key_id, lang_code, translated_text)

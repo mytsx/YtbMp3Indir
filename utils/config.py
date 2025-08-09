@@ -61,3 +61,7 @@ class Config:
         """Ayarları varsayılana döndür"""
         self.config = self.DEFAULT_CONFIG.copy()
         self.save_config()
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Get config as dictionary"""
+        return self.config.copy()

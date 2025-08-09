@@ -35,19 +35,19 @@ class HistoryWidget(QWidget):
         # Arama ve filtre alanı
         search_layout = QHBoxLayout()
         
-        search_layout.addWidget(QLabel(self.tr("Ara:")))
+        search_layout.addWidget(QLabel(self.tr("Search:")))
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText(self.tr("Başlık veya kanal adında ara..."))
+        self.search_input.setPlaceholderText(self.tr("Search in title or channel name..."))
         self.search_input.textChanged.connect(self.search_history)
         search_layout.addWidget(self.search_input)
         
-        self.refresh_button = QPushButton(self.tr("Yenile"))
+        self.refresh_button = QPushButton(self.tr("Refresh"))
         self.refresh_button.setIcon(icon_manager.get_icon("refresh-cw", "#FFFFFF"))
         self.refresh_button.clicked.connect(self.load_history)
         style_manager.apply_button_style(self.refresh_button, "secondary")
         search_layout.addWidget(self.refresh_button)
         
-        self.clear_button = QPushButton(self.tr("Geçmişi Temizle"))
+        self.clear_button = QPushButton(self.tr("Clear History"))
         self.clear_button.setIcon(icon_manager.get_icon("trash-2", "#FFFFFF"))
         self.clear_button.clicked.connect(self.clear_history)
         style_manager.apply_button_style(self.clear_button, "danger")
@@ -59,8 +59,8 @@ class HistoryWidget(QWidget):
         self.table = QTableWidget()
         self.table.setColumnCount(6)
         self.table.setHorizontalHeaderLabels([
-            self.tr("Tarih"), self.tr("Başlık"), self.tr("Kanal"), 
-            self.tr("Format"), self.tr("Boyut"), self.tr("İşlemler")
+            self.tr("Date"), self.tr("Title"), self.tr("Channel"), 
+            self.tr("Format"), self.tr("Size"), self.tr("Actions")
         ])
         
         # Tablo ayarları
@@ -213,7 +213,7 @@ class HistoryWidget(QWidget):
         stats = self.db_manager.get_statistics()
         
         stats_text = self.tr(
-            "Toplam: {} dosya | Boyut: {:.1f} MB | Bugün: {} dosya"
+            "Total: {} files | Size: {:.1f} MB | Today: {} files"
         ).format(stats['total_downloads'], stats['total_size_mb'], stats['today_downloads'])
         
         self.stats_label.setText(stats_text)
@@ -234,7 +234,7 @@ class HistoryWidget(QWidget):
     def clear_history(self):
         """Tüm geçmişi temizle"""
         count = self.db_manager.clear_history()
-        QMessageBox.information(self, self.tr("Başarılı"), self.tr("{} kayıt silindi.").format(count))
+        QMessageBox.information(self, self.tr("Success"), self.tr("{} records deleted.").format(count))
         self.load_history()
     
     def add_selected_to_queue_action(self):
@@ -244,7 +244,7 @@ class HistoryWidget(QWidget):
             selected_rows.add(item.row())
         
         if not selected_rows:
-            QMessageBox.warning(self, self.tr("Uyarı"), self.tr("Lütfen kuyruğa eklenecek videoları seçin."))
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("Please select videos to add to queue."))
             return
         
         # Seçili satırlardan record ID'lerini topla
@@ -280,11 +280,11 @@ class HistoryWidget(QWidget):
         unique_urls = list(dict.fromkeys(urls))  # Sırayı koruyarak unique yap
         
         if not unique_urls:
-            QMessageBox.warning(self, self.tr("Uyarı"), self.tr("Geçmişte eklenecek video bulunamadı."))
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("No videos found in history to add."))
             return
         
         self.add_to_queue_signal.emit(unique_urls)
-        QMessageBox.information(self, self.tr("Başarılı"), self.tr("{} video kuyruğa eklendi.").format(len(unique_urls)))
+        QMessageBox.information(self, self.tr("Success"), self.tr("{} videos added to queue.").format(len(unique_urls)))
     
     def add_selected_to_download_action(self):
         """Seçili öğeleri indir sekmesine ekle"""
@@ -293,7 +293,7 @@ class HistoryWidget(QWidget):
             selected_rows.add(item.row())
         
         if not selected_rows:
-            QMessageBox.warning(self, self.tr("Uyarı"), self.tr("Lütfen indir sekmesine eklenecek videoları seçin."))
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("Please select videos to add to download tab."))
             return
         
         # Seçili satırlardan record ID'lerini topla
@@ -387,7 +387,7 @@ class HistoryWidget(QWidget):
             # Toplu silme işlemi
             deleted_count = self.db_manager.delete_downloads_batch(record_ids)
             self.load_history()
-            QMessageBox.information(self, self.tr("Başarılı"), self.tr("{} kayıt silindi.").format(deleted_count))
+            QMessageBox.information(self, self.tr("Success"), self.tr("{} records deleted.").format(deleted_count))
     
     def mousePressEvent(self, a0):
         """Mouse tıklaması olduğunda"""
@@ -404,8 +404,19 @@ class HistoryWidget(QWidget):
     def retranslateUi(self):
         """UI metinlerini yeniden çevir"""
         self.table.setHorizontalHeaderLabels([
-            self.tr("Tarih"), self.tr("Başlık"), self.tr("Kanal"), 
-            self.tr("Format"), self.tr("Boyut"), self.tr("İşlemler")
+            self.tr("Date"), self.tr("Title"), self.tr("Channel"), 
+            self.tr("Format"), self.tr("Size"), self.tr("Actions")
         ])
         # Arama placeholder'ı güncelle
-        self.search_input.setPlaceholderText(self.tr("Başlık veya kanal adında ara..."))
+        self.search_input.setPlaceholderText(self.tr("Search in title or channel name..."))
+        
+        # Butonları güncelle
+        if hasattr(self, 'refresh_button'):
+            self.refresh_button.setText(self.tr("Refresh"))
+            self.refresh_button.setToolTip(self.tr("Refresh history"))
+        if hasattr(self, 'clear_button'):
+            self.clear_button.setText(self.tr("Clear History"))
+            self.clear_button.setToolTip(self.tr("Clear all history"))
+        
+        # İstatistikleri güncelle - tabloyu yeniden yükle
+        self.load_history()

@@ -70,7 +70,7 @@ class DragDropListWidget(QListWidget):
             painter.setFont(font)
             
             # Metni ortala ve çiz
-            text = self.tr("Dönüştürülecek dosyaları sürükleyip bırakın\nveya tıklayarak seçin")
+            text = self.tr("Drag and drop files to convert\nor click to select")
             rect = self.viewport().rect()
             painter.drawText(rect, Qt.AlignCenter, text)
             painter.end()
@@ -297,13 +297,13 @@ class ConverterWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)  # Ana layout margin kaldır
         
         # Başlık
-        title = QLabel(self.tr("Her Türlü Dosyayı MP3'e Dönüştür"))
+        title = QLabel(self.tr("Convert Any File to MP3"))
         title.setObjectName("converterTitle")
         layout.addWidget(title)
         
         # Açıklama
-        desc = QLabel(self.tr("Video, ses ve diğer medya dosyalarınızı MP3 formatına dönüştürün. "
-                     "Dosyaları sürükleyip bırakabilir veya seçebilirsiniz."))
+        desc = QLabel(self.tr("Convert your video, audio and other media files to MP3 format. "
+                     "You can drag and drop files or select them."))
         desc.setWordWrap(True)
         desc.setObjectName("converterDescription")
         layout.addWidget(desc)
@@ -313,14 +313,14 @@ class ConverterWidget(QWidget):
         content_layout.setContentsMargins(10, 0, 10, 0)  # Sol ve sağ padding
         
         # Dosya seçme butonu
-        select_btn = QPushButton(self.tr(" Dosya Seç"))
+        select_btn = QPushButton(self.tr(" Select File"))
         select_btn.setIcon(icon_manager.get_icon("file", "#FFFFFF"))
         select_btn.clicked.connect(self.select_files)
         
         # FFmpeg yoksa dosya seçme butonunu da devre dışı bırak
         if not self.ffmpeg_path:
             select_btn.setEnabled(False)
-            select_btn.setToolTip(self.tr("FFmpeg bulunamadı. Dosya seçimi devre dışı."))
+            select_btn.setToolTip(self.tr("FFmpeg not found. File selection disabled."))
         style_manager.apply_button_style(select_btn, "primary")
         content_layout.addWidget(select_btn)
         
@@ -357,16 +357,16 @@ class ConverterWidget(QWidget):
         settings_layout.setSpacing(5)  # Widget'lar arası boşluk
         
         # Orijinal dosyaları silme seçeneği
-        self.replace_checkbox = QCheckBox(self.tr("Ses dosyalarının orijinallerini sil"))
+        self.replace_checkbox = QCheckBox(self.tr("Delete original audio files"))
         self.replace_checkbox.setChecked(True)
-        self.replace_checkbox.setToolTip(self.tr("İşaretli ise, ses dosyaları MP3'e dönüştürüldükten sonra silinir. "
-                                        "Video dosyaları her zaman korunur."))
+        self.replace_checkbox.setToolTip(self.tr("If checked, audio files will be deleted after conversion to MP3. "
+                                        "Video files are always preserved."))
         self.replace_checkbox.stateChanged.connect(self.on_replace_checkbox_changed)
         settings_layout.addWidget(self.replace_checkbox)
         
         # Uyarı mesajı - checkbox'un hemen altında
-        self.warning_label = QLabel(self.tr("DİKKAT: Ses dosyaları (WAV, FLAC, M4A vb.) MP3'e dönüştürüldükten sonra "
-                                   "orijinal dosyalar otomatik olarak silinir. Video dosyaları korunur."))
+        self.warning_label = QLabel(self.tr("WARNING: Audio files (WAV, FLAC, M4A etc.) will be automatically deleted "
+                                   "after conversion to MP3. Video files are preserved."))
         self.warning_label.setWordWrap(True)
         self.warning_label.setObjectName("alertWarning")
         settings_layout.addWidget(self.warning_label)
@@ -378,18 +378,18 @@ class ConverterWidget(QWidget):
         button_layout = QHBoxLayout()
         button_layout.setContentsMargins(10, 0, 10, 10)  # Butonlar için yan ve alt margin
         
-        self.convert_btn = QPushButton(self.tr(" Dönüştürmeyi Başlat"))
+        self.convert_btn = QPushButton(self.tr(" Start Conversion"))
         self.convert_btn.setIcon(icon_manager.get_icon("refresh-cw", "#FFFFFF"))
         self.convert_btn.clicked.connect(self.start_conversion)
         self.convert_btn.setEnabled(False)
         
         # FFmpeg yoksa butonu devre dışı bırak
         if not self.ffmpeg_path:
-            self.convert_btn.setToolTip(self.tr("FFmpeg bulunamadı. Dönüştürme özelliği kullanılamaz."))
+            self.convert_btn.setToolTip(self.tr("FFmpeg not found. Conversion feature unavailable."))
         style_manager.apply_button_style(self.convert_btn, "secondary")
         button_layout.addWidget(self.convert_btn)
         
-        self.cancel_btn = QPushButton(self.tr(" İptal Et"))
+        self.cancel_btn = QPushButton(self.tr(" Cancel"))
         self.cancel_btn.setIcon(icon_manager.get_icon("x", "#FFFFFF"))
         self.cancel_btn.clicked.connect(self.cancel_conversion)
         self.cancel_btn.setEnabled(False)
@@ -397,7 +397,7 @@ class ConverterWidget(QWidget):
         style_manager.apply_button_style(self.cancel_btn, "warning")
         button_layout.addWidget(self.cancel_btn)
         
-        self.clear_btn = QPushButton(self.tr(" Listeyi Temizle"))
+        self.clear_btn = QPushButton(self.tr(" Clear List"))
         self.clear_btn.setIcon(icon_manager.get_icon("trash-2", "#FFFFFF"))
         self.clear_btn.clicked.connect(self.clear_list)
         style_manager.apply_button_style(self.clear_btn, "warning")
@@ -607,7 +607,7 @@ class ConverterWidget(QWidget):
         else:
             error_text = str(data_dict)  # Fallback
             
-        QMessageBox.warning(self, self.tr("Hata"), error_text)
+        QMessageBox.warning(self, self.tr("Error"), error_text)
         
     def cancel_conversion(self):
         """Dönüştürme işlemini iptal et"""
@@ -638,18 +638,18 @@ class ConverterWidget(QWidget):
         """UI metinlerini yeniden çevir"""
         # Butonlar
         if hasattr(self, 'convert_btn'):
-            self.convert_btn.setText(self.tr(" Dönüştürmeyi Başlat"))
+            self.convert_btn.setText(self.tr(" Start Conversion"))
         if hasattr(self, 'cancel_btn'):
-            self.cancel_btn.setText(self.tr(" İptal Et"))
+            self.cancel_btn.setText(self.tr(" Cancel"))
         if hasattr(self, 'clear_btn'):
-            self.clear_btn.setText(self.tr(" Listeyi Temizle"))
+            self.clear_btn.setText(self.tr(" Clear List"))
         
         # Checkbox ve uyarı
-        self.replace_checkbox.setText(self.tr("Ses dosyalarının orijinallerini sil"))
-        self.replace_checkbox.setToolTip(self.tr("İşaretli ise, ses dosyaları MP3'e dönüştürüldükten sonra silinir. "
-                                                 "Video dosyaları her zaman korunur."))
-        self.warning_label.setText(self.tr("DİKKAT: Ses dosyaları (WAV, FLAC, M4A vb.) MP3'e dönüştürüldükten sonra "
-                                          "orijinal dosyalar otomatik olarak silinir. Video dosyaları korunur."))
+        self.replace_checkbox.setText(self.tr("Delete original audio files"))
+        self.replace_checkbox.setToolTip(self.tr("If checked, audio files will be deleted after conversion to MP3. "
+                                                 "Video files are always preserved."))
+        self.warning_label.setText(self.tr("WARNING: Audio files (WAV, FLAC, M4A etc.) will be automatically deleted "
+                                          "after conversion to MP3. Video files are preserved."))
         
         # Liste widget'ı güncelle
         self.file_list.viewport().update()

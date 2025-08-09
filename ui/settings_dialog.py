@@ -14,7 +14,7 @@ class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.config = Config()
-        self.setWindowTitle("Ayarlar")
+        self.setWindowTitle(self.tr("Settings"))
         self.setModal(True)
         self.setFixedSize(650, 700)  # Genişletildi
         
@@ -32,11 +32,11 @@ class SettingsDialog(QDialog):
         
         # İndirme ayarları sekmesi
         download_tab = self.create_download_tab()
-        self.tab_widget.addTab(download_tab, "İndirme")
+        self.tab_widget.addTab(download_tab, self.tr("Download"))
         
         # Uygulama ayarları sekmesi
         app_tab = self.create_app_tab()
-        self.tab_widget.addTab(app_tab, "Uygulama")
+        self.tab_widget.addTab(app_tab, self.tr("Application"))
         
         main_layout.addWidget(self.tab_widget)
         
@@ -45,12 +45,12 @@ class SettingsDialog(QDialog):
         button_layout.setSpacing(10)
         button_layout.addStretch()
         
-        self.save_button = QPushButton("Kaydet")
+        self.save_button = QPushButton(self.tr("Save"))
         self.save_button.setIcon(icon_manager.get_icon("save", "#FFFFFF"))
         style_manager.apply_button_style(self.save_button, "primary")
         self.save_button.clicked.connect(self.save_settings)
         
-        self.cancel_button = QPushButton("İptal")
+        self.cancel_button = QPushButton(self.tr("Cancel"))
         self.cancel_button.setIcon(icon_manager.get_icon("x", "#FFFFFF"))
         style_manager.apply_button_style(self.cancel_button, "secondary")
         self.cancel_button.clicked.connect(self.reject)
@@ -69,13 +69,13 @@ class SettingsDialog(QDialog):
         layout.setSpacing(20)
         
         # Ses kalitesi
-        quality_group = self.create_group_box("Ses Ayarları")
+        quality_group = self.create_group_box(self.tr("Audio Settings"))
         quality_layout = QVBoxLayout()
         quality_layout.setSpacing(10)
         quality_layout.setContentsMargins(10, 10, 10, 10)
         
         quality_row = QHBoxLayout()
-        quality_label = QLabel("Ses Kalitesi:")
+        quality_label = QLabel(self.tr("Audio Quality:"))
         quality_label.setFixedWidth(150)
         self.quality_combo = QComboBox()
         self.quality_combo.addItems(["128 kbps", "192 kbps", "320 kbps"])
@@ -88,14 +88,14 @@ class SettingsDialog(QDialog):
         layout.addWidget(quality_group)
         
         # İndirme klasörü
-        folder_group = self.create_group_box("İndirme Konumu")
+        folder_group = self.create_group_box(self.tr("Download Location"))
         folder_layout = QVBoxLayout()
         folder_layout.setSpacing(10)
         folder_layout.setContentsMargins(10, 10, 10, 10)
         
         folder_row = QHBoxLayout()
         self.folder_edit = QLineEdit()
-        self.folder_button = QPushButton("Gözat...")
+        self.folder_button = QPushButton(self.tr("Browse..."))
         self.folder_button.setIcon(icon_manager.get_icon("folder", "#666666"))
         # Icon button için sabit boyut gerekli
         self.folder_button.setFixedSize(80, 32)
@@ -109,14 +109,14 @@ class SettingsDialog(QDialog):
         layout.addWidget(folder_group)
         
         # Performans ayarları
-        perf_group = self.create_group_box("Performans")
+        perf_group = self.create_group_box(self.tr("Performance"))
         perf_layout = QVBoxLayout()
         perf_layout.setSpacing(15)  # Arttırıldı
         perf_layout.setContentsMargins(15, 20, 15, 15)  # Arttırıldı
         
         # Eşzamanlı indirme
         concurrent_row = self.create_spinbox_row(
-            "Eşzamanlı İndirme:",
+            self.tr("Concurrent Downloads:"),
             self.create_spinbox(1, 5, 1)
         )
         self.concurrent_spin = concurrent_row.itemAt(1).widget()
@@ -124,23 +124,23 @@ class SettingsDialog(QDialog):
         
         # Playlist limiti
         playlist_row = self.create_spinbox_row(
-            "Playlist Limiti:",
-            self.create_spinbox(0, 1000, 1, "Limitsiz")
+            self.tr("Playlist Limit:"),
+            self.create_spinbox(0, 1000, 1, self.tr("Unlimited"))
         )
         self.playlist_spin = playlist_row.itemAt(1).widget()
         perf_layout.addLayout(playlist_row)
         
         # Cache limiti
         cache_row = self.create_spinbox_row(
-            "URL Cache Limiti:",
+            self.tr("URL Cache Limit:"),
             self.create_spinbox(100, 2000, 100, suffix=" URL")
         )
         self.cache_spin = cache_row.itemAt(1).widget()
-        self.cache_spin.setToolTip("URL kontrolü için tutulan maksimum cache boyutu")
+        self.cache_spin.setToolTip(self.tr("Maximum cache size for URL checking"))
         perf_layout.addLayout(cache_row)
         
         # Otomatik yeniden deneme
-        self.auto_retry_check = QCheckBox("Başarısız indirmeleri otomatik yeniden dene")
+        self.auto_retry_check = QCheckBox(self.tr("Automatically retry failed downloads"))
         perf_layout.addWidget(self.auto_retry_check)
         
         perf_group.setLayout(perf_layout)
@@ -158,16 +158,16 @@ class SettingsDialog(QDialog):
         layout.setSpacing(20)
         
         # Görünüm ayarları
-        appearance_group = self.create_group_box("Görünüm")
+        appearance_group = self.create_group_box(self.tr("Appearance"))
         appearance_layout = QVBoxLayout()
         appearance_layout.setSpacing(10)
         
         # Tema
         theme_row = QHBoxLayout()
-        theme_label = QLabel("Tema:")
+        theme_label = QLabel(self.tr("Theme:"))
         theme_label.setFixedWidth(150)
         self.theme_combo = QComboBox()
-        self.theme_combo.addItems(["Açık", "Koyu"])
+        self.theme_combo.addItems([self.tr("Light"), self.tr("Dark")])
         theme_row.addWidget(theme_label)
         theme_row.addWidget(self.theme_combo)
         theme_row.addStretch()
@@ -176,7 +176,7 @@ class SettingsDialog(QDialog):
         
         # Dil seçimi
         language_row = QHBoxLayout()
-        language_label = QLabel("Dil / Language:")
+        language_label = QLabel(self.tr("Language:"))
         language_label.setFixedWidth(150)
         self.language_combo = QComboBox()
         
@@ -205,29 +205,29 @@ class SettingsDialog(QDialog):
         layout.addWidget(appearance_group)
         
         # Bildirim ayarları
-        notif_group = self.create_group_box("Bildirimler")
+        notif_group = self.create_group_box(self.tr("Notifications"))
         notif_layout = QVBoxLayout()
         notif_layout.setSpacing(10)
         
-        self.notif_sound_check = QCheckBox("İndirme tamamlandığında ses çal")
+        self.notif_sound_check = QCheckBox(self.tr("Play sound when download completes"))
         notif_layout.addWidget(self.notif_sound_check)
         
-        self.auto_open_check = QCheckBox("İndirme sonrası klasörü otomatik aç")
+        self.auto_open_check = QCheckBox(self.tr("Automatically open folder after download"))
         notif_layout.addWidget(self.auto_open_check)
         
         notif_group.setLayout(notif_layout)
         layout.addWidget(notif_group)
         
         # Geçmiş ayarları
-        history_group = self.create_group_box("İndirme Geçmişi")
+        history_group = self.create_group_box(self.tr("Download History"))
         history_layout = QVBoxLayout()
         history_layout.setSpacing(10)
         
         history_row = QHBoxLayout()
-        history_label = QLabel("Geçmişi sakla:")
+        history_label = QLabel(self.tr("Keep history:"))
         history_label.setFixedWidth(150)
         self.history_combo = QComboBox()
-        self.history_combo.addItems(["30 gün", "60 gün", "90 gün", "Süresiz"])
+        self.history_combo.addItems([self.tr("30 days"), self.tr("60 days"), self.tr("90 days"), self.tr("Forever")])
         history_row.addWidget(history_label)
         history_row.addWidget(self.history_combo)
         history_row.addStretch()
@@ -377,12 +377,12 @@ class SettingsDialog(QDialog):
     
     def retranslateUi(self):
         """UI metinlerini yeniden çevir"""
-        self.setWindowTitle(self.tr("Ayarlar"))
+        self.setWindowTitle(self.tr("Settings"))
         
         # Tab başlıkları
-        self.tab_widget.setTabText(0, self.tr("İndirme"))
-        self.tab_widget.setTabText(1, self.tr("Uygulama"))
+        self.tab_widget.setTabText(0, self.tr("Download"))
+        self.tab_widget.setTabText(1, self.tr("Application"))
         
         # Butonlar
-        self.save_button.setText(self.tr("Kaydet"))
-        self.cancel_button.setText(self.tr("İptal"))
+        self.save_button.setText(self.tr("Save"))
+        self.cancel_button.setText(self.tr("Cancel"))

@@ -1,4 +1,7 @@
-"""Translation Manager for MP3Yap application"""
+"""
+Merkezi Çeviri Yönetim Sistemi / Centralized Translation Management System
+Tüm uygulama çevirileri veritabanından yönetilir
+"""
 
 import os
 import locale
@@ -6,37 +9,32 @@ from PyQt5.QtCore import QTranslator, QLocale, QCoreApplication, pyqtSignal, QOb
 from PyQt5.QtWidgets import QApplication
 from typing import Optional, Dict, List
 
+# Önce Python sözlüğünden çevirileri kullan, sonra veritabanına geçeceğiz
+try:
+    from database.translation_db import translation_db
+    USE_DATABASE = True
+except ImportError:
+    from .translations import TRANSLATIONS
+    USE_DATABASE = False
+
 
 class TranslationManager(QObject):
-    """Application translation manager"""
+    """Merkezi çeviri yönetici sınıfı / Centralized translation manager"""
     
     # Signal emitted when language changes
     languageChanged = pyqtSignal(str)
     
-    # Supported languages
+    # Supported languages - now just Turkish and English as requested
     SUPPORTED_LANGUAGES = {
-        'en': {'name': 'English', 'native': 'English', 'flag': '🇬🇧', 'rtl': False},
         'tr': {'name': 'Turkish', 'native': 'Türkçe', 'flag': '🇹🇷', 'rtl': False},
-        'de': {'name': 'German', 'native': 'Deutsch', 'flag': '🇩🇪', 'rtl': False},
-        'es': {'name': 'Spanish', 'native': 'Español', 'flag': '🇪🇸', 'rtl': False},
-        'fr': {'name': 'French', 'native': 'Français', 'flag': '🇫🇷', 'rtl': False},
-        'ru': {'name': 'Russian', 'native': 'Русский', 'flag': '🇷🇺', 'rtl': False},
-        'it': {'name': 'Italian', 'native': 'Italiano', 'flag': '🇮🇹', 'rtl': False},
-        'pt': {'name': 'Portuguese', 'native': 'Português', 'flag': '🇵🇹', 'rtl': False},
-        'ja': {'name': 'Japanese', 'native': '日本語', 'flag': '🇯🇵', 'rtl': False},
-        'zh': {'name': 'Chinese', 'native': '中文', 'flag': '🇨🇳', 'rtl': False},
-        'ar': {'name': 'Arabic', 'native': 'العربية', 'flag': '🇸🇦', 'rtl': True},
-        'ko': {'name': 'Korean', 'native': '한국어', 'flag': '🇰🇷', 'rtl': False},
-        'nl': {'name': 'Dutch', 'native': 'Nederlands', 'flag': '🇳🇱', 'rtl': False},
-        'pl': {'name': 'Polish', 'native': 'Polski', 'flag': '🇵🇱', 'rtl': False},
-        'hi': {'name': 'Hindi', 'native': 'हिन्दी', 'flag': '🇮🇳', 'rtl': False},
+        'en': {'name': 'English', 'native': 'English', 'flag': '🇬🇧', 'rtl': False},
     }
     
     def __init__(self):
         super().__init__()
         self._translator = QTranslator()
         self._qt_translator = QTranslator()  # For Qt's built-in translations
-        self._current_language = None
+        self._current_language = 'tr'  # Default to Turkish
         self._translations_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), 
             'translations'
@@ -44,6 +42,47 @@ class TranslationManager(QObject):
         
         # Create translations directory if it doesn't exist
         os.makedirs(self._translations_path, exist_ok=True)
+        
+        # Veritabanı kullanılıyorsa dili ayarla
+        if USE_DATABASE:
+            translation_db.set_language(self._current_language)
+    
+    def tr(self, key: str, *args) -> str:
+        """
+        Get translation for a key (replaces Qt's tr() method)
+        
+        Args:
+            key: Translation key
+            *args: Format arguments if the translation contains placeholders
+            
+        Returns:
+            Translated text
+        """
+        if USE_DATABASE:
+            # Veritabanından çeviri al
+            text = translation_db.get_translation(key, self._current_language)
+        else:
+            # Python sözlüğünden çeviri al
+            if key in TRANSLATIONS:
+                text = TRANSLATIONS[key].get(self._current_language, key)
+            else:
+                text = key
+        
+        # Format argümanları uygula
+        if args:
+            try:
+                return text.format(*args)
+            except (IndexError, KeyError):
+                return text
+        return text
+    
+    def get(self, key: str, *args) -> str:
+        """Alias for tr() method"""
+        return self.tr(key, *args)
+    
+    def has_translation(self, key: str) -> bool:
+        """Check if a translation exists for a key"""
+        return key in TRANSLATIONS
     
     def get_system_language(self) -> str:
         """Get the system's default language"""
@@ -58,20 +97,18 @@ class TranslationManager(QObject):
                 if lang_code in self.SUPPORTED_LANGUAGES:
                     return lang_code
                 
-                # Check for language variants (e.g., pt_BR -> pt)
-                if lang_code == 'pt':
-                    return 'pt'
-                elif lang_code.startswith('zh'):
-                    return 'zh'
+                # For Turkish locales
+                if lang_code == 'tr':
+                    return 'tr'
         except:
             pass
         
-        # Default to English if system language is not supported
-        return 'en'
+        # Default to Turkish if system language is not supported
+        return 'tr'
     
     def load_language(self, language_code: Optional[str] = None) -> bool:
         """
-        Load a language translation
+        Switch to a different language
         
         Args:
             language_code: Language code to load. If None, uses system language.
@@ -91,66 +128,25 @@ class TranslationManager(QObject):
         if language_code == self._current_language:
             return True
         
-        app = QApplication.instance()
-        if not app:
-            print("No QApplication instance found")
-            return False
-        
-        # Remove old translator
-        if self._current_language:
-            app.removeTranslator(self._translator)
-            app.removeTranslator(self._qt_translator)
-        
-        # Load new translation
-        translation_file = os.path.join(
-            self._translations_path, 
-            f"mp3yap_{language_code}.qm"
-        )
-        
-        # Check if translation file exists
-        if language_code == 'tr':
-            # Turkish is the default language, no translation needed
-            # Remove any existing translator
-            if self._current_language:
-                app.removeTranslator(self._translator)
-            print("Using default Turkish language")
-        elif os.path.exists(translation_file):
-            if self._translator.load(translation_file):
-                app.installTranslator(self._translator)
-                print(f"Loaded translation: {translation_file}")
-            else:
-                print(f"Failed to load translation: {translation_file}")
-                # Continue anyway - will use default text
-        else:
-            print(f"Translation file not found: {translation_file}")
-            # For other languages, we'll need to generate the translation
-        
-        # Load Qt's built-in translations (for standard dialogs)
-        qt_translation_file = os.path.join(
-            self._translations_path,
-            f"qtbase_{language_code}.qm"
-        )
-        if os.path.exists(qt_translation_file):
-            if self._qt_translator.load(qt_translation_file):
-                app.installTranslator(self._qt_translator)
-        
         # Update current language
         self._current_language = language_code
         
-        # Set application locale
-        locale_obj = QLocale(language_code)
-        QLocale.setDefault(locale_obj)
+        # Veritabanı kullanılıyorsa dili güncelle
+        if USE_DATABASE:
+            translation_db.set_language(language_code)
         
-        # Handle RTL languages
-        if self.SUPPORTED_LANGUAGES[language_code]['rtl']:
-            app.setLayoutDirection(2)  # Qt.RightToLeft
-        else:
-            app.setLayoutDirection(0)  # Qt.LeftToRight
+        # Save preference
+        self.save_language_preference(language_code)
         
         # Emit signal for UI updates
         self.languageChanged.emit(language_code)
         
+        print(f"Language changed to: {language_code}")
         return True
+    
+    def set_language(self, language_code: str) -> bool:
+        """Set the application language (alias for load_language)"""
+        return self.load_language(language_code)
     
     def get_current_language(self) -> str:
         """Get the current language code"""

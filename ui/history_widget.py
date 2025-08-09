@@ -36,7 +36,7 @@ class HistoryWidget(QWidget):
         # Arama ve filtre alanı
         search_layout = QHBoxLayout()
         
-        self.search_label = QLabel(translation_manager.tr("Search:"))
+        self.search_label = QLabel(translation_manager.tr("queue.labels.search"))
         search_layout.addWidget(self.search_label)
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText(translation_manager.tr("Search in title or channel name..."))
@@ -61,8 +61,8 @@ class HistoryWidget(QWidget):
         self.table = QTableWidget()
         self.table.setColumnCount(6)
         self.table.setHorizontalHeaderLabels([
-            translation_manager.tr("Date"), translation_manager.tr("Title"), translation_manager.tr("Channel"), 
-            translation_manager.tr("Format"), translation_manager.tr("Size"), translation_manager.tr("Actions")
+            translation_manager.tr("Date"), translation_manager.tr("history.columns.title"), translation_manager.tr("Channel"), 
+            translation_manager.tr("Format"), translation_manager.tr("history.columns.size"), translation_manager.tr("Actions")
         ])
         
         # Tablo ayarları
@@ -184,7 +184,7 @@ class HistoryWidget(QWidget):
             # Tekrar indir butonu
             redownload_btn = QPushButton()
             redownload_btn.setIcon(icon_manager.get_icon("refresh-cw", "#FFFFFF"))
-            redownload_btn.setToolTip(translation_manager.tr("Download Again"))
+            redownload_btn.setToolTip(translation_manager.tr("history.menu.download_again"))
             redownload_btn.setFixedSize(24, 24)
             redownload_btn.setObjectName("redownloadIconButton")
             redownload_btn.clicked.connect(lambda checked, url=record['url']: self.redownload(url))
@@ -345,7 +345,7 @@ class HistoryWidget(QWidget):
         menu.addSeparator()
         
         # Seçilileri sil
-        delete_action = menu.addAction(translation_manager.tr("Delete Selected"))
+        delete_action = menu.addAction(translation_manager.tr("history.buttons.delete_selected"))
         delete_action.setIcon(icon_manager.get_icon("trash-2", "#DC3545"))
         delete_action.triggered.connect(self.delete_selected)
         
@@ -406,12 +406,12 @@ class HistoryWidget(QWidget):
     def retranslateUi(self):
         """UI metinlerini yeniden çevir"""
         self.table.setHorizontalHeaderLabels([
-            translation_manager.tr("Date"), translation_manager.tr("Title"), translation_manager.tr("Channel"), 
-            translation_manager.tr("Format"), translation_manager.tr("Size"), translation_manager.tr("Actions")
+            translation_manager.tr("Date"), translation_manager.tr("history.columns.title"), translation_manager.tr("Channel"), 
+            translation_manager.tr("Format"), translation_manager.tr("history.columns.size"), translation_manager.tr("Actions")
         ])
         # Arama label ve placeholder güncelle
         if hasattr(self, 'search_label'):
-            self.search_label.setText(translation_manager.tr("Search:"))
+            self.search_label.setText(translation_manager.tr("queue.labels.search"))
         self.search_input.setPlaceholderText(translation_manager.tr("Search in title or channel name..."))
         
         # Butonları güncelle

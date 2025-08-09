@@ -114,7 +114,7 @@ class MP3YapMainWindow(QMainWindow):
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle(translation_manager.tr("YouTube MP3 Downloader"))
+        self.setWindowTitle(translation_manager.tr("main.window.title"))
         self.setGeometry(100, 100, 1000, 700)
         
         # Set window icon if it exists
@@ -191,10 +191,10 @@ class MP3YapMainWindow(QMainWindow):
         menubar.setNativeMenuBar(False)
         
         # Dosya menüsü
-        self.file_menu = menubar.addMenu(translation_manager.tr('File'))
+        self.file_menu = menubar.addMenu(translation_manager.tr("main.menu.file"))
         
         # URL'leri içe aktar
-        self.import_action = QAction(translation_manager.tr('Import URLs...'), self)
+        self.import_action = QAction(translation_manager.tr("main.menu.import_urls"), self)
         self.import_action.setShortcut('Ctrl+I')
         self.import_action.triggered.connect(self.import_urls)
         self.file_menu.addAction(self.import_action)
@@ -217,10 +217,10 @@ class MP3YapMainWindow(QMainWindow):
         self.settings_menu.addAction(self.pref_action)
         
         # Yardım menüsü
-        self.help_menu = menubar.addMenu(translation_manager.tr('Help'))
+        self.help_menu = menubar.addMenu(translation_manager.tr("main.menu.help"))
         
         # Hakkında
-        self.about_action = QAction(translation_manager.tr('About'), self)
+        self.about_action = QAction(translation_manager.tr("main.menu.about"), self)
         self.about_action.triggered.connect(self.show_about)
         self.help_menu.addAction(self.about_action)
     
@@ -232,14 +232,14 @@ class MP3YapMainWindow(QMainWindow):
         
         # İndirme sekmesi
         download_tab = self.create_download_tab()
-        self.tab_widget.addTab(download_tab, translation_manager.tr("Download"))
+        self.tab_widget.addTab(download_tab, translation_manager.tr("main.buttons.download_action"))
         
         # Geçmiş sekmesi
         self.history_widget = HistoryWidget()
         self.history_widget.redownload_signal.connect(self.add_url_to_download)
         self.history_widget.add_to_queue_signal.connect(self.add_urls_to_queue)
         self.history_widget.add_to_download_signal.connect(self.add_urls_to_download_tab)
-        self.tab_widget.addTab(self.history_widget, translation_manager.tr("History"))
+        self.tab_widget.addTab(self.history_widget, translation_manager.tr("main.tabs.history_en"))
         
         # Tab değişikliğini dinle
         self.tab_widget.currentChanged.connect(self.on_tab_changed)
@@ -249,11 +249,11 @@ class MP3YapMainWindow(QMainWindow):
         self.queue_widget.start_download.connect(self.process_queue_item)
         self.queue_widget.queue_started.connect(lambda: setattr(self, 'is_queue_mode', True))
         self.queue_widget.queue_paused.connect(self.on_queue_paused)
-        self.tab_widget.addTab(self.queue_widget, translation_manager.tr("Queue"))
+        self.tab_widget.addTab(self.queue_widget, translation_manager.tr("main.tabs.queue_en"))
         
         # MP3'e Dönüştür sekmesi
         self.converter_widget = ConverterWidget()
-        self.tab_widget.addTab(self.converter_widget, translation_manager.tr("Convert"))
+        self.tab_widget.addTab(self.converter_widget, translation_manager.tr("main.tabs.convert_en"))
         
         # Tab bar'ı ortalamak için
         tab_bar = self.tab_widget.tabBar()
@@ -339,14 +339,14 @@ class MP3YapMainWindow(QMainWindow):
         
         # Butonlar
         button_layout = QHBoxLayout()
-        self.download_button = QPushButton(translation_manager.tr("Download"))
+        self.download_button = QPushButton(translation_manager.tr("main.buttons.download_action"))
         self.download_button.setIcon(icon_manager.get_icon("download", "#FFFFFF"))
         self.download_button.clicked.connect(self.start_download)  # type: ignore
         self.download_button.setToolTip(translation_manager.tr("Start download (Ctrl+Enter)"))
         style_manager.apply_button_style(self.download_button, "download")
         
         # İptal butonu
-        self.cancel_button = QPushButton(translation_manager.tr("Cancel"))
+        self.cancel_button = QPushButton(translation_manager.tr("common.buttons.cancel"))
         self.cancel_button.setIcon(icon_manager.get_icon("x", "#FFFFFF"))
         self.cancel_button.clicked.connect(self.cancel_download)  # type: ignore
         self.cancel_button.setEnabled(False)
@@ -361,7 +361,7 @@ class MP3YapMainWindow(QMainWindow):
         style_manager.apply_button_style(self.add_to_queue_button, "secondary")
         
         # Temizle butonu
-        self.clear_button = QPushButton(translation_manager.tr("Clear"))
+        self.clear_button = QPushButton(translation_manager.tr("queue.buttons.clear"))
         self.clear_button.setIcon(icon_manager.get_icon("trash-2", "#FFFFFF"))
         self.clear_button.clicked.connect(self.clear_urls)  # type: ignore
         self.clear_button.setToolTip(translation_manager.tr("Clear URL list"))
@@ -514,7 +514,7 @@ class MP3YapMainWindow(QMainWindow):
         
         # Butonlar
         button_box = QDialogButtonBox()
-        download_btn = button_box.addButton(translation_manager.tr("Download"), QDialogButtonBox.AcceptRole)
+        download_btn = button_box.addButton(translation_manager.tr("main.buttons.download_action"), QDialogButtonBox.AcceptRole)
         later_btn = button_box.addButton(translation_manager.tr("Daha Sonra"), QDialogButtonBox.RejectRole)
         
         download_btn.clicked.connect(lambda: self.open_update_url(info['download_url']))
@@ -556,7 +556,7 @@ class MP3YapMainWindow(QMainWindow):
                     QMessageBox.information(self, translation_manager.tr("Success"), 
                         translation_manager.tr("{} URL başarıyla yüklendi!").format(len(urls.strip().split())))
             except Exception as e:
-                QMessageBox.critical(self, translation_manager.tr("Error"), translation_manager.tr("Could not read file: {}").format(str(e)))
+                QMessageBox.critical(self, translation_manager.tr("dialogs.titles.error"), translation_manager.tr("Could not read file: {}").format(str(e)))
     
     def update_progress(self, filename, percent, text):
         """İlerleme çubuğunu güncelle"""
@@ -1210,7 +1210,7 @@ class MP3YapMainWindow(QMainWindow):
             'main': {'title': translation_manager.tr('Main Shortcuts'), 'shortcuts': []},
             'navigation': {'title': translation_manager.tr('Navigation Shortcuts'), 'shortcuts': []},
             'file': {'title': translation_manager.tr('File Operations'), 'shortcuts': []},
-            'help': {'title': translation_manager.tr('Help'), 'shortcuts': []}
+            'help': {'title': translation_manager.tr("main.menu.help"), 'shortcuts': []}
         }
         
         for shortcut in shortcuts:
@@ -1219,7 +1219,7 @@ class MP3YapMainWindow(QMainWindow):
                 categories[category]['shortcuts'].append(shortcut)
         
         # HTML oluştur
-        html = f"<h3>{translation_manager.tr('Keyboard Shortcuts')}</h3>"
+        html = f"<h3>{translation_manager.tr('main.menu.keyboard_shortcuts')}</h3>"
         
         for _, category_data in categories.items():
             if category_data['shortcuts']:
@@ -1264,7 +1264,7 @@ class MP3YapMainWindow(QMainWindow):
         </table>
         """
         
-        QMessageBox.information(self, translation_manager.tr("Keyboard Shortcuts"), html)
+        QMessageBox.information(self, translation_manager.tr("main.menu.keyboard_shortcuts"), html)
     
     def handle_escape(self):
         """Escape tuşu işlemi"""
@@ -1294,10 +1294,10 @@ class MP3YapMainWindow(QMainWindow):
         self.retranslateUi()
         
         # Update tab titles
-        self.tab_widget.setTabText(0, translation_manager.tr("Download"))
-        self.tab_widget.setTabText(1, translation_manager.tr("History"))
-        self.tab_widget.setTabText(2, translation_manager.tr("Queue"))
-        self.tab_widget.setTabText(3, translation_manager.tr("Convert"))
+        self.tab_widget.setTabText(0, translation_manager.tr("main.buttons.download_action"))
+        self.tab_widget.setTabText(1, translation_manager.tr("main.tabs.history_en"))
+        self.tab_widget.setTabText(2, translation_manager.tr("main.tabs.queue_en"))
+        self.tab_widget.setTabText(3, translation_manager.tr("main.tabs.convert_en"))
         
         # Update child widgets
         for i in range(self.tab_widget.count()):
@@ -1308,19 +1308,19 @@ class MP3YapMainWindow(QMainWindow):
     def retranslateUi(self):
         """UI metinlerini yeniden çevir (dil değiştiğinde)"""
         # Ana pencere başlığı
-        self.setWindowTitle(translation_manager.tr("YouTube MP3 Downloader"))
+        self.setWindowTitle(translation_manager.tr("main.window.title"))
         
         # Menü metinlerini güncelle (menüleri yeniden oluşturmadan)
         if hasattr(self, 'file_menu'):
-            self.file_menu.setTitle(translation_manager.tr('File'))
-            self.import_action.setText(translation_manager.tr('Import URLs...'))
+            self.file_menu.setTitle(translation_manager.tr("main.menu.file"))
+            self.import_action.setText(translation_manager.tr("main.menu.import_urls"))
             self.exit_action.setText(translation_manager.tr('Exit'))
         if hasattr(self, 'settings_menu'):
             self.settings_menu.setTitle(translation_manager.tr('Tools'))
             self.pref_action.setText(translation_manager.tr('Settings...'))
         if hasattr(self, 'help_menu'):
-            self.help_menu.setTitle(translation_manager.tr('Help'))
-            self.about_action.setText(translation_manager.tr('About'))
+            self.help_menu.setTitle(translation_manager.tr("main.menu.help"))
+            self.about_action.setText(translation_manager.tr("main.menu.about"))
         
         # Status bar widget'larının metinlerini güncelle (yeniden oluşturmadan)
         if hasattr(self, 'shortcuts_hint'):
@@ -1328,23 +1328,23 @@ class MP3YapMainWindow(QMainWindow):
             self.shortcuts_hint.setToolTip(translation_manager.tr("Show keyboard shortcuts"))
         
         # Tab başlıkları
-        self.tab_widget.setTabText(0, translation_manager.tr("Download"))
-        self.tab_widget.setTabText(1, translation_manager.tr("History"))
-        self.tab_widget.setTabText(2, translation_manager.tr("Queue"))
-        self.tab_widget.setTabText(3, translation_manager.tr("Convert"))
+        self.tab_widget.setTabText(0, translation_manager.tr("main.buttons.download_action"))
+        self.tab_widget.setTabText(1, translation_manager.tr("main.tabs.history_en"))
+        self.tab_widget.setTabText(2, translation_manager.tr("main.tabs.queue_en"))
+        self.tab_widget.setTabText(3, translation_manager.tr("main.tabs.convert_en"))
         
         # Download tab'ındaki butonları güncelle
         if hasattr(self, 'download_button'):
-            self.download_button.setText(translation_manager.tr("Download"))
+            self.download_button.setText(translation_manager.tr("main.buttons.download_action"))
             self.download_button.setToolTip(translation_manager.tr("Start download (Ctrl+Enter)"))
         if hasattr(self, 'cancel_button'):
-            self.cancel_button.setText(translation_manager.tr("Cancel"))
+            self.cancel_button.setText(translation_manager.tr("common.buttons.cancel"))
             self.cancel_button.setToolTip(translation_manager.tr("Cancel download (Esc)"))
         if hasattr(self, 'add_to_queue_button'):
             self.add_to_queue_button.setText(translation_manager.tr("Add to Queue"))
             self.add_to_queue_button.setToolTip(translation_manager.tr("Add URLs to queue"))
         if hasattr(self, 'clear_button'):
-            self.clear_button.setText(translation_manager.tr("Clear"))
+            self.clear_button.setText(translation_manager.tr("queue.buttons.clear"))
             self.clear_button.setToolTip(translation_manager.tr("Clear URL list"))
         if hasattr(self, 'open_folder_button'):
             self.open_folder_button.setText(translation_manager.tr("Open Folder"))

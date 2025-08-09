@@ -50,9 +50,10 @@ class TranslationManager(QObject):
     def tr(self, key: str, *args) -> str:
         """
         Get translation for a key (replaces Qt's tr() method)
+        Supports both abstract keys (e.g., "main.buttons.download") and legacy Turkish text keys
         
         Args:
-            key: Translation key
+            key: Translation key (abstract or legacy Turkish text)
             *args: Format arguments if the translation contains placeholders
             
         Returns:
@@ -61,6 +62,13 @@ class TranslationManager(QObject):
         if USE_DATABASE:
             # Veritabanından çeviri al (database kendi fallback mekanizmasına sahip)
             text = translation_db.get_translation(key, self._current_language)
+            
+            # If abstract key not found and it looks like Turkish text (no dots), 
+            # try as legacy key for backward compatibility
+            if text == key and '.' not in key:
+                # This might be a legacy Turkish text key
+                # The database will handle it if it exists
+                pass
         else:
             # Python sözlüğünden çeviri al - database ile aynı fallback mantığı
             if key in TRANSLATIONS:

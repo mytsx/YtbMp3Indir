@@ -337,26 +337,11 @@ class SettingsDialog(QDialog):
             success = translation_manager.load_language(selected_language)
             
             if success:
-                # Ana pencereyi güncelle
-                if self.parent():
-                    # Ana pencerede retranslateUi varsa çağır
-                    if hasattr(self.parent(), 'retranslateUi'):
-                        self.parent().retranslateUi()
-                    # Tab widget'ları güncelle
-                    if hasattr(self.parent(), 'tab_widget'):
-                        # Tab başlıklarını güncelle
-                        self.parent().tab_widget.setTabText(0, translation_manager.tr("Download"))
-                        self.parent().tab_widget.setTabText(1, translation_manager.tr("History"))
-                        self.parent().tab_widget.setTabText(2, translation_manager.tr("Queue"))
-                        self.parent().tab_widget.setTabText(3, translation_manager.tr("Convert"))
-                        
-                        # Her tab'ın retranslateUi metodunu çağır
-                        for i in range(self.parent().tab_widget.count()):
-                            widget = self.parent().tab_widget.widget(i)
-                            if hasattr(widget, 'retranslateUi'):
-                                widget.retranslateUi()
+                # Language change signal will be emitted by translation_manager
+                # Main window should connect to translation_manager.languageChanged signal
+                # and handle its own UI updates
                 
-                # Settings dialog'u da güncelle
+                # Only update this dialog's UI
                 self.retranslateUi()
                 
                 # Dili config'e kaydet

@@ -23,7 +23,7 @@ from utils.icon_manager import icon_manager
 from utils.platform_utils import get_keyboard_icon, get_modifier_symbol, convert_shortcut_for_platform
 from utils.update_checker import UpdateChecker
 from utils.translation_manager import translation_manager
-from services.url_analyzer import UrlAnalysisWorker, UrlAnalysisResult
+from services.url_analyzer import UrlAnalysisWorker, UrlAnalysisResult, UrlAnalyzer
 from version import __version__, __app_name__, __author__
 
 
@@ -177,6 +177,9 @@ class MP3YapMainWindow(QMainWindow):
         self.queue_signals.finished.connect(self.queue_download_finished)
         self.queue_signals.error.connect(self.queue_download_error)
         self.queue_signals.status_update.connect(self.queue_status_update)
+        
+        # Connect to language change signal for decoupled UI updates
+        translation_manager.languageChanged.connect(self.on_language_changed)
         
         # Güncelleme kontrolü başlat
         self.check_for_updates()
@@ -964,8 +967,8 @@ class MP3YapMainWindow(QMainWindow):
         
         # Valid URLs and playlist info
         if result.valid_urls:
-            playlists = [p for p in result.playlist_info if p.get('video_count', p.get('count', 1)) > 1]
-            single_videos = [p for p in result.playlist_info if p.get('video_count', p.get('count', 1)) == 1]
+            playlists = [p for p in result.playlist_info if p.get('video_count', 1) > 1]
+            single_videos = [p for p in result.playlist_info if p.get('video_count', 1) == 1]
             
             if result.total_videos == len(result.valid_urls):
                 # Only single videos
@@ -985,7 +988,7 @@ class MP3YapMainWindow(QMainWindow):
                         playlist_text = f"  • {p['title'][:30]}"
                         if len(p['title']) > 30:
                             playlist_text += "..."
-                        playlist_text += f" ({p.get('video_count', p.get('count', 1))} video)"
+                        playlist_text += f" ({p.get('video_count', 1)} video)"
                         status_parts.append(playlist_text)
         
         # Invalid URLs
@@ -1025,38 +1028,30 @@ class MP3YapMainWindow(QMainWindow):
     
     def show_cached_url_status(self, urls):
         """Cache'den URL durumunu göster"""
+        # Use UrlAnalyzer for consistency - avoid duplicate logic
+        valid_urls, invalid_urls = UrlAnalyzer.validate_youtube_urls(urls)
+        
         total_videos = 0
         playlists = []
         single_videos = []
-        valid_urls = []
-        invalid_count = 0
         
-        # Regex ile hızlı YouTube URL kontrolü
-        youtube_regex = re.compile(
-            r'(https?://)?(www\.)?(youtube\.com/(watch\?v=|shorts/|embed/)|youtu\.be/|m\.youtube\.com/watch\?v=)([a-zA-Z0-9_-]{11})'
-        )
-        
-        for url in urls:
-            if youtube_regex.search(url):
-                valid_urls.append(url)
-                # Cache'de var mı?
-                if url in self.url_cache:
-                    info = self.url_cache[url]
-                    if info['is_playlist']:
-                        playlists.append(info)
-                        total_videos += info['video_count']
-                    else:
-                        single_videos.append(info)
-                        total_videos += 1
+        for url in valid_urls:
+            # Cache'de var mı?
+            if url in self.url_cache:
+                info = self.url_cache[url]
+                if info.get('is_playlist'):
+                    playlists.append(info)
+                    total_videos += info.get('video_count', 1)
                 else:
-                    # Cache'de yok, tek video varsay
-                    single_videos.append({'title': 'Tek Video', 'video_count': 1})
+                    single_videos.append(info)
                     total_videos += 1
             else:
-                invalid_count += 1
+                # Cache'de yok, tek video varsay
+                single_videos.append({'title': 'Tek Video', 'video_count': 1})
+                total_videos += 1
         
         # Durum mesajını oluştur
-        if total_videos == 0 and invalid_count == 0:
+        if not valid_urls and not invalid_urls:
             self.url_status_bar.setVisible(False)
             return
             
@@ -1076,13 +1071,13 @@ class MP3YapMainWindow(QMainWindow):
                 status_parts.append(translation_manager.tr("✓ {} (toplam {} video) indirmeye hazır").format(
                     translation_manager.tr(" ve ").join(parts), total_videos))
         
-        if invalid_count > 0:
-            status_parts.append(translation_manager.tr("✗ {} geçersiz URL").format(invalid_count))
+        if invalid_urls:
+            status_parts.append(translation_manager.tr("✗ {} geçersiz URL").format(len(invalid_urls)))
         
         if status_parts:
             self.url_status_bar.setText(" | ".join(status_parts))
             # Renk ayarla
-            if invalid_count > 0:
+            if invalid_urls:
                 # Kırmızı
                 style_manager.set_widget_property(self.url_status_bar, "statusType", "error")
             else:
@@ -1308,6 +1303,22 @@ class MP3YapMainWindow(QMainWindow):
             self.downloader.stop()
         # Pencereyi kapat
         a0.accept()
+    
+    def on_language_changed(self, lang_code):
+        """Handle language change signal from translation manager"""
+        self.retranslateUi()
+        
+        # Update tab titles
+        self.tab_widget.setTabText(0, translation_manager.tr("Download"))
+        self.tab_widget.setTabText(1, translation_manager.tr("History"))
+        self.tab_widget.setTabText(2, translation_manager.tr("Queue"))
+        self.tab_widget.setTabText(3, translation_manager.tr("Convert"))
+        
+        # Update child widgets
+        for i in range(self.tab_widget.count()):
+            widget = self.tab_widget.widget(i)
+            if hasattr(widget, 'retranslateUi'):
+                widget.retranslateUi()
     
     def retranslateUi(self):
         """UI metinlerini yeniden çevir (dil değiştiğinde)"""

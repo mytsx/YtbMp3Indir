@@ -164,12 +164,14 @@ class TranslationDatabase:
             
             conn.commit()
             
-            # Önbelleği temizle - dil kodunu da dahil et
-            # Tüm diller için bu anahtarı temizle
+            # Önbelleği temizle - tüm diller için bu anahtarı temizle
             keys_to_delete = []
-            prefix = f"{scope}:{key}" if scope else key
+            # Cache key format: lang_code:scope:key or lang_code:key
+            key_suffix = f"{scope}:{key}" if scope else key
             for cache_key in self._cache:
-                if cache_key.endswith(f":{prefix}") or cache_key == prefix:
+                # Check if cache key ends with our key pattern (after language code)
+                parts = cache_key.split(':', 1)  # Split only on first colon to get lang_code
+                if len(parts) > 1 and parts[1] == key_suffix:
                     keys_to_delete.append(cache_key)
             for cache_key in keys_to_delete:
                 del self._cache[cache_key]

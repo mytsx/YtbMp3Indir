@@ -5,9 +5,12 @@ Handles URL validation, playlist detection, and database checks in background
 
 import os
 import re
+import logging
 from typing import Dict, List, Optional, Tuple, Any
 from PyQt5.QtCore import QThread, pyqtSignal, QObject
 import yt_dlp
+
+logger = logging.getLogger(__name__)
 
 
 class UrlAnalysisResult:
@@ -95,7 +98,7 @@ class UrlAnalyzer:
                         'video_count': 1
                     }
         except Exception as e:
-            print(f"Playlist bilgisi alınamadı: {e}")
+            logger.warning(f"Playlist bilgisi alınamadı: {e}")
             return {
                 'url': url,
                 'is_playlist': False,
@@ -212,7 +215,7 @@ class UrlAnalysisWorker(QThread):
                     result.playlist_info.append({
                         'url': url,
                         'title': 'Tek Video',
-                        'count': 1
+                        'video_count': 1
                     })
                     if url not in self.url_cache:
                         self.url_cache[url] = {
@@ -250,7 +253,7 @@ class UrlAnalysisWorker(QThread):
                         result.files_missing += 1
             
             # Calculate total videos
-            result.total_videos = sum(p.get('count', p.get('video_count', 1)) 
+            result.total_videos = sum(p.get('video_count', 1) 
                                      for p in result.playlist_info)
             
             self.finished.emit(result)

@@ -332,8 +332,8 @@ class QueueWidget(QWidget):
             
             self.table.setCellWidget(row, 3, action_widget)
             
-            # ID'yi ilk sütundaki item'a userData olarak sakla
-            self.table.item(row, 0).setData(Qt.UserRole, item['id'])
+            # Tüm item'ı ilk sütundaki item'a userData olarak sakla
+            self.table.item(row, 0).setData(Qt.UserRole, item)
         
         # İstatistikleri güncelle
         self.update_statistics()
@@ -511,8 +511,9 @@ class QueueWidget(QWidget):
         # Seçili öğelerin ID'lerini al
         selected_ids = []
         for row in selected_rows:
-            item_id = self.table.item(row, 0).data(Qt.UserRole)
-            selected_ids.append(item_id)
+            item_data = self.table.item(row, 0).data(Qt.UserRole)
+            if item_data:
+                selected_ids.append(item_data['id'])
         
         # Menü öğeleri
         if len(selected_ids) == 1:

@@ -181,40 +181,42 @@ class MP3YapMainWindow(QMainWindow):
     def setup_menu(self):
         """Menü çubuğunu oluştur"""
         menubar = self.menuBar()
+        # macOS'ta native menubar sorun çıkarabiliyor
+        menubar.setNativeMenuBar(False)
         
         # Dosya menüsü
-        file_menu = menubar.addMenu('Dosya')
+        self.file_menu = menubar.addMenu(self.tr('Dosya'))
         
         # URL'leri içe aktar
-        import_action = QAction('URL\'leri İçe Aktar...', self)
-        import_action.setShortcut('Ctrl+I')
-        import_action.triggered.connect(self.import_urls)
-        file_menu.addAction(import_action)
+        self.import_action = QAction(self.tr('URL\'leri İçe Aktar...'), self)
+        self.import_action.setShortcut('Ctrl+I')
+        self.import_action.triggered.connect(self.import_urls)
+        self.file_menu.addAction(self.import_action)
         
-        file_menu.addSeparator()
+        self.file_menu.addSeparator()
         
         # Çıkış
-        exit_action = QAction('Çıkış', self)
-        exit_action.setShortcut('Ctrl+Q')
-        exit_action.triggered.connect(self.close)
-        file_menu.addAction(exit_action)
+        self.exit_action = QAction(self.tr('Çıkış'), self)
+        self.exit_action.setShortcut('Ctrl+Q')
+        self.exit_action.triggered.connect(self.close)
+        self.file_menu.addAction(self.exit_action)
         
-        # Ayarlar menüsü
-        settings_menu = menubar.addMenu('Ayarlar')
+        # Araçlar menüsü (macOS'ta "Ayarlar" ismi sorun çıkarabiliyor)
+        self.settings_menu = menubar.addMenu(self.tr('Araçlar'))
         
-        # Tercihler
-        pref_action = QAction('Tercihler...', self)
-        pref_action.setShortcut('Ctrl+,')
-        pref_action.triggered.connect(self.show_settings)
-        settings_menu.addAction(pref_action)
+        # Tercihler/Ayarlar
+        self.pref_action = QAction(self.tr('Ayarlar...'), self)
+        self.pref_action.setShortcut('Ctrl+,')
+        self.pref_action.triggered.connect(self.show_settings)
+        self.settings_menu.addAction(self.pref_action)
         
         # Yardım menüsü
-        help_menu = menubar.addMenu('Yardım')
+        self.help_menu = menubar.addMenu(self.tr('Yardım'))
         
         # Hakkında
-        about_action = QAction('Hakkında', self)
-        about_action.triggered.connect(self.show_about)
-        help_menu.addAction(about_action)
+        self.about_action = QAction(self.tr('Hakkında'), self)
+        self.about_action.triggered.connect(self.show_about)
+        self.help_menu.addAction(self.about_action)
     
     def setup_ui(self):
         """Kullanıcı arayüzünü oluştur"""
@@ -224,14 +226,14 @@ class MP3YapMainWindow(QMainWindow):
         
         # İndirme sekmesi
         download_tab = self.create_download_tab()
-        self.tab_widget.addTab(download_tab, "İndir")
+        self.tab_widget.addTab(download_tab, self.tr("İndir"))
         
         # Geçmiş sekmesi
         self.history_widget = HistoryWidget()
         self.history_widget.redownload_signal.connect(self.add_url_to_download)
         self.history_widget.add_to_queue_signal.connect(self.add_urls_to_queue)
         self.history_widget.add_to_download_signal.connect(self.add_urls_to_download_tab)
-        self.tab_widget.addTab(self.history_widget, "Geçmiş")
+        self.tab_widget.addTab(self.history_widget, self.tr("Geçmiş"))
         
         # Tab değişikliğini dinle
         self.tab_widget.currentChanged.connect(self.on_tab_changed)
@@ -241,7 +243,7 @@ class MP3YapMainWindow(QMainWindow):
         self.queue_widget.start_download.connect(self.process_queue_item)
         self.queue_widget.queue_started.connect(lambda: setattr(self, 'is_queue_mode', True))
         self.queue_widget.queue_paused.connect(self.on_queue_paused)
-        self.tab_widget.addTab(self.queue_widget, "Sıra")
+        self.tab_widget.addTab(self.queue_widget, self.tr("Sıra"))
         
         # MP3'e Dönüştür sekmesi
         self.converter_widget = ConverterWidget()
@@ -283,7 +285,7 @@ class MP3YapMainWindow(QMainWindow):
         status_bar.addPermanentWidget(self.version_label)
         
         # Klavye kısayolları butonu
-        shortcuts_hint = QPushButton("Kısayollar (F1)")
+        shortcuts_hint = QPushButton(self.tr("Kısayollar (F1)"))
         # Tema'ya göre renk belirle
         theme = self.config.get('theme', 'light')
         icon_color = style_manager.colors.DARK_TEXT_SECONDARY if theme == 'dark' else style_manager.colors.TEXT_SECONDARY
@@ -296,7 +298,7 @@ class MP3YapMainWindow(QMainWindow):
         shortcuts_hint.setFlat(True)
         shortcuts_hint.setCursor(Qt.PointingHandCursor)
         shortcuts_hint.clicked.connect(self.show_shortcuts_help)
-        shortcuts_hint.setToolTip("Klavye kısayollarını göster")
+        shortcuts_hint.setToolTip(self.tr("Klavye kısayollarını göster"))
         shortcuts_hint.setObjectName("statusBarButton")
         shortcuts_hint.setMaximumWidth(140)  # Genişlik arttırıldı
         
@@ -308,20 +310,20 @@ class MP3YapMainWindow(QMainWindow):
         layout = QVBoxLayout()
         
         # URL giriş alanı
-        url_label = QLabel("İndirilecek YouTube URL'lerini buraya yapıştırın:")
+        url_label = QLabel(self.tr("YouTube URL'lerini buraya yapıştırın (her satıra bir URL)"))
         self.url_text = QTextEdit()
-        self.url_text.setToolTip("YouTube URL'lerini buraya yapıştırın (Ctrl+V)")
+        self.url_text.setToolTip(self.tr("YouTube URL'lerini buraya yapıştırın (Ctrl+V)"))
         
         # Durum ve ilerleme
         status_layout = QHBoxLayout()
-        self.status_label = QLabel("Hazır")
+        self.status_label = QLabel(self.tr("Hazır"))
         self.status_label.setMinimumHeight(30)
         self.status_label.setObjectName("downloadStatus")
         status_layout.addWidget(self.status_label)
         
         # İndirme ilerleme çubuğu
         progress_layout = QHBoxLayout()
-        self.current_file_label = QLabel("Dosya: ")
+        self.current_file_label = QLabel(self.tr("Dosya: "))
         self.progress_bar = QProgressBar()
         self.progress_percent = QLabel("0%")
         self.progress_percent.setObjectName("progressPercent")
@@ -331,39 +333,39 @@ class MP3YapMainWindow(QMainWindow):
         
         # Butonlar
         button_layout = QHBoxLayout()
-        self.download_button = QPushButton(" İndir")
+        self.download_button = QPushButton(self.tr("İndir"))
         self.download_button.setIcon(icon_manager.get_icon("download", "#FFFFFF"))
         self.download_button.clicked.connect(self.start_download)  # type: ignore
-        self.download_button.setToolTip("İndirmeyi başlat (Ctrl+Enter)")
+        self.download_button.setToolTip(self.tr("İndirmeyi başlat (Ctrl+Enter)"))
         style_manager.apply_button_style(self.download_button, "download")
         
         # İptal butonu
-        self.cancel_button = QPushButton(" İptal")
+        self.cancel_button = QPushButton(self.tr("İptal"))
         self.cancel_button.setIcon(icon_manager.get_icon("x", "#FFFFFF"))
         self.cancel_button.clicked.connect(self.cancel_download)  # type: ignore
         self.cancel_button.setEnabled(False)
-        self.cancel_button.setToolTip("İndirmeyi iptal et (Esc)")
+        self.cancel_button.setToolTip(self.tr("İndirmeyi iptal et (Esc)"))
         style_manager.apply_button_style(self.cancel_button, "danger")
         
         # Kuyruğa ekle butonu
-        self.add_to_queue_button = QPushButton(" Kuyruğa Ekle")
+        self.add_to_queue_button = QPushButton(self.tr("Kuyruğa Ekle"))
         self.add_to_queue_button.setIcon(icon_manager.get_icon("plus", "#FFFFFF"))
         self.add_to_queue_button.clicked.connect(self.add_to_queue)  # type: ignore
-        self.add_to_queue_button.setToolTip("URL'leri kuyruğa ekle")
+        self.add_to_queue_button.setToolTip(self.tr("URL'leri kuyruğa ekle"))
         style_manager.apply_button_style(self.add_to_queue_button, "secondary")
         
         # Temizle butonu
-        self.clear_button = QPushButton(" Temizle")
+        self.clear_button = QPushButton(self.tr("Temizle"))
         self.clear_button.setIcon(icon_manager.get_icon("trash-2", "#FFFFFF"))
         self.clear_button.clicked.connect(self.clear_urls)  # type: ignore
-        self.clear_button.setToolTip("URL listesini temizle")
+        self.clear_button.setToolTip(self.tr("URL listesini temizle"))
         style_manager.apply_button_style(self.clear_button, "warning")
         
         # Klasörü aç butonu
-        self.open_folder_button = QPushButton(" Klasörü Aç")
+        self.open_folder_button = QPushButton(self.tr("Klasörü Aç"))
         self.open_folder_button.setIcon(icon_manager.get_icon("folder", "#FFFFFF"))
         self.open_folder_button.clicked.connect(self.open_output_folder)  # type: ignore
-        self.open_folder_button.setToolTip("İndirme klasörünü aç (Ctrl+D)")
+        self.open_folder_button.setToolTip(self.tr("İndirme klasörünü aç (Ctrl+D)"))
         style_manager.apply_button_style(self.open_folder_button, "accent")
         
         # Sol taraf - ana işlemler
@@ -1399,6 +1401,22 @@ class MP3YapMainWindow(QMainWindow):
         # Preloader'dan gelen iptal işlemi
         pass  # Şu an için boş, gerektiğinde implement edilecek
     
+    def changeEvent(self, a0):
+        """Olay değişikliklerini yakala"""
+        if a0.type() == a0.LanguageChange:
+            # Dil değiştiğinde tüm metinleri güncelle
+            self.retranslateUi()
+            
+            # Alt widget'ların retranslateUi metodlarını çağır
+            if hasattr(self.history_widget, 'retranslateUi'):
+                self.history_widget.retranslateUi()
+            if hasattr(self.queue_widget, 'retranslateUi'):
+                self.queue_widget.retranslateUi()
+            if hasattr(self.converter_widget, 'retranslateUi'):
+                self.converter_widget.retranslateUi()
+        
+        super().changeEvent(a0)
+    
     def closeEvent(self, a0):
         """Pencere kapatılırken"""
         # Aktif indirme varsa durdur
@@ -1406,3 +1424,53 @@ class MP3YapMainWindow(QMainWindow):
             self.downloader.stop()
         # Pencereyi kapat
         a0.accept()
+    
+    def retranslateUi(self):
+        """UI metinlerini yeniden çevir (dil değiştiğinde)"""
+        # Ana pencere başlığı
+        self.setWindowTitle(self.tr("YouTube MP3 İndirici"))
+        
+        # Menü metinlerini güncelle (menüleri yeniden oluşturmadan)
+        if hasattr(self, 'file_menu'):
+            self.file_menu.setTitle(self.tr('Dosya'))
+            self.import_action.setText(self.tr('URL\'leri İçe Aktar...'))
+            self.exit_action.setText(self.tr('Çıkış'))
+        if hasattr(self, 'settings_menu'):
+            self.settings_menu.setTitle(self.tr('Araçlar'))
+            self.pref_action.setText(self.tr('Ayarlar...'))
+        if hasattr(self, 'help_menu'):
+            self.help_menu.setTitle(self.tr('Yardım'))
+            self.about_action.setText(self.tr('Hakkında'))
+        
+        # Status bar'ı yeniden oluştur
+        self.statusBar().clearMessage()
+        self.setup_status_bar()
+        
+        # Tab başlıkları
+        self.tab_widget.setTabText(0, self.tr("İndir"))
+        self.tab_widget.setTabText(1, self.tr("Geçmiş"))
+        self.tab_widget.setTabText(2, self.tr("Sıra"))
+        self.tab_widget.setTabText(3, self.tr("Dönüştür"))
+        
+        # Download tab'ındaki butonları güncelle
+        if hasattr(self, 'download_button'):
+            self.download_button.setText(self.tr("İndir"))
+            self.download_button.setToolTip(self.tr("İndirmeyi başlat (Ctrl+Enter)"))
+        if hasattr(self, 'cancel_button'):
+            self.cancel_button.setText(self.tr("İptal"))
+            self.cancel_button.setToolTip(self.tr("İndirmeyi iptal et (Esc)"))
+        if hasattr(self, 'add_to_queue_button'):
+            self.add_to_queue_button.setText(self.tr("Kuyruğa Ekle"))
+            self.add_to_queue_button.setToolTip(self.tr("URL'leri kuyruğa ekle"))
+        if hasattr(self, 'clear_button'):
+            self.clear_button.setText(self.tr("Temizle"))
+            self.clear_button.setToolTip(self.tr("URL listesini temizle"))
+        if hasattr(self, 'open_folder_button'):
+            self.open_folder_button.setText(self.tr("Klasörü Aç"))
+            self.open_folder_button.setToolTip(self.tr("İndirme klasörünü aç (Ctrl+D)"))
+        
+        # Label'ları güncelle
+        if hasattr(self, 'status_label'):
+            self.status_label.setText(self.tr("Hazır"))
+        if hasattr(self, 'current_file_label'):
+            self.current_file_label.setText(self.tr("Dosya: "))

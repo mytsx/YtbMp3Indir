@@ -173,6 +173,34 @@ class SettingsDialog(QDialog):
         theme_row.addStretch()
         
         appearance_layout.addLayout(theme_row)
+        
+        # Dil seçimi
+        language_row = QHBoxLayout()
+        language_label = QLabel("Dil / Language:")
+        language_label.setFixedWidth(150)
+        self.language_combo = QComboBox()
+        
+        # Get available languages from translation manager
+        from utils.translation_manager import translation_manager
+        languages = translation_manager.get_available_languages(native=True)
+        
+        # Add languages to combo box
+        for code, name, flag in languages:
+            display_text = f"{flag} {name}" if flag else name
+            self.language_combo.addItem(display_text, code)
+        
+        # Set current language
+        current_lang = self.config.get('language', 'tr')
+        for i in range(self.language_combo.count()):
+            if self.language_combo.itemData(i) == current_lang:
+                self.language_combo.setCurrentIndex(i)
+                break
+        
+        language_row.addWidget(language_label)
+        language_row.addWidget(self.language_combo)
+        language_row.addStretch()
+        
+        appearance_layout.addLayout(language_row)
         appearance_group.setLayout(appearance_layout)
         layout.addWidget(appearance_group)
         
@@ -292,10 +320,69 @@ class SettingsDialog(QDialog):
         # Uygulama ayarları
         theme = 'light' if self.theme_combo.currentIndex() == 0 else 'dark'
         self.config.set('theme', theme)
+        
+        # Dil ayarını kontrol et (henüz kaydetme)
+        selected_language = self.language_combo.currentData()
+        current_language = self.config.get('language', 'tr')
+        
         self.config.set('notification_sound', self.notif_sound_check.isChecked())
         self.config.set('auto_open_folder', self.auto_open_check.isChecked())
         
         history_map = {0: 30, 1: 60, 2: 90, 3: 0}
         self.config.set('history_days', history_map[self.history_combo.currentIndex()])
         
+        # Dil değiştiyse dinamik olarak güncelle
+        if selected_language != current_language:
+            from utils.translation_manager import translation_manager
+            # Dinamik olarak dili değiştir
+            success = translation_manager.load_language(selected_language)
+            
+            if success:
+                # Ana pencereyi güncelle
+                if self.parent():
+                    # Ana pencerede retranslateUi varsa çağır
+                    if hasattr(self.parent(), 'retranslateUi'):
+                        self.parent().retranslateUi()
+                    # Tab widget'ları güncelle
+                    if hasattr(self.parent(), 'tab_widget'):
+                        # Tab başlıklarını güncelle
+                        self.parent().tab_widget.setTabText(0, self.tr("İndir"))
+                        self.parent().tab_widget.setTabText(1, self.tr("Geçmiş"))
+                        self.parent().tab_widget.setTabText(2, self.tr("Sıra"))
+                        self.parent().tab_widget.setTabText(3, self.tr("Dönüştür"))
+                        
+                        # Her tab'ın retranslateUi metodunu çağır
+                        for i in range(self.parent().tab_widget.count()):
+                            widget = self.parent().tab_widget.widget(i)
+                            if hasattr(widget, 'retranslateUi'):
+                                widget.retranslateUi()
+                
+                # Settings dialog'u da güncelle
+                self.retranslateUi()
+                
+                # Dili config'e kaydet
+                self.config.set('language', selected_language)
+            else:
+                from PyQt5.QtWidgets import QMessageBox
+                QMessageBox.warning(
+                    self,
+                    self.tr("Hata"),
+                    self.tr("Dil değiştirilemedi. Lütfen uygulamayı yeniden başlatın.")
+                )
+        else:
+            # Dil değişmemişse sadece kaydet
+            self.config.set('language', selected_language)
+        
         self.accept()
+    
+    def retranslateUi(self):
+        """UI metinlerini yeniden çevir"""
+        self.setWindowTitle(self.tr("Ayarlar"))
+        
+        # Tab başlıkları
+        self.tab_widget.setTabText(0, self.tr("İndirme"))
+        self.tab_widget.setTabText(1, self.tr("Uygulama"))
+        
+        # Butonlar
+        self.save_button.setText(self.tr("Kaydet"))
+        self.cancel_button.setText(self.tr("İptal"))

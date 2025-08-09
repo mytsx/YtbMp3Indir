@@ -633,3 +633,23 @@ class ConverterWidget(QWidget):
             )
             
         self.conversion_worker = None
+    
+    def retranslateUi(self):
+        """UI metinlerini yeniden çevir"""
+        # Butonlar
+        if hasattr(self, 'convert_btn'):
+            self.convert_btn.setText(self.tr(" Dönüştürmeyi Başlat"))
+        if hasattr(self, 'cancel_btn'):
+            self.cancel_btn.setText(self.tr(" İptal Et"))
+        if hasattr(self, 'clear_btn'):
+            self.clear_btn.setText(self.tr(" Listeyi Temizle"))
+        
+        # Checkbox ve uyarı
+        self.replace_checkbox.setText(self.tr("Ses dosyalarının orijinallerini sil"))
+        self.replace_checkbox.setToolTip(self.tr("İşaretli ise, ses dosyaları MP3'e dönüştürüldükten sonra silinir. "
+                                                 "Video dosyaları her zaman korunur."))
+        self.warning_label.setText(self.tr("DİKKAT: Ses dosyaları (WAV, FLAC, M4A vb.) MP3'e dönüştürüldükten sonra "
+                                          "orijinal dosyalar otomatik olarak silinir. Video dosyaları korunur."))
+        
+        # Liste widget'ı güncelle
+        self.file_list.viewport().update()

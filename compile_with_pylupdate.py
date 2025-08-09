@@ -8,7 +8,7 @@ from PyQt5.QtCore import QProcess
 
 def compile_translations():
     """Use PyQt5's lrelease via QProcess"""
-    translations_dir = "/Users/yerli/Developer/mehmetyerli/mp3yap/translations"
+    translations_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "translations")
     
     # Try to use pyrcc5 and lrelease from PyQt5
     try:

@@ -189,7 +189,7 @@ def main():
     """Generate translation files for supported languages"""
     
     languages = ["en", "de", "es", "fr"]
-    translations_dir = "/Users/yerli/Developer/mehmetyerli/mp3yap/translations"
+    translations_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "translations")
     
     os.makedirs(translations_dir, exist_ok=True)
     

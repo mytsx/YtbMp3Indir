@@ -164,9 +164,14 @@ class TranslationDatabase:
             
             conn.commit()
             
-            # Önbelleği temizle
-            cache_key = f"{scope}:{key}" if scope else key
-            if cache_key in self._cache:
+            # Önbelleği temizle - dil kodunu da dahil et
+            # Tüm diller için bu anahtarı temizle
+            keys_to_delete = []
+            prefix = f"{scope}:{key}" if scope else key
+            for cache_key in self._cache:
+                if cache_key.endswith(f":{prefix}") or cache_key == prefix:
+                    keys_to_delete.append(cache_key)
+            for cache_key in keys_to_delete:
                 del self._cache[cache_key]
     
     def get_translation(self, key: str, lang_code: str = None, scope: str = None) -> str:

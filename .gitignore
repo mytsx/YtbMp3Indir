@@ -37,6 +37,7 @@ env/
 # Project specific
 music/
 *.db
+!data/translations.db  # Çeviri veritabanı Git'te takip edilmeli
 *.mp3
 *.webm
 *.m4a

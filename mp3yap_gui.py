@@ -71,6 +71,23 @@ def main():
         config = Config()
         app.processEvents()
         
+        # Dil ayarlarını yükle
+        splash.update_status("Dil ayarları yükleniyor...")
+        from utils.translation_manager import translation_manager
+        
+        # Config'den dili al veya sistem dilini kullan
+        saved_language = config.get('language', None)
+        if saved_language:
+            translation_manager.load_language(saved_language)
+        else:
+            # Sistem dilini kullan ve ilk kez kaydet
+            system_language = translation_manager.get_system_language()
+            translation_manager.load_language(system_language)
+            config.set('language', system_language)
+            # Config otomatik kaydediyor (set metodunda)
+        
+        app.processEvents()
+        
         # FFmpeg kontrolü
         splash.update_status("FFmpeg kontrol ediliyor...")
         import static_ffmpeg

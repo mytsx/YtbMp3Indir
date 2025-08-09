@@ -22,6 +22,8 @@ from styles import style_manager
 from utils.icon_manager import icon_manager
 from utils.platform_utils import get_keyboard_icon, get_modifier_symbol, convert_shortcut_for_platform
 from utils.update_checker import UpdateChecker
+from utils.translation_manager import translation_manager
+from services.url_analyzer import UrlAnalysisWorker, UrlAnalysisResult, UrlAnalyzer
 from version import __version__, __app_name__, __author__
 
 
@@ -112,7 +114,7 @@ class MP3YapMainWindow(QMainWindow):
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("YouTube MP3 İndirici")
+        self.setWindowTitle(translation_manager.tr("YouTube MP3 Downloader"))
         self.setGeometry(100, 100, 1000, 700)
         
         # Set window icon if it exists
@@ -140,6 +142,7 @@ class MP3YapMainWindow(QMainWindow):
         self.url_cache = {}  # URL -> info dict
         self.last_checked_urls = set()  # Son kontrol edilen URL'ler
         self.MAX_CACHE_SIZE = self.config.get('max_cache_size', 500)  # Ayarlardan al, yoksa 500
+        self.url_analysis_worker = None  # Background URL analysis worker
         
         # Özel indirme listesi (sadece seçilenler için)
         self.selected_download_queue = []  # Sadece seçili öğeleri indirmek için
@@ -175,46 +178,51 @@ class MP3YapMainWindow(QMainWindow):
         self.queue_signals.error.connect(self.queue_download_error)
         self.queue_signals.status_update.connect(self.queue_status_update)
         
+        # Connect to language change signal for decoupled UI updates
+        translation_manager.languageChanged.connect(self.on_language_changed)
+        
         # Güncelleme kontrolü başlat
         self.check_for_updates()
     
     def setup_menu(self):
         """Menü çubuğunu oluştur"""
         menubar = self.menuBar()
+        # macOS'ta native menubar sorun çıkarabiliyor
+        menubar.setNativeMenuBar(False)
         
         # Dosya menüsü
-        file_menu = menubar.addMenu('Dosya')
+        self.file_menu = menubar.addMenu(translation_manager.tr('File'))
         
         # URL'leri içe aktar
-        import_action = QAction('URL\'leri İçe Aktar...', self)
-        import_action.setShortcut('Ctrl+I')
-        import_action.triggered.connect(self.import_urls)
-        file_menu.addAction(import_action)
+        self.import_action = QAction(translation_manager.tr('Import URLs...'), self)
+        self.import_action.setShortcut('Ctrl+I')
+        self.import_action.triggered.connect(self.import_urls)
+        self.file_menu.addAction(self.import_action)
         
-        file_menu.addSeparator()
+        self.file_menu.addSeparator()
         
         # Çıkış
-        exit_action = QAction('Çıkış', self)
-        exit_action.setShortcut('Ctrl+Q')
-        exit_action.triggered.connect(self.close)
-        file_menu.addAction(exit_action)
+        self.exit_action = QAction(translation_manager.tr('Exit'), self)
+        self.exit_action.setShortcut('Ctrl+Q')
+        self.exit_action.triggered.connect(self.close)
+        self.file_menu.addAction(self.exit_action)
         
-        # Ayarlar menüsü
-        settings_menu = menubar.addMenu('Ayarlar')
+        # Araçlar menüsü (macOS'ta "Ayarlar" ismi sorun çıkarabiliyor)
+        self.settings_menu = menubar.addMenu(translation_manager.tr('Tools'))
         
-        # Tercihler
-        pref_action = QAction('Tercihler...', self)
-        pref_action.setShortcut('Ctrl+,')
-        pref_action.triggered.connect(self.show_settings)
-        settings_menu.addAction(pref_action)
+        # Tercihler/Ayarlar
+        self.pref_action = QAction(translation_manager.tr('Settings...'), self)
+        self.pref_action.setShortcut('Ctrl+,')
+        self.pref_action.triggered.connect(self.show_settings)
+        self.settings_menu.addAction(self.pref_action)
         
         # Yardım menüsü
-        help_menu = menubar.addMenu('Yardım')
+        self.help_menu = menubar.addMenu(translation_manager.tr('Help'))
         
         # Hakkında
-        about_action = QAction('Hakkında', self)
-        about_action.triggered.connect(self.show_about)
-        help_menu.addAction(about_action)
+        self.about_action = QAction(translation_manager.tr('About'), self)
+        self.about_action.triggered.connect(self.show_about)
+        self.help_menu.addAction(self.about_action)
     
     def setup_ui(self):
         """Kullanıcı arayüzünü oluştur"""
@@ -224,14 +232,14 @@ class MP3YapMainWindow(QMainWindow):
         
         # İndirme sekmesi
         download_tab = self.create_download_tab()
-        self.tab_widget.addTab(download_tab, "İndir")
+        self.tab_widget.addTab(download_tab, translation_manager.tr("Download"))
         
         # Geçmiş sekmesi
         self.history_widget = HistoryWidget()
         self.history_widget.redownload_signal.connect(self.add_url_to_download)
         self.history_widget.add_to_queue_signal.connect(self.add_urls_to_queue)
         self.history_widget.add_to_download_signal.connect(self.add_urls_to_download_tab)
-        self.tab_widget.addTab(self.history_widget, "Geçmiş")
+        self.tab_widget.addTab(self.history_widget, translation_manager.tr("History"))
         
         # Tab değişikliğini dinle
         self.tab_widget.currentChanged.connect(self.on_tab_changed)
@@ -241,11 +249,11 @@ class MP3YapMainWindow(QMainWindow):
         self.queue_widget.start_download.connect(self.process_queue_item)
         self.queue_widget.queue_started.connect(lambda: setattr(self, 'is_queue_mode', True))
         self.queue_widget.queue_paused.connect(self.on_queue_paused)
-        self.tab_widget.addTab(self.queue_widget, "Sıra")
+        self.tab_widget.addTab(self.queue_widget, translation_manager.tr("Queue"))
         
         # MP3'e Dönüştür sekmesi
         self.converter_widget = ConverterWidget()
-        self.tab_widget.addTab(self.converter_widget, self.tr("Dönüştür"))
+        self.tab_widget.addTab(self.converter_widget, translation_manager.tr("Convert"))
         
         # Tab bar'ı ortalamak için
         tab_bar = self.tab_widget.tabBar()
@@ -283,7 +291,7 @@ class MP3YapMainWindow(QMainWindow):
         status_bar.addPermanentWidget(self.version_label)
         
         # Klavye kısayolları butonu
-        shortcuts_hint = QPushButton("Kısayollar (F1)")
+        self.shortcuts_hint = QPushButton(translation_manager.tr("Shortcuts (F1)"))
         # Tema'ya göre renk belirle
         theme = self.config.get('theme', 'light')
         icon_color = style_manager.colors.DARK_TEXT_SECONDARY if theme == 'dark' else style_manager.colors.TEXT_SECONDARY
@@ -292,15 +300,15 @@ class MP3YapMainWindow(QMainWindow):
         # Windows için keyboard ikonu kullan (windows.svg yoksa)
         if keyboard_icon == "windows" and not icon_manager.has_icon("windows"):
             keyboard_icon = "keyboard"
-        shortcuts_hint.setIcon(icon_manager.get_icon(keyboard_icon, icon_color))
-        shortcuts_hint.setFlat(True)
-        shortcuts_hint.setCursor(Qt.PointingHandCursor)
-        shortcuts_hint.clicked.connect(self.show_shortcuts_help)
-        shortcuts_hint.setToolTip("Klavye kısayollarını göster")
-        shortcuts_hint.setObjectName("statusBarButton")
-        shortcuts_hint.setMaximumWidth(140)  # Genişlik arttırıldı
+        self.shortcuts_hint.setIcon(icon_manager.get_icon(keyboard_icon, icon_color))
+        self.shortcuts_hint.setFlat(True)
+        self.shortcuts_hint.setCursor(Qt.PointingHandCursor)
+        self.shortcuts_hint.clicked.connect(self.show_shortcuts_help)
+        self.shortcuts_hint.setToolTip(translation_manager.tr("Show keyboard shortcuts"))
+        self.shortcuts_hint.setObjectName("statusBarButton")
+        self.shortcuts_hint.setMaximumWidth(140)  # Genişlik arttırıldı
         
-        status_bar.addPermanentWidget(shortcuts_hint)
+        status_bar.addPermanentWidget(self.shortcuts_hint)
     
     def create_download_tab(self):
         """İndirme sekmesini oluştur"""
@@ -308,20 +316,20 @@ class MP3YapMainWindow(QMainWindow):
         layout = QVBoxLayout()
         
         # URL giriş alanı
-        url_label = QLabel("İndirilecek YouTube URL'lerini buraya yapıştırın:")
+        self.url_label = QLabel(translation_manager.tr("Paste YouTube URLs here (one per line)"))
         self.url_text = QTextEdit()
-        self.url_text.setToolTip("YouTube URL'lerini buraya yapıştırın (Ctrl+V)")
+        self.url_text.setToolTip(translation_manager.tr("Paste YouTube URLs here (Ctrl+V)"))
         
         # Durum ve ilerleme
         status_layout = QHBoxLayout()
-        self.status_label = QLabel("Hazır")
+        self.status_label = QLabel(translation_manager.tr("Ready"))
         self.status_label.setMinimumHeight(30)
         self.status_label.setObjectName("downloadStatus")
         status_layout.addWidget(self.status_label)
         
         # İndirme ilerleme çubuğu
         progress_layout = QHBoxLayout()
-        self.current_file_label = QLabel("Dosya: ")
+        self.current_file_label = QLabel(translation_manager.tr("File: "))
         self.progress_bar = QProgressBar()
         self.progress_percent = QLabel("0%")
         self.progress_percent.setObjectName("progressPercent")
@@ -331,39 +339,39 @@ class MP3YapMainWindow(QMainWindow):
         
         # Butonlar
         button_layout = QHBoxLayout()
-        self.download_button = QPushButton(" İndir")
+        self.download_button = QPushButton(translation_manager.tr("Download"))
         self.download_button.setIcon(icon_manager.get_icon("download", "#FFFFFF"))
         self.download_button.clicked.connect(self.start_download)  # type: ignore
-        self.download_button.setToolTip("İndirmeyi başlat (Ctrl+Enter)")
+        self.download_button.setToolTip(translation_manager.tr("Start download (Ctrl+Enter)"))
         style_manager.apply_button_style(self.download_button, "download")
         
         # İptal butonu
-        self.cancel_button = QPushButton(" İptal")
+        self.cancel_button = QPushButton(translation_manager.tr("Cancel"))
         self.cancel_button.setIcon(icon_manager.get_icon("x", "#FFFFFF"))
         self.cancel_button.clicked.connect(self.cancel_download)  # type: ignore
         self.cancel_button.setEnabled(False)
-        self.cancel_button.setToolTip("İndirmeyi iptal et (Esc)")
+        self.cancel_button.setToolTip(translation_manager.tr("Cancel download (Esc)"))
         style_manager.apply_button_style(self.cancel_button, "danger")
         
         # Kuyruğa ekle butonu
-        self.add_to_queue_button = QPushButton(" Kuyruğa Ekle")
+        self.add_to_queue_button = QPushButton(translation_manager.tr("Add to Queue"))
         self.add_to_queue_button.setIcon(icon_manager.get_icon("plus", "#FFFFFF"))
         self.add_to_queue_button.clicked.connect(self.add_to_queue)  # type: ignore
-        self.add_to_queue_button.setToolTip("URL'leri kuyruğa ekle")
+        self.add_to_queue_button.setToolTip(translation_manager.tr("Add URLs to queue"))
         style_manager.apply_button_style(self.add_to_queue_button, "secondary")
         
         # Temizle butonu
-        self.clear_button = QPushButton(" Temizle")
+        self.clear_button = QPushButton(translation_manager.tr("Clear"))
         self.clear_button.setIcon(icon_manager.get_icon("trash-2", "#FFFFFF"))
         self.clear_button.clicked.connect(self.clear_urls)  # type: ignore
-        self.clear_button.setToolTip("URL listesini temizle")
+        self.clear_button.setToolTip(translation_manager.tr("Clear URL list"))
         style_manager.apply_button_style(self.clear_button, "warning")
         
         # Klasörü aç butonu
-        self.open_folder_button = QPushButton(" Klasörü Aç")
+        self.open_folder_button = QPushButton(translation_manager.tr("Open Folder"))
         self.open_folder_button.setIcon(icon_manager.get_icon("folder", "#FFFFFF"))
         self.open_folder_button.clicked.connect(self.open_output_folder)  # type: ignore
-        self.open_folder_button.setToolTip("İndirme klasörünü aç (Ctrl+D)")
+        self.open_folder_button.setToolTip(translation_manager.tr("Open download folder (Ctrl+D)"))
         style_manager.apply_button_style(self.open_folder_button, "accent")
         
         # Sol taraf - ana işlemler
@@ -384,7 +392,7 @@ class MP3YapMainWindow(QMainWindow):
         self.url_status_bar.setVisible(False)
         
         # Layout'a widget'ları ekle
-        layout.addWidget(url_label)
+        layout.addWidget(self.url_label)
         layout.addWidget(self.url_text)
         layout.addLayout(status_layout)
         layout.addLayout(progress_layout)
@@ -411,7 +419,7 @@ class MP3YapMainWindow(QMainWindow):
         urls = [url.strip() for url in urls if url.strip()]
         
         if not urls:
-            QMessageBox.warning(self, "Uyarı", "Lütfen en az bir URL girin!")
+            QMessageBox.warning(self, translation_manager.tr("Warning"), translation_manager.tr("Please enter at least one URL!"))
             return
         
         # Butonları güncelle
@@ -444,7 +452,7 @@ class MP3YapMainWindow(QMainWindow):
         if os.path.exists(output_path):
             QDesktopServices.openUrl(QUrl.fromLocalFile(output_path))
         else:
-            QMessageBox.information(self, "Bilgi", "Henüz hiç dosya indirilmemiş!")
+            QMessageBox.information(self, translation_manager.tr("Info"), translation_manager.tr("No files have been downloaded yet!"))
     
     def show_settings(self):
         """Ayarlar penceresini göster"""
@@ -465,7 +473,7 @@ class MP3YapMainWindow(QMainWindow):
         self.latest_update_info = update_info
         
         # Güncelleme butonunu göster
-        self.update_status_widget.setText(f"🔄 Güncelleme Mevcut: v{update_info['version']}")
+        self.update_status_widget.setText(translation_manager.tr("🔄 Güncelleme Mevcut: v{}").format(update_info['version']))
         self.update_status_widget.show()
         
         # Versiyon etiketini gizle
@@ -485,18 +493,18 @@ class MP3YapMainWindow(QMainWindow):
         info = self.latest_update_info
         
         dialog = QDialog(self)
-        dialog.setWindowTitle(self.tr("Güncelleme Mevcut"))
+        dialog.setWindowTitle(translation_manager.tr("Güncelleme Mevcut"))
         dialog.setMinimumWidth(500)
         dialog.setMinimumHeight(400)
         
         layout = QVBoxLayout()
         
         # Başlık
-        title = QLabel(f"<h2>{self.tr('Yeni Sürüm')}: v{info['version']}</h2>")
+        title = QLabel(f"<h2>{translation_manager.tr('New Version')}: v{info['version']}</h2>")
         layout.addWidget(title)
         
         # Değişiklikler
-        changes_label = QLabel(f"<b>{self.tr('Değişiklikler')}:</b>")
+        changes_label = QLabel(f"<b>{translation_manager.tr('Changes')}:</b>")
         layout.addWidget(changes_label)
         
         changes_text = QTextEdit()
@@ -506,8 +514,8 @@ class MP3YapMainWindow(QMainWindow):
         
         # Butonlar
         button_box = QDialogButtonBox()
-        download_btn = button_box.addButton(self.tr("İndir"), QDialogButtonBox.AcceptRole)
-        later_btn = button_box.addButton(self.tr("Daha Sonra"), QDialogButtonBox.RejectRole)
+        download_btn = button_box.addButton(translation_manager.tr("Download"), QDialogButtonBox.AcceptRole)
+        later_btn = button_box.addButton(translation_manager.tr("Daha Sonra"), QDialogButtonBox.RejectRole)
         
         download_btn.clicked.connect(lambda: self.open_update_url(info['download_url']))
         later_btn.clicked.connect(dialog.reject)
@@ -522,22 +530,22 @@ class MP3YapMainWindow(QMainWindow):
     
     def show_about(self):
         """Hakkında dialogunu göster"""
-        QMessageBox.about(self, f"{__app_name__} Hakkında",
+        QMessageBox.about(self, translation_manager.tr("About {}").format(__app_name__),
             f"<h3>{__app_name__}</h3>"
-            f"<p>Sürüm {__version__}</p>"
-            "<p>YouTube videolarını MP3 formatında indirmek için modern ve kullanıcı dostu bir araç.</p>"
-            f"<p><b>Geliştirici:</b> {__author__}</p>"
-            "<p><b>Web:</b> <a href='https://mehmetyerli.com'>mehmetyerli.com</a></p>"
-            "<p><b>Lisans:</b> Açık Kaynak</p>")
+            f"<p>{translation_manager.tr('Version')} {__version__}</p>"
+            f"<p>{translation_manager.tr('A modern and user-friendly tool for downloading YouTube videos in MP3 format.')}</p>"
+            f"<p><b>{translation_manager.tr('Developer')}:</b> {__author__}</p>"
+            f"<p><b>{translation_manager.tr('Web')}:</b> <a href='https://mehmetyerli.com'>mehmetyerli.com</a></p>"
+            f"<p><b>{translation_manager.tr('License')}:</b> {translation_manager.tr('Open Source')}</p>")
     
     def import_urls(self):
         """URL'leri metin dosyasından içe aktar"""
         from PyQt5.QtWidgets import QFileDialog
         filename, _ = QFileDialog.getOpenFileName(
             self, 
-            "URL Dosyası Seç", 
+            translation_manager.tr("URL Dosyası Seç"), 
             "", 
-            "Metin Dosyaları (*.txt);;Tüm Dosyalar (*.*)"
+            translation_manager.tr("Metin Dosyaları") + " (*.txt);;" + translation_manager.tr("Tüm Dosyalar") + " (*.*)"
         )
         
         if filename:
@@ -545,20 +553,20 @@ class MP3YapMainWindow(QMainWindow):
                 with open(filename, 'r', encoding='utf-8') as f:
                     urls = f.read()
                     self.url_text.setPlainText(urls)
-                    QMessageBox.information(self, "Başarılı", 
-                        f"{len(urls.strip().split())} URL başarıyla yüklendi!")
+                    QMessageBox.information(self, translation_manager.tr("Success"), 
+                        translation_manager.tr("{} URL başarıyla yüklendi!").format(len(urls.strip().split())))
             except Exception as e:
-                QMessageBox.critical(self, "Hata", f"Dosya okunamadı: {str(e)}")
+                QMessageBox.critical(self, translation_manager.tr("Error"), translation_manager.tr("Could not read file: {}").format(str(e)))
     
     def update_progress(self, filename, percent, text):
         """İlerleme çubuğunu güncelle"""
         # Playlist progress varsa vurgula
         if '[' in text and '/' in text:
             # Playlist progress içeriyor
-            self.current_file_label.setText(f"📋 Playlist İndiriliyor - Dosya: {filename}")
+            self.current_file_label.setText(translation_manager.tr("📋 Playlist İndiriliyor - Dosya: {}").format(filename))
             style_manager.set_widget_property(self.progress_percent, "progressType", "playlist")
         else:
-            self.current_file_label.setText(f"Dosya: {filename}")
+            self.current_file_label.setText(translation_manager.tr("Dosya: {}").format(filename))
             style_manager.set_widget_property(self.progress_percent, "progressType", "file")
             
         if percent >= 0:
@@ -570,11 +578,11 @@ class MP3YapMainWindow(QMainWindow):
     
     def download_finished(self, filename):
         """İndirme tamamlandığında çağrılır"""
-        self.status_label.setText(f"İndirme tamamlandı: {filename}")
+        self.status_label.setText(translation_manager.tr("İndirme tamamlandı: {}").format(filename))
     
     def download_error(self, filename, error):
         """İndirme hatası durumunda çağrılır"""
-        self.status_label.setText(f"Hata: {filename} - {error}")
+        self.status_label.setText(translation_manager.tr("Hata: {} - {}").format(filename, error))
     
     def update_status(self, status):
         """Durum mesajını güncelle"""
@@ -622,7 +630,7 @@ class MP3YapMainWindow(QMainWindow):
             existing_urls = set(line.strip() for line in current_text.split('\n') if line.strip())
             if url not in existing_urls:
                 self.url_text.setPlainText(current_text + '\n' + url)
-                self.status_label.setText("✓ URL indir sekmesine eklendi")
+                self.status_label.setText(translation_manager.tr("✓ URL indir sekmesine eklendi"))
                 style_manager.apply_alert_style(self.status_label, "success")
             # Zaten varsa sessizce geç
         else:
@@ -660,7 +668,7 @@ class MP3YapMainWindow(QMainWindow):
                 self.url_text.setPlainText('\n'.join(new_urls))
             
             # Durum mesajı - sadece eklenen sayıyı göster
-            self.status_label.setText(f"✓ {len(new_urls)} video indir sekmesine eklendi")
+            self.status_label.setText(translation_manager.tr("✓ {} video indir sekmesine eklendi").format(len(new_urls)))
             style_manager.apply_alert_style(self.status_label, "success")
         else:
             # Hiç yeni URL yoksa sessizce geç, durum mesajı gösterme
@@ -672,7 +680,7 @@ class MP3YapMainWindow(QMainWindow):
         urls = [url.strip() for url in urls if url.strip()]
         
         if not urls:
-            QMessageBox.warning(self, "Uyarı", "Lütfen en az bir URL girin!")
+            QMessageBox.warning(self, translation_manager.tr("Warning"), translation_manager.tr("Please enter at least one URL!"))
             return
         
         # Preloader göster
@@ -705,7 +713,7 @@ class MP3YapMainWindow(QMainWindow):
         duplicate_count = len(duplicate_videos)
         
         if added_count > 0 and duplicate_count == 0:
-            self.status_label.setText(f"✓ {added_count} video kuyruğa eklendi")
+            self.status_label.setText(translation_manager.tr("✓ {} video kuyruğa eklendi").format(added_count))
             style_manager.apply_alert_style(self.status_label, "success")
             self.url_text.clear()  # URL'leri temizle
             # Kuyruğu yenile
@@ -713,17 +721,17 @@ class MP3YapMainWindow(QMainWindow):
             # Kuyruk sekmesine geç
             self.tab_widget.setCurrentIndex(2)
         elif added_count > 0 and duplicate_count > 0:
-            self.status_label.setText(f"✓ {added_count} video eklendi, {duplicate_count} video zaten kuyrukta")
+            self.status_label.setText(translation_manager.tr("✓ {} video eklendi, {} video zaten kuyrukta").format(added_count, duplicate_count))
             style_manager.apply_alert_style(self.status_label, "warning")
             self.url_text.clear()  # URL'leri temizle
             self.queue_widget.load_queue()
             self.tab_widget.setCurrentIndex(2)
         elif duplicate_count > 0:
             # Sadece duplicate varsa
-            self.status_label.setText(f"ⓘ Tüm videolar ({duplicate_count}) zaten kuyrukta!")
+            self.status_label.setText(translation_manager.tr("ⓘ Tüm videolar ({}) zaten kuyrukta!").format(duplicate_count))
             style_manager.apply_alert_style(self.status_label, "warning")
         else:
-            self.status_label.setText("✗ Kuyruğa video eklenemedi")
+            self.status_label.setText(translation_manager.tr("✗ Kuyruğa video eklenemedi"))
             style_manager.apply_alert_style(self.status_label, "error")
     
     
@@ -832,6 +840,13 @@ class MP3YapMainWindow(QMainWindow):
         
         self.url_cache[url] = info
     
+    def _trim_cache(self):
+        """Trim cache to MAX_CACHE_SIZE if needed"""
+        while len(self.url_cache) > self.MAX_CACHE_SIZE:
+            # Remove oldest entry (FIFO)
+            oldest_key = next(iter(self.url_cache))
+            del self.url_cache[oldest_key]
+    
     def on_queue_paused(self):
         """Kuyruk duraklatıldığında"""
         self.is_queue_mode = False
@@ -868,12 +883,12 @@ class MP3YapMainWindow(QMainWindow):
         # Butonları güncelle
         self.download_button.setEnabled(True)
         self.cancel_button.setEnabled(False)
-        self.status_label.setText("İndirme iptal edildi")
+        self.status_label.setText(translation_manager.tr("İndirme iptal edildi"))
             
     def clear_urls(self):
         """URL metin alanını temizle"""
         self.url_text.clear()
-        self.status_label.setText("URL listesi temizlendi")
+        self.status_label.setText(translation_manager.tr("URL listesi temizlendi"))
         style_manager.apply_alert_style(self.status_label, "success")
         self.url_status_bar.setVisible(False)
     
@@ -911,283 +926,132 @@ class MP3YapMainWindow(QMainWindow):
         
         self.last_checked_urls = current_urls
         
-        # Hemen loading göster
-        self.url_status_bar.setText("⏳ URL'ler kontrol ediliyor...")
-        style_manager.set_widget_property(self.url_status_bar, "statusType", "warning")
-        self.url_status_bar.setVisible(True)
-        QApplication.processEvents()  # UI güncelle
+        # Cancel any existing analysis
+        if self.url_analysis_worker and self.url_analysis_worker.isRunning():
+            self.url_analysis_worker.cancel()
+            self.url_analysis_worker.wait()
         
-        # Playlist URL'si varsa hemen kontrol başlat
-        has_playlist = any('list=' in url for url in urls)
-        if has_playlist:
-            self.url_status_bar.setText("⏳ Playlist bilgisi alınıyor...")
-            style_manager.set_widget_property(self.url_status_bar, "statusType", "info")
-            self.url_status_bar.setVisible(True)
-            QApplication.processEvents()  # UI güncelle
-        
-        # URL sayısını göster
-        valid_urls = []
-        invalid_urls = []
-        
-        # Regex ile hızlı YouTube URL kontrolü
-        youtube_regex = re.compile(
-            r'(https?://)?(www\.)?(youtube\.com/(watch\?v=|shorts/|embed/)|youtu\.be/|m\.youtube\.com/watch\?v=)([a-zA-Z0-9_-]{11})'
+        # Start background analysis
+        self.url_analysis_worker = UrlAnalysisWorker(
+            urls, self.db_manager, self.config.to_dict(), self.url_cache, self
         )
         
-        for url in urls:
-            # Önce regex ile hızlı kontrol
-            match = youtube_regex.search(url)
-            if match:
-                # Video ID'yi al
-                video_id = match.group(5)
-                if video_id and len(video_id) == 11:
-                    valid_urls.append(url)
-                else:
-                    # Video ID eksik veya hatalı
-                    invalid_urls.append(url)
-            else:
-                # YouTube URL'si değil
-                invalid_urls.append(url)
+        # Connect signals
+        self.url_analysis_worker.started.connect(self.on_url_analysis_started)
+        self.url_analysis_worker.progress.connect(self.on_url_analysis_progress)
+        self.url_analysis_worker.finished.connect(self.on_url_analysis_finished)
+        self.url_analysis_worker.error.connect(self.on_url_analysis_error)
         
-        # Liste URL'lerini kontrol et
-        playlist_info = []
-        
-        # yt-dlp'yi dışarıda import et
-        import yt_dlp
-        
-        for url in valid_urls:
-            if 'list=' in url:
-                # Bu bir playlist URL'si - detaylı bilgi al
-                try:
-                    ydl_opts = {
-                        'quiet': True,
-                        'no_warnings': True,
-                        'extract_flat': 'in_playlist',  # Playlist metadata'sını al
-                        'ignoreerrors': True,
-                        'skip_download': True,
-                    }
-                    
-                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                        info = ydl.extract_info(url, download=False)
-                        if info and info.get('_type') == 'playlist':
-                            # Playlist bilgisi
-                            playlist_title = info.get('title', 'İsimsiz Liste')
-                            playlist_size = info.get('playlist_count', 0)
-                            if playlist_size == 0 and 'entries' in info:
-                                playlist_size = len(info['entries'])
-                            uploader = info.get('uploader', info.get('channel', ''))
-                            
-                            # Cache'e kaydet (boyut kontrolü ile)
-                            self._add_to_cache(url, {
-                                'is_playlist': True,
-                                'title': playlist_title,
-                                'video_count': playlist_size,
-                                'uploader': uploader
-                            })
-                            
-                            playlist_info.append({
-                                'url': url,
-                                'title': playlist_title,
-                                'count': playlist_size,
-                                'uploader': uploader
-                            })
-                        else:
-                            # Playlist URL'si gibi görünüyor ama değil
-                            playlist_info.append({
-                                'url': url,
-                                'title': 'Tek Video',
-                                'count': 1
-                            })
-                except Exception as e:
-                    # Hata durumunda
-                    print(f"Playlist bilgisi alınamadı: {e}")
-                    playlist_info.append({
-                        'url': url,
-                        'title': 'Bilinmeyen',
-                        'count': 1
-                    })
-            else:
-                # Tek video
-                if url not in self.url_cache:
-                    # Cache'e ekle (boyut kontrolü ile)
-                    self._add_to_cache(url, {
-                        'is_playlist': False,
-                        'title': 'Tek Video',
-                        'video_count': 1
-                    })
-                
-                playlist_info.append({
-                    'url': url,
-                    'title': None,
-                    'count': 1
-                })
-        
-        # Durum mesajını oluştur
+        # Start analysis
+        self.url_analysis_worker.start()
+    
+    def on_url_analysis_started(self):
+        """URL analysis started"""
+        self.url_status_bar.setText(translation_manager.tr("⏳ URL'ler kontrol ediliyor..."))
+        style_manager.set_widget_property(self.url_status_bar, "statusType", "warning")
+        self.url_status_bar.setVisible(True)
+    
+    def on_url_analysis_progress(self, message: str):
+        """URL analysis progress update"""
+        self.url_status_bar.setText(message)
+        style_manager.set_widget_property(self.url_status_bar, "statusType", "info")
+    
+    def on_url_analysis_error(self, error_msg: str):
+        """URL analysis error"""
+        self.url_status_bar.setText(f"❌ {error_msg}")
+        style_manager.set_widget_property(self.url_status_bar, "statusType", "error")
+    
+    def on_url_analysis_finished(self, result: UrlAnalysisResult):
+        """URL analysis finished - display results"""
         status_parts = []
         
-        # Geçerli URL sayısı ve playlist bilgisi
-        if valid_urls:
-            total_videos = sum(p['count'] for p in playlist_info)
-            playlists = [p for p in playlist_info if p.get('count', 1) > 1]
-            single_videos = [p for p in playlist_info if p.get('count', 1) == 1]
+        # Valid URLs and playlist info
+        if result.valid_urls:
+            playlists = [p for p in result.playlist_info if p.get('video_count', 1) > 1]
+            single_videos = [p for p in result.playlist_info if p.get('video_count', 1) == 1]
             
-            # Detaylı bilgi
-            if total_videos == len(valid_urls):
-                # Sadece tek videolar var
-                status_parts.append(f"✓ {len(valid_urls)} video indirmeye hazır")
+            if result.total_videos == len(result.valid_urls):
+                # Only single videos
+                status_parts.append(f"✓ {len(result.valid_urls)} video indirmeye hazır")
             else:
-                # Karışık (playlist + tek video)
+                # Mixed (playlists + videos)
                 parts = []
                 if playlists:
                     parts.append(f"{len(playlists)} playlist")
                 if single_videos:
                     parts.append(f"{len(single_videos)} video")
-                status_parts.append(f"✓ {' ve '.join(parts)} (toplam {total_videos} video)")
+                status_parts.append(f"✓ {' ve '.join(parts)} (toplam {result.total_videos} video)")
                 
-                # Playlist detayları
+                # Playlist details
                 for p in playlists:
-                    if p.get('title') and p['title'] != 'Bilinmeyen':
+                    if p.get('title') and p['title'] not in ['Bilinmeyen', 'Tek Video']:
                         playlist_text = f"  • {p['title'][:30]}"
                         if len(p['title']) > 30:
                             playlist_text += "..."
-                        playlist_text += f" ({p['count']} video)"
+                        playlist_text += f" ({p.get('video_count', 1)} video)"
                         status_parts.append(playlist_text)
         
-        # Geçersiz URL sayısı
-        invalid_count = len(invalid_urls)
-        if invalid_count > 0:
-            status_parts.append(f"✗ {invalid_count} geçersiz URL")
+        # Invalid URLs
+        if result.invalid_urls:
+            status_parts.append(f"✗ {len(result.invalid_urls)} geçersiz URL")
         
-        # Veritabanında kontrol et
-        already_downloaded = 0
-        files_exist = 0
-        files_missing = 0
+        # Database status
+        if result.files_exist > 0:
+            status_parts.append(f"✓ {result.files_exist} dosya hem indirilmiş hem de klasörde mevcut")
         
-        for url in valid_urls:
-            # Veritabanında var mı kontrol et (tam eşleşme)
-            existing = self.db_manager.get_download_by_url(url)
-            if existing:
-                already_downloaded += 1
-                # En son indirilen kaydı kontrol et (birden fazla olabilir)
-                latest_record = existing[0]  # En yeni kayıt
-                
-                # Dosya yolunu kontrol et
-                file_found = False
-                full_file_path = None
-                alt_path = None
-                
-                # file_path genellikle klasör yolu, file_name dosya adı
-                if latest_record.get('file_path') and latest_record.get('file_name'):
-                    file_path = latest_record['file_path']
-                    file_name = latest_record['file_name']
-                    
-                    # Eğer file_path tam yol değilse (sadece "music" gibi), tam yol yap
-                    if not os.path.isabs(file_path):
-                        file_path = os.path.abspath(file_path)
-                    
-                    # Tam dosya yolunu oluştur
-                    full_file_path = os.path.join(file_path, file_name)
-                    if os.path.exists(full_file_path):
-                        file_found = True
-                    
-                    # Eğer bulunamadıysa, yasaklı karakterleri değiştirip tekrar dene
-                    if not file_found:
-                        # Normal pipe'ı full-width pipe ile değiştir
-                        alt_file_name = file_name.replace('|', '｜')
-                        alt_full_path = os.path.join(file_path, alt_file_name)
-                        if os.path.exists(alt_full_path):
-                            file_found = True
-                            full_file_path = alt_full_path
-                
-                # Alternatif kontroller - config'den output_directory al
-                if not file_found and latest_record.get('file_name'):
-                    output_dir = self.config.get('output_directory', 'music')
-                    if not os.path.isabs(output_dir):
-                        output_dir = os.path.abspath(output_dir)
-                    
-                    alt_path = os.path.join(output_dir, latest_record['file_name'])
-                    if os.path.exists(alt_path):
-                        file_found = True
-                    
-                    # Pipe karakteri değişimi ile tekrar dene
-                    if not file_found:
-                        alt_file_name = latest_record['file_name'].replace('|', '｜')
-                        alt_path2 = os.path.join(output_dir, alt_file_name)
-                        if os.path.exists(alt_path2):
-                            file_found = True
-                            alt_path = alt_path2
-                
-                if file_found:
-                    files_exist += 1
-                else:
-                    files_missing += 1
+        if result.files_missing > 0:
+            status_parts.append(f"⚠ {result.files_missing} dosya daha önce indirilmiş ama klasörde bulunamadı")
         
-        if files_exist > 0:
-            status_parts.append(f"✓ {files_exist} dosya hem indirilmiş hem de klasörde mevcut")
-        
-        if files_missing > 0:
-            status_parts.append(f"⚠ {files_missing} dosya daha önce indirilmiş ama klasörde bulunamadı")
-        
-        if already_downloaded > files_exist + files_missing:
-            # Dosya yolu olmayan kayıtlar var
-            unknown = already_downloaded - files_exist - files_missing
+        if result.already_downloaded > result.files_exist + result.files_missing:
+            unknown = result.already_downloaded - result.files_exist - result.files_missing
             status_parts.append(f"? {unknown} dosya kaydı eksik bilgi içeriyor")
         
-        # Durum çubuğunu güncelle
+        # Update status bar
         if status_parts:
             self.url_status_bar.setText(" | ".join(status_parts))
             self.url_status_bar.setVisible(True)
             
-            # Renk ayarla - öncelik sırasına göre
-            if invalid_count > 0:
-                # Kırmızı - geçersiz URL var (en kritik)
+            # Set color based on priority
+            if result.invalid_urls:
                 style_manager.set_widget_property(self.url_status_bar, "statusType", "error")
-            elif files_exist > 0 and files_missing == 0:
-                # Mavi - tüm dosyalar mevcut (bilgilendirme)
+            elif result.files_exist > 0 and result.files_missing == 0:
                 style_manager.set_widget_property(self.url_status_bar, "statusType", "info")
-            elif files_missing > 0:
-                # Sarı - dosyalar eksik (yeniden indirilebilir)
+            elif result.files_missing > 0:
                 style_manager.set_widget_property(self.url_status_bar, "statusType", "warning")
             else:
-                # Yeşil - yeni indirmeler için hazır
                 style_manager.set_widget_property(self.url_status_bar, "statusType", "success")
         else:
             self.url_status_bar.setVisible(False)
+        
+        # Update cache size limit
+        self._trim_cache()
     
     def show_cached_url_status(self, urls):
         """Cache'den URL durumunu göster"""
+        # Use UrlAnalyzer for consistency - avoid duplicate logic
+        valid_urls, invalid_urls = UrlAnalyzer.validate_youtube_urls(urls)
+        
         total_videos = 0
         playlists = []
         single_videos = []
-        valid_urls = []
-        invalid_count = 0
         
-        # Regex ile hızlı YouTube URL kontrolü
-        youtube_regex = re.compile(
-            r'(https?://)?(www\.)?(youtube\.com/(watch\?v=|shorts/|embed/)|youtu\.be/|m\.youtube\.com/watch\?v=)([a-zA-Z0-9_-]{11})'
-        )
-        
-        for url in urls:
-            if youtube_regex.search(url):
-                valid_urls.append(url)
-                # Cache'de var mı?
-                if url in self.url_cache:
-                    info = self.url_cache[url]
-                    if info['is_playlist']:
-                        playlists.append(info)
-                        total_videos += info['video_count']
-                    else:
-                        single_videos.append(info)
-                        total_videos += 1
+        for url in valid_urls:
+            # Cache'de var mı?
+            if url in self.url_cache:
+                info = self.url_cache[url]
+                if info.get('is_playlist'):
+                    playlists.append(info)
+                    total_videos += info.get('video_count', 1)
                 else:
-                    # Cache'de yok, tek video varsay
-                    single_videos.append({'title': 'Tek Video', 'video_count': 1})
+                    single_videos.append(info)
                     total_videos += 1
             else:
-                invalid_count += 1
+                # Cache'de yok, tek video varsay
+                single_videos.append({'title': 'Tek Video', 'video_count': 1})
+                total_videos += 1
         
         # Durum mesajını oluştur
-        if total_videos == 0 and invalid_count == 0:
+        if not valid_urls and not invalid_urls:
             self.url_status_bar.setVisible(False)
             return
             
@@ -1196,23 +1060,24 @@ class MP3YapMainWindow(QMainWindow):
         if total_videos > 0:
             if total_videos == len(valid_urls) and not playlists:
                 # Sadece tek videolar var
-                status_parts.append(f"✓ {len(valid_urls)} video indirmeye hazır")
+                status_parts.append(translation_manager.tr("✓ {} video indirmeye hazır").format(len(valid_urls)))
             else:
                 # Karışık (playlist + tek video)
                 parts = []
                 if playlists:
-                    parts.append(f"{len(playlists)} playlist")
+                    parts.append(translation_manager.tr("{} playlist").format(len(playlists)))
                 if single_videos:
-                    parts.append(f"{len(single_videos)} video")
-                status_parts.append(f"✓ {' ve '.join(parts)} (toplam {total_videos} video) indirmeye hazır")
+                    parts.append(translation_manager.tr("{} video").format(len(single_videos)))
+                status_parts.append(translation_manager.tr("✓ {} (toplam {} video) indirmeye hazır").format(
+                    translation_manager.tr(" ve ").join(parts), total_videos))
         
-        if invalid_count > 0:
-            status_parts.append(f"✗ {invalid_count} geçersiz URL")
+        if invalid_urls:
+            status_parts.append(translation_manager.tr("✗ {} geçersiz URL").format(len(invalid_urls)))
         
         if status_parts:
             self.url_status_bar.setText(" | ".join(status_parts))
             # Renk ayarla
-            if invalid_count > 0:
+            if invalid_urls:
                 # Kırmızı
                 style_manager.set_widget_property(self.url_status_bar, "statusType", "error")
             else:
@@ -1342,10 +1207,10 @@ class MP3YapMainWindow(QMainWindow):
         
         # Kategorilere göre grupla
         categories = {
-            'main': {'title': 'Ana Kısayollar', 'shortcuts': []},
-            'navigation': {'title': 'Gezinme Kısayolları', 'shortcuts': []},
-            'file': {'title': 'Dosya İşlemleri', 'shortcuts': []},
-            'help': {'title': 'Yardım', 'shortcuts': []}
+            'main': {'title': translation_manager.tr('Main Shortcuts'), 'shortcuts': []},
+            'navigation': {'title': translation_manager.tr('Navigation Shortcuts'), 'shortcuts': []},
+            'file': {'title': translation_manager.tr('File Operations'), 'shortcuts': []},
+            'help': {'title': translation_manager.tr('Help'), 'shortcuts': []}
         }
         
         for shortcut in shortcuts:
@@ -1354,7 +1219,7 @@ class MP3YapMainWindow(QMainWindow):
                 categories[category]['shortcuts'].append(shortcut)
         
         # HTML oluştur
-        html = "<h3>Klavye Kısayolları</h3>"
+        html = f"<h3>{translation_manager.tr('Keyboard Shortcuts')}</h3>"
         
         for _, category_data in categories.items():
             if category_data['shortcuts']:
@@ -1368,22 +1233,38 @@ class MP3YapMainWindow(QMainWindow):
                         key = QKeySequence(key)
                     key_str = key.toString(QKeySequence.NativeText)
                     
-                    html += f"<tr><td><b>{key_str}</b></td><td>{shortcut['description']}</td></tr>"
+                    # Açıklamaları çevir
+                    desc = shortcut['description']
+                    desc_translated = {
+                        'URL yapıştır ve otomatik doğrula': translation_manager.tr('Paste URL and auto validate'),
+                        'Hızlı indirme başlat': translation_manager.tr('Start quick download'),
+                        'İndirme klasörünü aç': translation_manager.tr('Open download folder'),
+                        'Geçmiş sekmesine geç': translation_manager.tr('Switch to history tab'),
+                        'Kuyruk sekmesine geç': translation_manager.tr('Switch to queue tab'),
+                        'Mevcut sekmeyi yenile': translation_manager.tr('Refresh current tab'),
+                        'Bu yardım penceresini göster': translation_manager.tr('Show this help window'),
+                        'İndirmeyi iptal et': translation_manager.tr('Cancel download'),
+                        "URL'leri dosyadan içe aktar": translation_manager.tr('Import URLs from file'),
+                        'Tercihler/Ayarlar': translation_manager.tr('Preferences/Settings'),
+                        'Uygulamadan çık': translation_manager.tr('Quit application')
+                    }.get(desc, desc)
+                    
+                    html += f"<tr><td><b>{key_str}</b></td><td>{desc_translated}</td></tr>"
                 
                 html += "</table>"
         
         # Kuyruk sekmesi kısayolları (widget içinde tanımlı)
         modifier = get_modifier_symbol()
         html += f"""
-        <h4>Kuyruk Sekmesi Kısayolları</h4>
+        <h4>{translation_manager.tr('Queue Tab Shortcuts')}</h4>
         <table>
-        <tr><td><b>{modifier}+A</b></td><td>Tümünü seç</td></tr>
-        <tr><td><b>Delete</b></td><td>Seçilileri sil</td></tr>
-        <tr><td><b>Space</b></td><td>Seçilileri duraklat/devam ettir</td></tr>
+        <tr><td><b>{modifier}+A</b></td><td>{translation_manager.tr('Select all')}</td></tr>
+        <tr><td><b>Delete</b></td><td>{translation_manager.tr('Delete selected')}</td></tr>
+        <tr><td><b>Space</b></td><td>{translation_manager.tr('Pause/resume selected')}</td></tr>
         </table>
         """
         
-        QMessageBox.information(self, "Klavye Kısayolları", html)
+        QMessageBox.information(self, translation_manager.tr("Keyboard Shortcuts"), html)
     
     def handle_escape(self):
         """Escape tuşu işlemi"""
@@ -1399,6 +1280,7 @@ class MP3YapMainWindow(QMainWindow):
         # Preloader'dan gelen iptal işlemi
         pass  # Şu an için boş, gerektiğinde implement edilecek
     
+    
     def closeEvent(self, a0):
         """Pencere kapatılırken"""
         # Aktif indirme varsa durdur
@@ -1406,3 +1288,76 @@ class MP3YapMainWindow(QMainWindow):
             self.downloader.stop()
         # Pencereyi kapat
         a0.accept()
+    
+    def on_language_changed(self, lang_code):
+        """Handle language change signal from translation manager"""
+        self.retranslateUi()
+        
+        # Update tab titles
+        self.tab_widget.setTabText(0, translation_manager.tr("Download"))
+        self.tab_widget.setTabText(1, translation_manager.tr("History"))
+        self.tab_widget.setTabText(2, translation_manager.tr("Queue"))
+        self.tab_widget.setTabText(3, translation_manager.tr("Convert"))
+        
+        # Update child widgets
+        for i in range(self.tab_widget.count()):
+            widget = self.tab_widget.widget(i)
+            if hasattr(widget, 'retranslateUi'):
+                widget.retranslateUi()
+    
+    def retranslateUi(self):
+        """UI metinlerini yeniden çevir (dil değiştiğinde)"""
+        # Ana pencere başlığı
+        self.setWindowTitle(translation_manager.tr("YouTube MP3 Downloader"))
+        
+        # Menü metinlerini güncelle (menüleri yeniden oluşturmadan)
+        if hasattr(self, 'file_menu'):
+            self.file_menu.setTitle(translation_manager.tr('File'))
+            self.import_action.setText(translation_manager.tr('Import URLs...'))
+            self.exit_action.setText(translation_manager.tr('Exit'))
+        if hasattr(self, 'settings_menu'):
+            self.settings_menu.setTitle(translation_manager.tr('Tools'))
+            self.pref_action.setText(translation_manager.tr('Settings...'))
+        if hasattr(self, 'help_menu'):
+            self.help_menu.setTitle(translation_manager.tr('Help'))
+            self.about_action.setText(translation_manager.tr('About'))
+        
+        # Status bar widget'larının metinlerini güncelle (yeniden oluşturmadan)
+        if hasattr(self, 'shortcuts_hint'):
+            self.shortcuts_hint.setText(translation_manager.tr("Shortcuts (F1)"))
+            self.shortcuts_hint.setToolTip(translation_manager.tr("Show keyboard shortcuts"))
+        
+        # Tab başlıkları
+        self.tab_widget.setTabText(0, translation_manager.tr("Download"))
+        self.tab_widget.setTabText(1, translation_manager.tr("History"))
+        self.tab_widget.setTabText(2, translation_manager.tr("Queue"))
+        self.tab_widget.setTabText(3, translation_manager.tr("Convert"))
+        
+        # Download tab'ındaki butonları güncelle
+        if hasattr(self, 'download_button'):
+            self.download_button.setText(translation_manager.tr("Download"))
+            self.download_button.setToolTip(translation_manager.tr("Start download (Ctrl+Enter)"))
+        if hasattr(self, 'cancel_button'):
+            self.cancel_button.setText(translation_manager.tr("Cancel"))
+            self.cancel_button.setToolTip(translation_manager.tr("Cancel download (Esc)"))
+        if hasattr(self, 'add_to_queue_button'):
+            self.add_to_queue_button.setText(translation_manager.tr("Add to Queue"))
+            self.add_to_queue_button.setToolTip(translation_manager.tr("Add URLs to queue"))
+        if hasattr(self, 'clear_button'):
+            self.clear_button.setText(translation_manager.tr("Clear"))
+            self.clear_button.setToolTip(translation_manager.tr("Clear URL list"))
+        if hasattr(self, 'open_folder_button'):
+            self.open_folder_button.setText(translation_manager.tr("Open Folder"))
+            self.open_folder_button.setToolTip(translation_manager.tr("Open download folder (Ctrl+D)"))
+        
+        # Label'ları güncelle
+        if hasattr(self, 'status_label'):
+            self.status_label.setText(translation_manager.tr("Ready"))
+        if hasattr(self, 'current_file_label'):
+            self.current_file_label.setText(translation_manager.tr("File: "))
+        
+        # URL giriş alanı label ve tooltip güncelle
+        if hasattr(self, 'url_label'):
+            self.url_label.setText(translation_manager.tr("Paste YouTube URLs here (one per line)"))
+        if hasattr(self, 'url_text'):
+            self.url_text.setToolTip(translation_manager.tr("Paste YouTube URLs here (Ctrl+V)"))

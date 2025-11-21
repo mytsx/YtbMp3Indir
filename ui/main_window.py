@@ -630,14 +630,16 @@ class MP3YapMainWindow(QMainWindow):
             self.status_label.setObjectName("downloadStatus")
         
         # Eğer tüm indirmeler tamamlandıysa butonları güncelle
-        if status == "🎉 Tüm indirmeler tamamlandı!" or status == "İndirme durduruldu":
+        completed_msg = translation_manager.tr("main.status.all_downloads_completed")
+        stopped_msg = translation_manager.tr("main.status.download_stopped")
+        if status == completed_msg or status == stopped_msg:
             self.download_button.setEnabled(True)
             self.cancel_button.setEnabled(False)
             # Geçmiş sekmesini güncelle
             if hasattr(self, 'history_widget'):
                 self.history_widget.load_history()
             # İndirme tamamlandıysa URL'leri temizle
-            if status == "🎉 Tüm indirmeler tamamlandı!":
+            if status == completed_msg:
                 self.url_text.clear()
                 self.url_status_bar.setVisible(False)
     
@@ -657,7 +659,7 @@ class MP3YapMainWindow(QMainWindow):
             # Zaten varsa sessizce geç
         else:
             self.url_text.setPlainText(url)
-            self.status_label.setText("✓ URL indir sekmesine eklendi")
+            self.status_label.setText(translation_manager.tr("main.status.url_added_to_download_tab"))
             style_manager.apply_alert_style(self.status_label, "success")
     
     def add_urls_to_queue(self, urls):

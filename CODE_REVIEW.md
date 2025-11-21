@@ -138,13 +138,13 @@ logger.debug("Creating splash screen...")
 from PyQt5.QtGui import QDesktopServices, QColor, QIcon, QKeySequence
 ```
 
+**Durum:** ✅ KONTROL EDİLDİ - QColor gerçekten kullanılmıyor. 
+
 **Öneri:**  
 ```python
 # İYİ ✅
 from PyQt5.QtGui import QDesktopServices, QIcon, QKeySequence
 ```
-
-**Durum:** Kontrol edilmeli - Belki dinamik stil değişiklikleri için kullanılıyor olabilir
 
 ---
 
@@ -175,7 +175,230 @@ self.status_label.setText(translation_manager.tr("main.status.url_added_download
 
 ---
 
-## 🟡 ORTA ÖNCELİK (Medium Priority)
+## 🆕 YENİ TESPİTLER - Kapsamlı 2. Review
+
+**Review Tarihi:** 22 Kasım 2025  
+**İncelenen Alanlar:** Exception handling, bare except usage, thread safety, code quality
+
+### 🔴 CRITICAL: Bare Exception Handlers (except:)
+
+**Dosya:** `utils/translation_manager.py` (satır 133)
+
+**Sorun:**  
+Bare `except:` kullanılıyor - bu ALL exception'ları yakalıyor, KeyboardInterrupt ve SystemExit dahil:
+
+```python
+# KÖTÜ ❌
+try:
+    system_lang = QLocale.system().name().split('_')[0]
+    if lang_code in self.SUPPORTED_LANGUAGES:
+        return lang_code
+except:  # TOO BROAD!
+    pass
+```
+
+**Öneri:**
+```python
+# İYİ ✅
+try:
+    system_lang = QLocale.system().name().split('_')[0]
+    if lang_code in self.SUPPORTED_LANGUAGES:
+        return lang_code
+except (AttributeError, IndexError, TypeError):
+    logger.debug("Could not detect system language")
+    pass
+```
+
+**Öncelik:** 🔴 CRITICAL - Bare except kullanımı Python anti-pattern
+
+---
+
+**Dosya:** `ui/main_window.py` (satır 787)
+
+**Sorun:**  
+Signal disconnect işleminde bare except:
+
+```python
+# KÖTÜ ❌
+try:
+    self.signals.finished.disconnect()
+    self.signals.error.disconnect()
+except:
+    pass
+```
+
+**Öneri:**
+```python
+# İYİ ✅
+try:
+    self.signals.finished.disconnect()
+    self.signals.error.disconnect()
+except (TypeError, RuntimeError) as e:
+    # Signal zaten disconnect veya hiç bağlı değil
+    logger.debug(f"Signal disconnect ignored: {e}")
+```
+
+**Öncelik:** 🔴 HIGH - Signal lifecycle management
+
+---
+
+**Dosya:** `scripts/translation/manage_translations.py` (satır 33, 41)
+
+**Sorun:**  
+İki yerde bare except kullanılıyor (script dosyası - düşük öncelik)
+
+**Öncelik:** 🟢 LOW (Script dosyası)
+
+---
+
+### 🟡 MEDIUM: Exception Handling İyileştirme Gereken Yerler
+
+#### `core/downloader.py` - Detaylı Analiz
+
+**Satır 70** - FFmpeg Loading:
+```python
+# Mevcut ❌
+except Exception as e:
+    self.ffmpeg_available = self.check_system_ffmpeg()
+    if not self.ffmpeg_available:
+        self.signals.status_update.emit(f"FFmpeg yüklenemedi: {str(e)}")
+```
+
+**Öneri:**
+```python
+# İYİ ✅
+except (ImportError, OSError, RuntimeError) as e:
+    logger.warning(f"Static FFmpeg load failed: {e}")
+    self.ffmpeg_available = self.check_system_ffmpeg()
+    if not self.ffmpeg_available:
+        self.signals.status_update.emit(
+            translation_manager.tr("downloader.errors.ffmpeg_load_failed").format(str(e))
+        )
+```
+
+---
+
+**Satır 131** - Temp File Cleanup:
+```python
+# Mevcut - KABUL EDİLEBİLİR ✅
+except Exception:
+    logger.exception(f"Unexpected error when cleaning {file_path}")
+```
+
+**Durum:** ✅ Bu acceptable - logger.exception() kullanıyor ve cleanup operation kritik değil
+
+---
+
+**Satır 175** - Filename Sanitization:
+```python
+# Mevcut ❌
+except Exception as e:
+    # Fallback for any other unexpected errors
+    logger.exception("Unexpected error in filename sanitization, using fallback")
+    file_name = f"{title[:100]} [{video_id}].{'mp3' if self.ffmpeg_available else ext}"
+```
+
+**Öneri:**
+```python
+# İYİ ✅
+except (UnicodeError, ValueError, AttributeError) as e:
+    logger.warning(f"Filename sanitization error, using fallback: {e}")
+    file_name = f"{title[:100]} [{video_id}].{'mp3' if self.ffmpeg_available else ext}"
+except Exception:
+    logger.exception("CRITICAL: Unexpected error in filename sanitization")
+    # Re-raise critical errors
+    raise
+```
+
+---
+
+**Satır 430** - Download Exception Handler:
+```python
+# Mevcut
+except Exception as e:  # pylint: disable=broad-except
+    # Beklenmeyen hatalar için fallback
+    self.signals.error.emit(url, str(e))
+    self.signals.status_update.emit(f"Beklenmeyen hata: {e}")
+    return False
+```
+
+**Durum:** ✅ KABUL EDİLEBİLİR - pylint disable comment var, logger kullanıyor, graceful fallback
+
+**Öneri (İyileştirme):**
+```python
+# Daha iyi ✅
+except Exception as e:  # pylint: disable=broad-except
+    # Last resort fallback for truly unexpected errors
+    logger.exception(f"Unexpected download error for {url}")
+    self.signals.error.emit(url, str(e))
+    self.signals.status_update.emit(
+        translation_manager.tr("downloader.errors.unexpected").format(str(e))
+    )
+    return False
+```
+
+---
+
+**Satır 493** - Cleanup Error:
+```python
+# Mevcut - KABUL EDİLEBİLİR ✅
+except Exception:
+    logger.exception("Unexpected error setting yt-dlp cancellation flags")
+```
+
+**Durum:** ✅ Acceptable - logger.exception() kullanıyor, cleanup operation
+
+---
+
+### 🟢 LOW: Script Dosyalarında Exception Handling
+
+Şu script dosyalarında broad exception handling var ama bunlar production code değil:
+
+- `add_settings_keys.py`
+- `check_db_keys.py`
+- `scripts/create_ico.py`
+- `scripts/translation/*.py` (çeşitli migration script'leri)
+
+**Durum:** 🟢 LOW Priority - Script dosyaları için kabul edilebilir
+
+---
+
+### 🟢 LOW: Hard-coded Strings - Son Kalan Örnekler
+
+**Dosya:** `ui/main_window.py`
+
+**Tespit edilen:**
+
+1. Satır ~665:
+```python
+self.status_label.setText("✓ URL indir sekmesine eklendi")
+```
+
+2. Satır ~641:
+```python
+if status == "🎉 Tüm indirmeler tamamlandı!":
+```
+
+**Öneri:**  
+Translation key'lere çevrilmeli:
+```python
+self.status_label.setText(translation_manager.tr("main.status.url_added_download_tab"))
+if status == translation_manager.tr("main.status.all_downloads_complete"):
+```
+
+**Öncelik:** 🟢 LOW (Fonksiyonel sorun yok, consistency için)
+
+---
+
+### ✅ POZİTİF BULGULAR
+
+1. **✅ QColor Import Doğrulandı:** `ui/main_window.py`'da gerçekten kullanılmıyor - kaldırılabilir
+2. **✅ Thread Safety:** `QueueProcessThread` finally bloğu mevcut
+3. **✅ Signal Guarantee:** `services/url_analyzer.py` properly implemented
+4. **✅ Logger Usage:** Production code'da `print()` kullanımı yok (script'ler hariç)
+5. **✅ Config Handling:** `utils/config.py` specific exception'lar kullanıyor (JSON, IO)
+
+---
 
 ### 4. Resource Cleanup in Thread Cancellation
 

@@ -6,6 +6,7 @@ import yt_dlp
 import static_ffmpeg
 from PyQt5.QtCore import QObject, pyqtSignal
 from database.manager import DatabaseManager
+from utils.translation_manager import translation_manager
 
 logger = logging.getLogger(__name__)
 
@@ -453,27 +454,27 @@ class Downloader:
         
         for i, url in enumerate(urls, 1):
             if not self.is_running:
-                self.signals.status_update.emit("İndirme durduruldu")
+                self.signals.status_update.emit(translation_manager.tr("main.status.download_stopped"))
                 break
-                
+
             self.signals.status_update.emit(f"URL {i}/{len(urls)} işleniyor")
             success = self.process_url(url, output_path)
-            
+
             if not success:
                 # If cancelled, stop all downloads
                 if not self.is_running:
-                    self.signals.status_update.emit("İndirme iptal edildi")
+                    self.signals.status_update.emit(translation_manager.tr("main.status.download_cancelled"))
                     break
-        
+
         # Check if it was cancelled
         was_cancelled = not self.is_running
         self.is_running = False
-        
+
         # Show appropriate final message
         if was_cancelled:
-            self.signals.status_update.emit("İndirme iptal edildi")
+            self.signals.status_update.emit(translation_manager.tr("main.status.download_cancelled"))
         else:
-            self.signals.status_update.emit("🎉 Tüm indirmeler tamamlandı!")
+            self.signals.status_update.emit(translation_manager.tr("main.status.all_downloads_completed"))
 
     def stop(self):
         """İndirmeyi durdur"""

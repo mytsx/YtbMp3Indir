@@ -690,11 +690,11 @@ class QueueWidget(QWidget):
         ])
         
         # Butonlar
-        self.start_button.setText(translation_manager.tr("queue.buttons.resume_all"))
+        self.start_button.setText(translation_manager.tr("queue.buttons.start_queue"))
         self.start_button.setToolTip(translation_manager.tr("queue.tooltips.start_queue"))
         self.pause_button.setText(translation_manager.tr("queue.buttons.pause_all"))
         self.pause_button.setToolTip(translation_manager.tr("queue.tooltips.pause_queue"))
-        self.clear_button.setText(translation_manager.tr("queue.buttons.clear_all"))
+        self.clear_button.setText(translation_manager.tr("queue.buttons.clear"))
         self.clear_button.setToolTip(translation_manager.tr("queue.tooltips.clear_options"))
         
         # Arama ve filtre
@@ -716,7 +716,7 @@ class QueueWidget(QWidget):
         
         # Clear menü action'larını güncelle
         if hasattr(self, 'clear_all_action'):
-            self.clear_all_action.setText(translation_manager.tr("queue.buttons.clear_all"))
+            self.clear_all_action.setText(translation_manager.tr("queue.menu.clear_all"))
         if hasattr(self, 'clear_selected_action'):
             self.clear_selected_action.setText(translation_manager.tr("queue.menu.clear_selected"))
         if hasattr(self, 'clear_completed_action'):

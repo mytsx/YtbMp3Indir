@@ -44,75 +44,86 @@ class QueueProcessThread(QThread):
     
     def run(self):
         """Thread içinde çalış"""
-        # yt-dlp seçenekleri
-        ydl_opts = {
-            'quiet': True,
-            'no_warnings': True,
-            'extract_flat': 'in_playlist',
-            'ignoreerrors': True,
-            'skip_download': True,
-        }
-        
-        # Mevcut video ID'lerini al
-        existing_video_ids = self.db_manager.get_existing_queue_video_ids()
-        
-        # Eklenecek öğeleri topla
+        # Initialize variables for proper cleanup
         items_to_add = []
         duplicate_videos = []
-        
-        for url in self.urls:
-            try:
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    info = ydl.extract_info(url, download=False)
-                    if info:
-                        if info.get('_type') == 'playlist':
-                            # Playlist ise her video için kontrol et
-                            playlist_title = info.get('title', 'İsimsiz Liste')
-                            entries = info.get('entries', [])
-                            for idx, entry in enumerate(entries):
-                                video_id = entry.get('id')
-                                video_url = entry.get('url', '')
-                                video_title = entry.get('title', f'Video {idx+1}')
-                                full_title = f"[{playlist_title}] {video_title}"
-                                
+
+        try:
+            # yt-dlp seçenekleri
+            ydl_opts = {
+                'quiet': True,
+                'no_warnings': True,
+                'extract_flat': 'in_playlist',
+                'ignoreerrors': True,
+                'skip_download': True,
+            }
+
+            # Mevcut video ID'lerini al
+            existing_video_ids = self.db_manager.get_existing_queue_video_ids()
+
+            for url in self.urls:
+                try:
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        info = ydl.extract_info(url, download=False)
+                        if info:
+                            if info.get('_type') == 'playlist':
+                                # Playlist ise her video için kontrol et
+                                playlist_title = info.get('title', 'İsimsiz Liste')
+                                entries = info.get('entries', [])
+                                for idx, entry in enumerate(entries):
+                                    video_id = entry.get('id')
+                                    video_url = entry.get('url', '')
+                                    video_title = entry.get('title', f'Video {idx+1}')
+                                    full_title = f"[{playlist_title}] {video_title}"
+
+                                    # Duplicate kontrolü
+                                    if video_id and video_id in existing_video_ids:
+                                        duplicate_videos.append(video_title)
+                                    else:
+                                        items_to_add.append({
+                                            'url': video_url,
+                                            'video_title': full_title,
+                                            'video_id': video_id
+                                        })
+                                        if video_id:
+                                            existing_video_ids.add(video_id)
+                            else:
+                                # Tek video
+                                video_id = info.get('id')
+                                video_title = info.get('title', 'İsimsiz Video')
+
                                 # Duplicate kontrolü
                                 if video_id and video_id in existing_video_ids:
                                     duplicate_videos.append(video_title)
                                 else:
                                     items_to_add.append({
-                                        'url': video_url,
-                                        'video_title': full_title,
+                                        'url': url,
+                                        'video_title': video_title,
                                         'video_id': video_id
                                     })
-                                    if video_id:
-                                        existing_video_ids.add(video_id)
-                        else:
-                            # Tek video
-                            video_id = info.get('id')
-                            video_title = info.get('title', 'İsimsiz Video')
-                            
-                            # Duplicate kontrolü
-                            if video_id and video_id in existing_video_ids:
-                                duplicate_videos.append(video_title)
-                            else:
-                                items_to_add.append({
-                                    'url': url,
-                                    'video_title': video_title,
-                                    'video_id': video_id
-                                })
-            except Exception as e:
-                logger.warning(f"Failed to fetch video info: {e}")
-                # Hata durumunda URL ile ekle
-                items_to_add.append({
-                    'url': url,
-                    'video_title': None,
-                    'video_id': None
-                })
-        
-        # Toplu ekleme yap
-        added_count = self.db_manager.add_to_queue_batch(items_to_add)
-        
-        self.finished_signal.emit(added_count, duplicate_videos)
+                except Exception as e:
+                    logger.warning(f"Failed to fetch video info: {e}")
+                    # Hata durumunda URL ile ekle
+                    items_to_add.append({
+                        'url': url,
+                        'video_title': None,
+                        'video_id': None
+                    })
+
+            # Toplu ekleme yap
+            added_count = self.db_manager.add_to_queue_batch(items_to_add)
+
+        except Exception as e:
+            logger.error(f"Queue processing error: {e}")
+            # Use partial results even on error
+            added_count = self.db_manager.add_to_queue_batch(items_to_add) if items_to_add else 0
+
+        finally:
+            # MEDIUM #4: Always emit finished signal for proper cleanup
+            # Even on error/cancellation, UI needs to know processing is done
+            if 'added_count' not in locals():
+                added_count = 0
+            self.finished_signal.emit(added_count, duplicate_videos)
 
 
 class MP3YapMainWindow(QMainWindow):

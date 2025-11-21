@@ -5,9 +5,14 @@ Tüm uygulama çevirileri veritabanından yönetilir
 
 import os
 import locale
+import logging
 from PyQt5.QtCore import QTranslator, QLocale, QCoreApplication, pyqtSignal, QObject
 from PyQt5.QtWidgets import QApplication
 from typing import Optional, Dict, List
+
+# Configure logging for missing translations
+logging.basicConfig(level=logging.WARNING)
+logger = logging.getLogger(__name__)
 
 # Önce Python sözlüğünden çevirileri kullan, sonra veritabanına geçeceğiz
 try:
@@ -51,19 +56,23 @@ class TranslationManager(QObject):
         """
         Get translation for a key (replaces Qt's tr() method)
         Supports both abstract keys (e.g., "main.buttons.download") and legacy Turkish text keys
-        
+
         Args:
             key: Translation key (abstract or legacy Turkish text)
             *args: Format arguments if the translation contains placeholders
-            
+
         Returns:
             Translated text
         """
         if USE_DATABASE:
             # Veritabanından çeviri al (database kendi fallback mekanizmasına sahip)
             text = translation_db.get_translation(key, self._current_language)
-            
-            # If abstract key not found and it looks like Turkish text (no dots), 
+
+            # If translation not found (key returned as-is), log it
+            if text == key:
+                logger.warning(f"❌ MISSING TRANSLATION: key='{key}' lang='{self._current_language}'")
+
+            # If abstract key not found and it looks like Turkish text (no dots),
             # try as legacy key for backward compatibility
             if text == key and '.' not in key:
                 # This might be a legacy Turkish text key
@@ -79,17 +88,21 @@ class TranslationManager(QObject):
                 # Fallback dili dene (İngilizce)
                 elif 'en' in trans_dict:
                     text = trans_dict['en']
+                    logger.warning(f"⚠️  FALLBACK TO EN: key='{key}' (no {self._current_language})")
                 # Son çare olarak anahtarı döndür
                 else:
                     text = key
+                    logger.warning(f"❌ MISSING TRANSLATION: key='{key}' (no translation found)")
             else:
                 text = key
-        
+                logger.warning(f"❌ MISSING KEY: '{key}' (not in database)")
+
         # Format argümanları uygula
         if args:
             try:
                 return text.format(*args)
-            except (IndexError, KeyError):
+            except (IndexError, KeyError) as e:
+                logger.error(f"❌ FORMAT ERROR: key='{key}' args={args} error={e}")
                 return text
         return text
     

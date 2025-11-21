@@ -137,7 +137,7 @@ class SettingsDialog(QDialog):
             self.create_spinbox(100, 2000, 100, suffix=" URL")
         )
         self.cache_spin = cache_row.itemAt(1).widget()
-        self.cache_spin.setToolTip(translation_manager.tr("settings.tooltips.cache_limit"))
+        self.cache_spin.setToolTip(translation_manager.tr("settings.labels.url_cache_limit"))
         perf_layout.addLayout(cache_row)
         
         # Otomatik yeniden deneme

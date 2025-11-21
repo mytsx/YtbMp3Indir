@@ -49,7 +49,7 @@ def main():
         try:
             # Modülleri import et (lazy loading)
             # print("[MP3YAP] Loading modules...")
-            splash.update_status("Modüller yükleniyor...")
+            # splash.update_status("Modüller yükleniyor...") # Translation manager not loaded yet
             from ui.main_window import MP3YapMainWindow
             app.processEvents()
         except Exception as e:
@@ -113,7 +113,7 @@ def main():
                 # print("[MP3YAP] Main window displayed")
         
         # Uygulama hazır, splash'i bilgilendir
-        splash.update_status("Hazır!")
+        splash.update_status(translation_manager.tr("main.status.ready"))
         splash.set_app_ready()  # Logaritmik doldurma başlat
         
         # Ana pencereyi göster

@@ -170,18 +170,29 @@ class TranslationDatabase:
     def get_translation(self, key: str, lang_code: str = None, scope: str = None) -> str:
         """
         Çeviri al
-        
+
         Args:
             key: Anahtar metni
             lang_code: Dil kodu (None ise mevcut dil kullanılır)
             scope: Kapsam
-            
+
         Returns:
             Çevrilmiş metin veya anahtar
         """
         if lang_code is None:
             lang_code = self._current_language
-        
+
+        # Eğer scope verilmemişse, hierarchical key'den çıkar
+        # Örnek: "main.labels.paste_urls" -> scope="main.labels", key_text="main.labels.paste_urls"
+        # Key'in kendisi değişmez, sadece scope parametresi belirlenir
+        if scope is None and '.' in key:
+            # Son noktadan önceki kısım scope olabilir
+            parts = key.rsplit('.', 1)
+            if len(parts) == 2:
+                potential_scope = parts[0]
+                # Scope'u dene, yoksa None olarak devam et
+                scope = potential_scope
+
         # Önbellekte ara
         cache_key = f"{lang_code}:{scope}:{key}" if scope else f"{lang_code}:{key}"
         if cache_key in self._cache:

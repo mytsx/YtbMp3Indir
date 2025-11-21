@@ -286,7 +286,7 @@ class ConverterWidget(QWidget):
         if not self.ffmpeg_path:
             QMessageBox.warning(
                 self,
-                translation_manager.tr("converter.errors.ffmpeg_title"),
+                translation_manager.tr("dialogs.titles.error"),
                 translation_manager.tr("FFmpeg not found. MP3 conversion feature is disabled.\n\n"
                        "Please install FFmpeg or restart the application.")
             )
@@ -321,7 +321,7 @@ class ConverterWidget(QWidget):
         # FFmpeg yoksa dosya seçme butonunu da devre dışı bırak
         if not self.ffmpeg_path:
             self.select_btn.setEnabled(False)
-            self.select_btn.setToolTip(translation_manager.tr("converter.errors.ffmpeg_not_found_select"))
+            self.select_btn.setToolTip(translation_manager.tr("converter.errors.ffmpeg_not_found"))
         style_manager.apply_button_style(self.select_btn, "primary")
         content_layout.addWidget(self.select_btn)
         
@@ -385,7 +385,7 @@ class ConverterWidget(QWidget):
         
         # FFmpeg yoksa butonu devre dışı bırak
         if not self.ffmpeg_path:
-            self.convert_btn.setToolTip(translation_manager.tr("converter.errors.ffmpeg_not_found_convert"))
+            self.convert_btn.setToolTip(translation_manager.tr("converter.errors.ffmpeg_not_found"))
         style_manager.apply_button_style(self.convert_btn, "secondary")
         button_layout.addWidget(self.convert_btn)
         

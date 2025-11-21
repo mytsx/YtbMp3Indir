@@ -78,7 +78,7 @@ class SplashScreen(QWidget):
         status_layout = QHBoxLayout(self.status_widget)
         status_layout.setContentsMargins(20, 0, 20, 0)
         
-        self.status_label = QLabel(translation_manager.tr("Starting..."))
+        self.status_label = QLabel(translation_manager.tr("status.loading"))
         self.status_label.setAlignment(Qt.AlignCenter)
         status_font = QFont("Arial", 11)
         self.status_label.setFont(status_font)
@@ -120,7 +120,7 @@ class SplashScreen(QWidget):
     def set_app_ready(self):
         """Uygulama hazır olduğunda çağrılır"""
         self.app_ready = True
-        self.update_status(translation_manager.tr("Ready!"))
+        self.update_status(translation_manager.tr("main.status.ready"))
         # Fade out yok - direkt kapat
         QTimer.singleShot(500, self.close_splash)
         

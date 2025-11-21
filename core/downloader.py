@@ -128,8 +128,8 @@ class Downloader:
                     logger.error(f"Permission denied when cleaning {file_path}: {e}")
                 except OSError as e:
                     logger.error(f"OS error when cleaning {file_path}: {e}")
-                except Exception as e:
-                    logger.error(f"Unexpected error when cleaning {file_path}: {e}")
+                except Exception:
+                    logger.exception(f"Unexpected error when cleaning {file_path}")
 
         # Clear tracked files if doing full cleanup
         if not base_filename:
@@ -168,9 +168,13 @@ class Downloader:
                 sanitized_title = sanitized_title.encode('utf-8')[:max_title_bytes].decode('utf-8', errors='ignore')
             # Build filename matching template
             file_name = f"{sanitized_title} [{video_id}].{'mp3' if self.ffmpeg_available else ext}"
+        except (UnicodeEncodeError, UnicodeDecodeError) as e:
+            # Fallback to simple format if unicode sanitization fails
+            logger.warning(f"Unicode error in filename sanitization, using fallback: {e}")
+            file_name = f"{title[:100]} [{video_id}].{'mp3' if self.ffmpeg_available else ext}"
         except Exception as e:
-            # Fallback to simple format if sanitization fails
-            logger.warning(f"Filename sanitization failed, using fallback: {e}")
+            # Fallback for any other unexpected errors
+            logger.exception("Unexpected error in filename sanitization, using fallback")
             file_name = f"{title[:100]} [{video_id}].{'mp3' if self.ffmpeg_available else ext}"
         # Klasörün tam yolunu al
         output_dir = self.current_output_path or 'music'
@@ -486,8 +490,8 @@ class Downloader:
                     logger.debug("Set yt-dlp cancellation flags")
             except AttributeError as e:
                 logger.warning(f"Could not set yt-dlp params (no params attribute): {e}")
-            except Exception as e:
-                logger.error(f"Unexpected error setting yt-dlp cancellation flags: {e}")
+            except Exception:
+                logger.exception("Unexpected error setting yt-dlp cancellation flags")
 
         # P0-3 FIX: Use centralized cleanup with proper error handling
         logger.info("Starting temp file cleanup")

@@ -40,8 +40,8 @@ class DatabaseManager:
             logger.debug(f"Could not add is_deleted columns (likely first run or already exists): {e}")
         except sqlite3.DatabaseError as e:
             logger.error(f"Database error during is_deleted migration: {e}")
-        except Exception as e:
-            logger.error(f"Unexpected error during is_deleted migration: {e}")
+        except Exception:
+            logger.exception("Unexpected error during is_deleted migration")
     
     def _add_video_id_columns(self, cursor):
         """Mevcut tablolara video_id sütununu ekle"""
@@ -65,8 +65,8 @@ class DatabaseManager:
             logger.debug(f"Could not add video_id columns (likely first run or already exists): {e}")
         except sqlite3.DatabaseError as e:
             logger.error(f"Database error during video_id migration: {e}")
-        except Exception as e:
-            logger.error(f"Unexpected error during video_id migration: {e}")
+        except Exception:
+            logger.exception("Unexpected error during video_id migration")
     
     def init_database(self):
         """Veritabanını ve tabloları oluştur"""

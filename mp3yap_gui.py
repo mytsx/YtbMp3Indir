@@ -37,9 +37,7 @@ def main():
         splash.start()  # start metodunu çağır
         # print("[MP3YAP] Splash screen displayed")
     except Exception as e:
-        logger.error(f"Failed to create splash screen: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.exception("Failed to create splash screen")
         sys.exit(1)
     
     # Ana pencere değişkeni
@@ -56,9 +54,7 @@ def main():
             from ui.main_window import MP3YapMainWindow
             app.processEvents()
         except Exception as e:
-            logger.error(f"Failed to load modules: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.exception("Failed to load modules")
             return
         
         # Veritabanını kontrol et

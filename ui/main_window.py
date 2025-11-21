@@ -28,6 +28,10 @@ from version import __version__, __app_name__, __author__
 
 logger = logging.getLogger(__name__)
 
+# Status message detection constants
+STATUS_SYMBOLS = {"WARNING": "UYARI:", "SUCCESS": "✅", "ERROR": "❌"}
+STATUS_KEYWORDS = {"QUEUED": "kuyrukta", "ADDED": "eklendi", "FAILED": "eklenemedi"}
+
 
 class QueueProcessThread(QThread):
     """Kuyruk işleme thread'i"""
@@ -590,7 +594,8 @@ class MP3YapMainWindow(QMainWindow):
         """Durum mesajını güncelle"""
         # Önemli uyarıları silme
         current_text = self.status_label.text()
-        if any(x in current_text for x in ["UYARI:", "✅", "❌"]) and any(x in current_text.lower() for x in ["kuyrukta", "eklendi", "eklenemedi"]):
+        if any(x in current_text for x in STATUS_SYMBOLS.values()) and \
+           any(x in current_text.lower() for x in STATUS_KEYWORDS.values()):
             # Kuyruk işlemi mesajı varsa üzerine yazma
             return
         self.status_label.setText(status)
@@ -898,7 +903,7 @@ class MP3YapMainWindow(QMainWindow):
         """URL metni değiştiğinde"""
         # Eğer duplicate uyarısı varsa timer'ı başlatma
         current_text = self.status_label.text()
-        if "kuyrukta" in current_text.lower() and "UYARI:" in current_text:
+        if STATUS_KEYWORDS["QUEUED"] in current_text.lower() and STATUS_SYMBOLS["WARNING"] in current_text:
             return
             
         # Timer'ı durdur ve yeniden başlat (debounce)

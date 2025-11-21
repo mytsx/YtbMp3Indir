@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller spec file for MP3Yap Portable Version
-Creates a single portable executable file for Windows
+PyInstaller spec file for MP3Yap
+Creates a single executable file for Windows
 """
 
 import os
@@ -11,6 +11,8 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 # Get the directory of this spec file
 spec_dir = os.path.dirname(os.path.abspath(SPEC))
+# Get project root directory (parent of build/)
+project_root = os.path.dirname(spec_dir)
 
 # Get FFmpeg binaries location
 static_ffmpeg.add_paths()
@@ -18,7 +20,7 @@ ffmpeg_bin_dir = os.path.join(os.path.dirname(static_ffmpeg.__file__), 'bin', 'w
 
 # Collect all data files
 datas = [
-    ('assets', 'assets'),  # Include icon files
+    (os.path.join(project_root, 'assets'), 'assets'),  # Include icon files
 ]
 
 # Collect FFmpeg binaries
@@ -50,8 +52,8 @@ hiddenimports = [
 hiddenimports.extend(collect_submodules('yt_dlp'))
 
 a = Analysis(
-    ['mp3yap_gui.py'],
-    pathex=[spec_dir],
+    [os.path.join(project_root, 'mp3yap_gui.py')],
+    pathex=[project_root],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
@@ -67,22 +69,24 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.datas,
     [],
-    name='Youtube Mp3 İndir v2.2.0 Portable',
+    exclude_binaries=True,
+    name='Youtube Mp3 İndir',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
     console=False,  # No console window
     disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-    icon='assets/icon.ico' if os.path.exists('assets/icon.ico') else 'assets/icon.png',
-    version='version_info.txt' if os.path.exists('version_info.txt') else None,
+    icon=os.path.join(project_root, 'assets', 'icon.ico') if os.path.exists(os.path.join(project_root, 'assets', 'icon.ico')) else os.path.join(project_root, 'assets', 'icon.png'),
+    version=os.path.join(spec_dir, 'version_info.txt') if os.path.exists(os.path.join(spec_dir, 'version_info.txt')) else None,
+)
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name='Youtube Mp3 İndir',
 )

@@ -166,7 +166,99 @@ class TranslationDatabase:
             
             # Clear entire cache - simpler and more performant for infrequent write operations
             self._cache.clear()
-    
+
+    def _fetch_translation_with_fallback(self, cursor, key: str, scope: Optional[str],
+                                          lang_code: str, use_scope_null: bool = False) -> Optional[str]:
+        """
+        Helper method to fetch translation with fallback mechanism
+        Reduces code duplication by centralizing the complex CTE query
+
+        Args:
+            cursor: Database cursor
+            key: Translation key
+            scope: Scope filter (or None)
+            lang_code: Language code
+            use_scope_null: If True, forces scope to be NULL in query
+
+        Returns:
+            Translated text or None if not found
+        """
+        if use_scope_null:
+            # Force scope to be NULL (for fallback queries)
+            cursor.execute('''
+                WITH requested_translation AS (
+                    SELECT t.translated_text
+                    FROM translations t
+                    JOIN translation_keys k ON t.key_id = k.key_id
+                    WHERE k.key_text = ?
+                    AND k.scope IS NULL
+                    AND t.lang_code = ?
+                ),
+                fallback_translation AS (
+                    SELECT t.translated_text
+                    FROM translations t
+                    JOIN translation_keys k ON t.key_id = k.key_id
+                    JOIN languages l ON l.lang_code = ?
+                    WHERE k.key_text = ?
+                    AND k.scope IS NULL
+                    AND t.lang_code = l.fallback_lang
+                ),
+                default_translation AS (
+                    SELECT default_text
+                    FROM translation_keys
+                    WHERE key_text = ?
+                    AND scope IS NULL
+                )
+                SELECT COALESCE(
+                    (SELECT translated_text FROM requested_translation),
+                    (SELECT translated_text FROM fallback_translation),
+                    (SELECT default_text FROM default_translation),
+                    ?
+                )
+            ''', (key, lang_code,
+                  lang_code, key,
+                  key,
+                  key))
+        else:
+            # Use provided scope (with NULL handling)
+            cursor.execute('''
+                WITH requested_translation AS (
+                    SELECT t.translated_text
+                    FROM translations t
+                    JOIN translation_keys k ON t.key_id = k.key_id
+                    WHERE k.key_text = ?
+                    AND (k.scope = ? OR (k.scope IS NULL AND ? IS NULL))
+                    AND t.lang_code = ?
+                ),
+                fallback_translation AS (
+                    SELECT t.translated_text
+                    FROM translations t
+                    JOIN translation_keys k ON t.key_id = k.key_id
+                    JOIN languages l ON l.lang_code = ?
+                    WHERE k.key_text = ?
+                    AND (k.scope = ? OR (k.scope IS NULL AND ? IS NULL))
+                    AND t.lang_code = l.fallback_lang
+                ),
+                default_translation AS (
+                    SELECT default_text
+                    FROM translation_keys
+                    WHERE key_text = ?
+                    AND (scope = ? OR (scope IS NULL AND ? IS NULL))
+                )
+                SELECT COALESCE(
+                    (SELECT translated_text FROM requested_translation),
+                    (SELECT translated_text FROM fallback_translation),
+                    (SELECT default_text FROM default_translation),
+                    ?
+                )
+            ''', (key, scope, scope, lang_code,
+                  lang_code, key, scope, scope,
+                  key, scope, scope,
+                  key))
+
+        result = cursor.fetchone()
+        return result[0] if result else None
+
     def get_translation(self, key: str, lang_code: str = None, scope: str = None) -> str:
         """
         Çeviri al
@@ -211,87 +303,19 @@ class TranslationDatabase:
         
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            
-            # Çeviriyi al (fallback mekanizması ile)
-            cursor.execute('''
-                WITH requested_translation AS (
-                    SELECT t.translated_text
-                    FROM translations t
-                    JOIN translation_keys k ON t.key_id = k.key_id
-                    WHERE k.key_text = ? 
-                    AND (k.scope = ? OR (k.scope IS NULL AND ? IS NULL))
-                    AND t.lang_code = ?
-                ),
-                fallback_translation AS (
-                    SELECT t.translated_text
-                    FROM translations t
-                    JOIN translation_keys k ON t.key_id = k.key_id
-                    JOIN languages l ON l.lang_code = ?
-                    WHERE k.key_text = ?
-                    AND (k.scope = ? OR (k.scope IS NULL AND ? IS NULL))
-                    AND t.lang_code = l.fallback_lang
-                ),
-                default_translation AS (
-                    SELECT default_text
-                    FROM translation_keys
-                    WHERE key_text = ?
-                    AND (scope = ? OR (scope IS NULL AND ? IS NULL))
-                )
-                SELECT COALESCE(
-                    (SELECT translated_text FROM requested_translation),
-                    (SELECT translated_text FROM fallback_translation),
-                    (SELECT default_text FROM default_translation),
-                    ?
-                )
-            ''', (key, scope, scope, lang_code,
-                  lang_code, key, scope, scope,
-                  key, scope, scope,
-                  key))
-            
-            result = cursor.fetchone()
-            text = result[0] if result else key
+
+            # Çeviriyi al (fallback mekanizması ile) - using refactored helper method
+            text = self._fetch_translation_with_fallback(cursor, key, scope, lang_code)
+            if text is None:
+                text = key
 
             # Eğer çeviri bulunamadı ve scope otomatik çıkarılmışsa, scope=NULL ile tekrar dene
             # Çünkü bazı eski keyler scope'suz saklanmış olabilir
             if text == key and extracted_scope is not None:
-                # scope=NULL ile tekrar ara
-                cursor.execute('''
-                    WITH requested_translation AS (
-                        SELECT t.translated_text
-                        FROM translations t
-                        JOIN translation_keys k ON t.key_id = k.key_id
-                        WHERE k.key_text = ?
-                        AND k.scope IS NULL
-                        AND t.lang_code = ?
-                    ),
-                    fallback_translation AS (
-                        SELECT t.translated_text
-                        FROM translations t
-                        JOIN translation_keys k ON t.key_id = k.key_id
-                        JOIN languages l ON l.lang_code = ?
-                        WHERE k.key_text = ?
-                        AND k.scope IS NULL
-                        AND t.lang_code = l.fallback_lang
-                    ),
-                    default_translation AS (
-                        SELECT default_text
-                        FROM translation_keys
-                        WHERE key_text = ?
-                        AND scope IS NULL
-                    )
-                    SELECT COALESCE(
-                        (SELECT translated_text FROM requested_translation),
-                        (SELECT translated_text FROM fallback_translation),
-                        (SELECT default_text FROM default_translation),
-                        ?
-                    )
-                ''', (key, lang_code,
-                      lang_code, key,
-                      key,
-                      key))
-
-                result = cursor.fetchone()
-                text = result[0] if result else key
+                # scope=NULL ile tekrar ara - using refactored helper method with use_scope_null=True
+                fallback_text = self._fetch_translation_with_fallback(cursor, key, None, lang_code, use_scope_null=True)
+                if fallback_text:
+                    text = fallback_text
 
                 # Cache with scope=None key
                 cache_key = f"{lang_code}:{key}"

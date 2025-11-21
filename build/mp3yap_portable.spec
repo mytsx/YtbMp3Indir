@@ -14,6 +14,11 @@ spec_dir = os.path.dirname(os.path.abspath(SPEC))
 # Get project root directory (parent of build/)
 project_root = os.path.dirname(spec_dir)
 
+# Icon and version file paths (extracted for readability)
+icon_ico_path = os.path.join(project_root, 'assets', 'icon.ico')
+icon_png_path = os.path.join(project_root, 'assets', 'icon.png')
+version_info_path = os.path.join(spec_dir, 'version_info.txt')
+
 # Get FFmpeg binaries location
 static_ffmpeg.add_paths()
 ffmpeg_bin_dir = os.path.join(os.path.dirname(static_ffmpeg.__file__), 'bin', 'win32')
@@ -85,6 +90,6 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=os.path.join(project_root, 'assets', 'icon.ico') if os.path.exists(os.path.join(project_root, 'assets', 'icon.ico')) else os.path.join(project_root, 'assets', 'icon.png'),
-    version=os.path.join(spec_dir, 'version_info.txt') if os.path.exists(os.path.join(spec_dir, 'version_info.txt')) else None,
+    icon=icon_ico_path if os.path.exists(icon_ico_path) else icon_png_path,
+    version=version_info_path if os.path.exists(version_info_path) else None,
 )

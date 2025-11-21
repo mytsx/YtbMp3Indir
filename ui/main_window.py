@@ -1069,7 +1069,7 @@ class MP3YapMainWindow(QMainWindow):
                 if single_videos:
                     parts.append(translation_manager.tr("main.labels.video_count").format(len(single_videos)))
                 status_parts.append(translation_manager.tr("main.status.playlist_ready").format(
-                    translation_manager.tr(" ve ").join(parts), total_videos))
+                    translation_manager.tr("common.conjunction.and").join(parts), total_videos))
         
         if invalid_urls:
             status_parts.append(translation_manager.tr("main.status.invalid_urls_count").format(len(invalid_urls)))

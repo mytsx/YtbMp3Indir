@@ -200,7 +200,7 @@ class QueueWidget(QWidget):
             # Toplu silme işlemi
             deleted_count = self.db.remove_from_queue_batch(queue_ids)
             self.load_queue()
-            QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr(f"{deleted_count} items removed from queue."))
+            QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr("queue.messages.items_removed").format(deleted_count))
     
     def toggle_selected_items(self):
         """Seçili öğelerin durumunu değiştir (bekleyen/duraklatıldı)"""
@@ -412,7 +412,7 @@ class QueueWidget(QWidget):
         """Tüm kuyruğu temizle"""
         count = self.db.clear_all_queue()
         self.load_queue()
-        QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr(f"{count} items cleared from queue."))
+        QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr("queue.messages.items_cleared").format(count))
     
     def clear_selected(self):
         """Seçili öğeleri temizle"""
@@ -431,21 +431,21 @@ class QueueWidget(QWidget):
                 self.db.remove_from_queue(item_data['id'])
         
         self.load_queue()
-        QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr(f"{len(selected_rows)} items cleared."))
+        QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr("queue.messages.selected_cleared").format(len(selected_rows)))
     
     def clear_completed(self):
         """Tamamlananları temizle"""
         count = self.db.clear_queue('completed')
         self.db.reorder_queue_positions()
         self.load_queue()
-        QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr(f"{count} completed downloads cleared."))
+        QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr("queue.messages.completed_cleared").format(count))
     
     def clear_failed(self):
         """Başarısız indirmeleri temizle"""
         count = self.db.clear_queue('failed')
         self.db.reorder_queue_positions()
         self.load_queue()
-        QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr(f"{count} failed downloads cleared."))
+        QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr("queue.messages.failed_cleared").format(count))
     
     def clear_canceled(self):
         """Iptal edilmiş indirmeleri temizle"""
@@ -454,7 +454,7 @@ class QueueWidget(QWidget):
         count += self.db.clear_queue('paused')
         self.db.reorder_queue_positions()
         self.load_queue()
-        QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr(f"{count} canceled downloads cleared."))
+        QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr("queue.messages.canceled_cleared").format(count))
     
     def move_up(self, item_id):
         """Öğeyi yukarı taşı"""

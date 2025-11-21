@@ -78,12 +78,18 @@ class PreloaderWidget(QWidget):
         self.setLayout(layout)
     
     def show_with_text(self, text: str, cancelable: bool = False):
-        """Preloader'ı göster"""
-        # If text is a key, translate it, otherwise use as is
-        if "." in text and " " not in text:
-            self.description_label.setText(translation_manager.tr(text))
-        else:
-            self.description_label.setText(text)
+        """
+        Preloader'ı göster
+
+        Args:
+            text: Already translated text to display
+                  (Callers should use translation_manager.tr() before passing)
+            cancelable: Whether to show cancel instruction
+        """
+        # REFACTORED: Removed brittle heuristic detection
+        # Now: Always expect already-translated text from caller
+        # This makes the API more explicit and maintainable
+        self.description_label.setText(text)
              
         if cancelable:
             self.cancel_label.show()

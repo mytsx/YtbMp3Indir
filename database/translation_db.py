@@ -277,24 +277,16 @@ class TranslationDatabase:
         # Eğer scope verilmemişse, hierarchical key'den çıkar
         # Örnek: "main.labels.paste_urls" -> scope="main.labels", key_text="main.labels.paste_urls"
         # Key'in kendisi değişmez, sadece scope parametresi belirlenir
-        # NOT: Sadece hierarchical key pattern için scope çıkar (lowercase, no spaces)
-        # Plain-text keys (spaces, uppercase, sentences) için scope çıkarma
+        # REFACTORED: Removed brittle heuristic detection
+        # Now: Always extract scope from hierarchical keys (contains '.' and no spaces)
+        # This is more explicit and maintainable than the previous heuristic approach
         extracted_scope = None
-        if scope is None and '.' in key:
-            # Hierarchical key pattern: lowercase letters, dots, underscores only
-            # Not plain text: no spaces, no uppercase at start
-            is_hierarchical = (
-                ' ' not in key and  # No spaces
-                not key[0].isupper() and  # Doesn't start with uppercase
-                key.replace('.', '').replace('_', '').isalnum()  # Only alphanumeric, dots, underscores
-            )
-
-            if is_hierarchical:
-                # Son noktadan önceki kısım scope olabilir
-                parts = key.rsplit('.', 1)
-                if len(parts) == 2:
-                    extracted_scope = parts[0]
-                    scope = extracted_scope
+        if scope is None and '.' in key and ' ' not in key:
+            # Hierarchical key detected: extract scope from last dot
+            parts = key.rsplit('.', 1)
+            if len(parts) == 2:
+                extracted_scope = parts[0]
+                scope = extracted_scope
 
         # Önbellekte ara
         cache_key = f"{lang_code}:{scope}:{key}" if scope else f"{lang_code}:{key}"

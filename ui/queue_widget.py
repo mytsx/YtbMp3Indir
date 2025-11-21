@@ -51,7 +51,7 @@ class QueueWidget(QWidget):
         control_layout.addStretch()
         
         # Kontrol butonları
-        self.start_button = QPushButton(translation_manager.tr("queue.buttons.resume_all"))
+        self.start_button = QPushButton(translation_manager.tr("queue.buttons.start_queue"))
         self.start_button.setIcon(icon_manager.get_icon("play", "#FFFFFF"))
         self.start_button.clicked.connect(self.start_queue)
         self.start_button.setToolTip(translation_manager.tr("queue.tooltips.start_queue"))
@@ -65,7 +65,7 @@ class QueueWidget(QWidget):
         style_manager.apply_button_style(self.pause_button, "warning")
         
         # Temizleme butonları için dropdown menü
-        self.clear_button = QPushButton(translation_manager.tr("queue.buttons.clear_all"))
+        self.clear_button = QPushButton(translation_manager.tr("queue.buttons.clear"))
         self.clear_button.setIcon(icon_manager.get_icon("trash-2", "#FFFFFF"))
         self.clear_button.setToolTip(translation_manager.tr("queue.tooltips.clear_options"))
         style_manager.apply_button_style(self.clear_button, "danger")

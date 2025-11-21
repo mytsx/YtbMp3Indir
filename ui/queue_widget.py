@@ -156,6 +156,7 @@ class QueueWidget(QWidget):
         self.table.customContextMenuRequested.connect(self.show_context_menu)
         
         # İstatistikler
+        self.stats_label = QLabel()
         self.update_statistics()
         
         # Layout'a ekle
@@ -582,11 +583,7 @@ class QueueWidget(QWidget):
         total = len(items)
         pending = sum(1 for item in items if item['status'] == 'pending')
         completed = sum(1 for item in items if item['status'] == 'completed')
-        
-        # Create stats label if it doesn't exist
-        if not hasattr(self, 'stats_label'):
-            self.stats_label = QLabel()
-            
+
         stats_text = "{} {} | {} {} | {} {}".format(
             translation_manager.tr("main.labels.total"), total,
             translation_manager.tr("main.labels.waiting"), pending,

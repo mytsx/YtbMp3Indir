@@ -59,7 +59,7 @@ class PreloaderWidget(QWidget):
         """)
         
         # ESC iptal bildirimi
-        self.cancel_label = QLabel(translation_manager.tr("common.buttons.cancel") + " (ESC)")
+        self.cancel_label = QLabel(translation_manager.tr("preloader.labels.cancel_hint"))
         self.cancel_label.setAlignment(Qt.AlignCenter)
         self.cancel_label.setStyleSheet("""
             QLabel {

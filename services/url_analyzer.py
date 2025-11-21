@@ -264,7 +264,7 @@ class UrlAnalysisWorker(QThread):
 
             # Step 4: Check database for existing downloads
             self.progress.emit("⏳ Veritabanı kontrol ediliyor...")
-            output_dir = self.config.get('output_path', 'music')  # FIX: Use correct config key
+            output_dir = self.config.get('output_path', 'music')
 
             for url in result.valid_urls:
                 if self._is_cancelled:

@@ -771,7 +771,7 @@ class MP3YapMainWindow(QMainWindow):
         self.signals.error.connect(self.queue_download_error)
 
         # İndirmeyi başlat
-        output_dir = self.config.get('output_path', 'music')  # FIX: Use correct config key
+        output_dir = self.config.get('output_path', 'music')
         download_thread = threading.Thread(
             target=self.queue_downloader.download_all,
             args=([queue_item['url']], output_dir)

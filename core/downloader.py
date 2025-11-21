@@ -48,11 +48,12 @@ class Downloader:
         self.db_manager = DatabaseManager()
         self.ydl = None  # Current YoutubeDL instance for cancellation
         self.current_output_path = None  # Store output path for hooks
-        
+
         # Thread-safe data structures
         self._lock = threading.Lock()
         self._saved_videos = set()
-        
+        self._current_temp_files = set()  # Track temp files for cleanup
+
         # Playlist tracking
         self.playlist_info = {}  # URL -> playlist info
         self.current_playlist_index = {}  # URL -> current index
@@ -70,7 +71,70 @@ class Downloader:
     def check_system_ffmpeg(self):
         """Sistem FFmpeg'ini kontrol et"""
         return shutil.which('ffmpeg') is not None
-    
+
+    def _cleanup_temp_files(self, base_filename=None):
+        """
+        Clean up temporary download files (.part, .ytdl, incomplete files)
+
+        Args:
+            base_filename: Specific file to clean up (optional)
+                         If None, cleans all tracked temp files
+        """
+        files_to_clean = set()
+
+        if base_filename:
+            # Clean specific file and its variants
+            files_to_clean.add(base_filename)
+            files_to_clean.add(base_filename + '.part')
+            files_to_clean.add(base_filename + '.ytdl')
+            # Also check for common yt-dlp temp file patterns
+            if not base_filename.endswith(('.part', '.ytdl')):
+                dir_path = os.path.dirname(base_filename) or '.'
+                base_name = os.path.basename(base_filename)
+                try:
+                    for file in os.listdir(dir_path):
+                        # Match .part and .ytdl files for this download
+                        if file.startswith(base_name) and (file.endswith('.part') or file.endswith('.ytdl')):
+                            files_to_clean.add(os.path.join(dir_path, file))
+                except (OSError, PermissionError) as e:
+                    logger.warning(f"Could not list directory for cleanup: {e}")
+        else:
+            # Clean all tracked temp files
+            with self._lock:
+                files_to_clean.update(self._current_temp_files)
+
+            # Also clean output directory for any orphaned temp files
+            if self.current_output_path and os.path.exists(self.current_output_path):
+                try:
+                    for file in os.listdir(self.current_output_path):
+                        if file.endswith('.part') or file.endswith('.ytdl'):
+                            files_to_clean.add(os.path.join(self.current_output_path, file))
+                except (OSError, PermissionError) as e:
+                    logger.warning(f"Could not list output directory for cleanup: {e}")
+
+        # Perform cleanup
+        cleaned_count = 0
+        for file_path in files_to_clean:
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                    cleaned_count += 1
+                    logger.info(f"Cleaned up temp file: {os.path.basename(file_path)}")
+                except PermissionError as e:
+                    logger.error(f"Permission denied when cleaning {file_path}: {e}")
+                except OSError as e:
+                    logger.error(f"OS error when cleaning {file_path}: {e}")
+                except Exception as e:
+                    logger.error(f"Unexpected error when cleaning {file_path}: {e}")
+
+        # Clear tracked files if doing full cleanup
+        if not base_filename:
+            with self._lock:
+                self._current_temp_files.clear()
+
+        if cleaned_count > 0:
+            logger.info(f"Cleanup complete: removed {cleaned_count} temporary file(s)")
+
     def save_to_database(self, info):
         """Video bilgilerini veritabanına kaydet"""
         if not info:
@@ -181,26 +245,20 @@ class Downloader:
     
     def download_progress_hook(self, d):
         """İndirme ilerlemesini takip eden fonksiyon"""
+        # Track temp files for cleanup
+        if 'filename' in d:
+            with self._lock:
+                self._current_temp_files.add(d['filename'])
+
         # İptal kontrolü
         if not self.is_running:
-            # Clean up partial files
+            # P0-3 FIX: Use centralized cleanup with proper error handling
             if 'filename' in d:
-                filename = d['filename']
-                # Remove .part file if exists
-                if os.path.exists(filename + '.part'):
-                    try:
-                        os.remove(filename + '.part')
-                    except:
-                        pass
-                # Remove incomplete file
-                if os.path.exists(filename) and d['status'] == 'downloading':
-                    try:
-                        os.remove(filename)
-                    except:
-                        pass
+                logger.info(f"Download cancelled, cleaning up: {os.path.basename(d['filename'])}")
+                self._cleanup_temp_files(d['filename'])
             # Raise DownloadError to stop the download
             raise yt_dlp.DownloadError("İndirme iptal edildi")
-            
+
         if d['status'] == 'downloading':
             filename = os.path.basename(d['filename'])
             
@@ -366,9 +424,11 @@ class Downloader:
     def download_all(self, urls, output_path):
         """Tüm URL'leri indir"""
         self.is_running = True
-        
-        # Reset saved videos set and playlist tracking
-        self._saved_videos = set()
+
+        # P0-3 FIX: Reset temp files tracking along with other state
+        with self._lock:
+            self._saved_videos = set()
+            self._current_temp_files = set()
         self.playlist_info = {}
         self.current_playlist_index = {}
         
@@ -401,28 +461,24 @@ class Downloader:
 
     def stop(self):
         """İndirmeyi durdur"""
+        logger.info("Stop requested - setting is_running to False")
         self.is_running = False
-        # Cancel current download if exists
+
+        # P0-3 FIX: Proper error handling when cancelling yt-dlp
         if self.ydl:
             try:
                 # Force stop by setting internal flags
                 if hasattr(self.ydl, 'params'):
                     self.ydl.params['break_on_reject'] = True
                     self.ydl.params['ignoreerrors'] = False
-            except:
-                pass
-        
-        # Clean up music directory from .part files
-        try:
-            music_dir = self.current_output_path or 'music'
-            if os.path.exists(music_dir):
-                for file in os.listdir(music_dir):
-                    if file.endswith('.part') or file.endswith('.ytdl'):
-                        try:
-                            os.remove(os.path.join(music_dir, file))
-                        except:
-                            pass
-        except:
-            pass
-            
+                    logger.debug("Set yt-dlp cancellation flags")
+            except AttributeError as e:
+                logger.warning(f"Could not set yt-dlp params (no params attribute): {e}")
+            except Exception as e:
+                logger.error(f"Unexpected error setting yt-dlp cancellation flags: {e}")
+
+        # P0-3 FIX: Use centralized cleanup with proper error handling
+        logger.info("Starting temp file cleanup")
+        self._cleanup_temp_files()  # Clean all tracked temp files
+
         self.signals.status_update.emit("İndirme iptal ediliyor...")

@@ -28,33 +28,54 @@ class UrlAnalysisResult:
 class UrlAnalyzer:
     """Pure function URL analysis logic"""
     
-    # YouTube URL regex pattern
-    YOUTUBE_REGEX = re.compile(
+    # YouTube URL regex patterns
+    # Pattern for video URLs (watch, shorts, embed, youtu.be)
+    VIDEO_REGEX = re.compile(
         r'(https?://)?(www\.)?(youtube\.com/(watch\?v=|shorts/|embed/)|youtu\.be/|m\.youtube\.com/watch\?v=)([a-zA-Z0-9_-]{11})'
+    )
+
+    # Pattern for playlist URLs (can be playlist-only or with video)
+    PLAYLIST_REGEX = re.compile(
+        r'(https?://)?(www\.)?(youtube\.com/(playlist\?list=|watch\?.*[&?]list=))([a-zA-Z0-9_-]+)'
     )
     
     @classmethod
     def validate_youtube_urls(cls, urls: List[str]) -> Tuple[List[str], List[str]]:
         """
-        Validate YouTube URLs using regex
-        
+        Validate YouTube URLs using regex (supports both video and playlist URLs)
+
         Returns:
             Tuple of (valid_urls, invalid_urls)
         """
         valid_urls = []
         invalid_urls = []
-        
+
         for url in urls:
-            match = cls.YOUTUBE_REGEX.search(url)
-            if match:
-                video_id = match.group(5)
-                if video_id and len(video_id) == 11:
+            url = url.strip()
+            if not url:
+                continue
+
+            # Check for video URL first
+            video_match = cls.VIDEO_REGEX.search(url)
+            if video_match:
+                video_id = video_match.group(5)
+                # Validate video ID: must be 11 characters, alphanumeric + _ and -
+                if video_id and len(video_id) == 11 and video_id.replace('-', '').replace('_', '').isalnum():
                     valid_urls.append(url)
-                else:
-                    invalid_urls.append(url)
-            else:
-                invalid_urls.append(url)
-        
+                    continue
+
+            # Check for playlist URL
+            playlist_match = cls.PLAYLIST_REGEX.search(url)
+            if playlist_match:
+                playlist_id = playlist_match.group(5)
+                # Playlist IDs can be various lengths, just check it's alphanumeric
+                if playlist_id and len(playlist_id) > 0 and playlist_id.replace('-', '').replace('_', '').isalnum():
+                    valid_urls.append(url)
+                    continue
+
+            # Neither video nor playlist format matched
+            invalid_urls.append(url)
+
         return valid_urls, invalid_urls
     
     @classmethod
@@ -176,32 +197,33 @@ class UrlAnalysisWorker(QThread):
     
     def run(self):
         """Run URL analysis in background"""
+        result = UrlAnalysisResult()
+
         try:
             self.started.emit()
-            result = UrlAnalysisResult()
-            
+
             # Step 1: Validate URLs
             self.progress.emit("⏳ URL'ler kontrol ediliyor...")
             result.valid_urls, result.invalid_urls = UrlAnalyzer.validate_youtube_urls(self.urls)
-            
+
             if self._is_cancelled:
-                return
-            
+                return  # Will emit finished in finally block
+
             # Step 2: Check for playlists
             has_playlist = any('list=' in url for url in result.valid_urls)
             if has_playlist:
                 self.progress.emit("⏳ Playlist bilgisi alınıyor...")
-            
+
             # Step 3: Extract playlist information
             for url in result.valid_urls:
                 if self._is_cancelled:
-                    return
-                
+                    return  # Will emit finished in finally block
+
                 if 'list=' in url:
                     # This is a playlist URL
                     playlist_data = UrlAnalyzer.extract_playlist_info(url)
                     result.playlist_info.append(playlist_data)
-                    
+
                     # Update cache (caller should handle cache size)
                     if url not in self.url_cache:
                         self.url_cache[url] = {
@@ -223,40 +245,43 @@ class UrlAnalysisWorker(QThread):
                             'title': 'Tek Video',
                             'video_count': 1
                         }
-            
+
             if self._is_cancelled:
-                return
-            
+                return  # Will emit finished in finally block
+
             # Step 4: Check database for existing downloads
             self.progress.emit("⏳ Veritabanı kontrol ediliyor...")
-            output_dir = self.config.get('output_directory', 'music')
-            
+            output_dir = self.config.get('output_path', 'music')  # FIX: Use correct config key
+
             for url in result.valid_urls:
                 if self._is_cancelled:
-                    return
-                
+                    return  # Will emit finished in finally block
+
                 existing = self.db_manager.get_download_by_url(url)
                 if existing:
                     result.already_downloaded += 1
                     latest_record = existing[0]  # Most recent record
-                    
+
                     # Check file existence
                     file_exists = UrlAnalyzer.check_file_existence(
                         latest_record.get('file_path'),
                         latest_record.get('file_name'),
                         output_dir
                     )
-                    
+
                     if file_exists:
                         result.files_exist += 1
                     else:
                         result.files_missing += 1
-            
+
             # Calculate total videos
-            result.total_videos = sum(p.get('video_count', 1) 
+            result.total_videos = sum(p.get('video_count', 1)
                                      for p in result.playlist_info)
-            
-            self.finished.emit(result)
-            
+
         except Exception as e:
             self.error.emit(str(e))
+
+        finally:
+            # FIX P0-5: ALWAYS emit finished signal, even on cancellation or error
+            # This prevents UI from hanging when analysis is cancelled
+            self.finished.emit(result)

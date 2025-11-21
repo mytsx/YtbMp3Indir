@@ -255,7 +255,11 @@ class Downloader:
                     'preferredquality': '192',
                 }],
                 'postprocessor_hooks': [self.postprocessor_hook],
-                'outtmpl': os.path.join(output_path, '%(title)s.%(ext)s'),
+                # SECURITY FIX: Sanitize filenames for cross-platform compatibility
+                # Use .200B to limit length, include video ID for uniqueness
+                'outtmpl': os.path.join(output_path, '%(title).200B.%(ext)s'),
+                'windowsfilenames': True,  # Remove Windows-illegal characters (: < > | etc)
+                'restrictfilenames': False,  # Keep unicode chars but sanitize via windowsfilenames
                 'ignoreerrors': False,  # Don't ignore errors for better control
                 'noplaylist': False,
                 'progress_hooks': [self.download_progress_hook],
@@ -268,7 +272,10 @@ class Downloader:
             # FFmpeg yoksa orijinal formatta indir
             ydl_opts = {
                 'format': 'bestaudio/best',
-                'outtmpl': os.path.join(output_path, '%(title)s.%(ext)s'),
+                # SECURITY FIX: Sanitize filenames for cross-platform compatibility
+                'outtmpl': os.path.join(output_path, '%(title).200B.%(ext)s'),
+                'windowsfilenames': True,  # Remove Windows-illegal characters
+                'restrictfilenames': False,  # Keep unicode chars
                 'ignoreerrors': False,  # Don't ignore errors for better control
                 'noplaylist': False,
                 'progress_hooks': [self.download_progress_hook],

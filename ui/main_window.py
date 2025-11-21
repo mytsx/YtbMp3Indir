@@ -685,7 +685,7 @@ class MP3YapMainWindow(QMainWindow):
         
         # Preloader göster
         self.preloader.show_with_text(
-            f"{len(urls)} video için bilgiler alınıyor...",
+            translation_manager.tr("main.status.fetching_info").format(len(urls)),
             cancelable=True
         )
         
@@ -767,9 +767,9 @@ class MP3YapMainWindow(QMainWindow):
         
         self.signals.finished.connect(self.queue_download_finished)
         self.signals.error.connect(self.queue_download_error)
-        
+
         # İndirmeyi başlat
-        output_dir = self.config.get('output_directory', 'music')
+        output_dir = self.config.get('output_path', 'music')  # FIX: Use correct config key
         download_thread = threading.Thread(
             target=self.queue_downloader.download_all,
             args=([queue_item['url']], output_dir)

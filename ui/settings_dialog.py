@@ -79,7 +79,8 @@ class SettingsDialog(QDialog):
         quality_label = QLabel(translation_manager.tr("settings.labels.audio_quality"))
         quality_label.setFixedWidth(150)
         self.quality_combo = QComboBox()
-        self.quality_combo.addItems(["128 kbps", "192 kbps", "320 kbps"])
+        kbps_suffix = translation_manager.tr("settings.suffixes.kbps")
+        self.quality_combo.addItems([f"128{kbps_suffix}", f"192{kbps_suffix}", f"320{kbps_suffix}"])
         quality_row.addWidget(quality_label)
         quality_row.addWidget(self.quality_combo)
         quality_row.addStretch()
@@ -134,7 +135,7 @@ class SettingsDialog(QDialog):
         # Cache limiti
         cache_row = self.create_spinbox_row(
             translation_manager.tr("settings.labels.url_cache_limit"),
-            self.create_spinbox(100, 2000, 100, suffix=" URL")
+            self.create_spinbox(100, 2000, 100, suffix=translation_manager.tr("settings.suffixes.url"))
         )
         self.cache_spin = cache_row.itemAt(1).widget()
         self.cache_spin.setToolTip(translation_manager.tr("settings.labels.url_cache_limit"))

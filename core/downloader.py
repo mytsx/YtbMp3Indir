@@ -2,6 +2,7 @@ import os
 import shutil
 import threading
 import logging
+from typing import Optional, Dict, Any, List
 import yt_dlp
 import static_ffmpeg
 from PyQt5.QtCore import QObject, pyqtSignal
@@ -27,8 +28,14 @@ class Downloader:
     FILENAME_TRUNCATION_SAFETY_MARGIN = 10
 
     # Logger interface for yt-dlp
-    def debug(self, msg):
-        """Called by yt-dlp for debug messages"""
+    def debug(self, msg: str) -> None:
+        """Called by yt-dlp for debug messages
+
+        Args:
+            msg: Debug message from yt-dlp
+
+        Parses playlist download progress and emits status updates.
+        """
         # Parse playlist download messages
         if '[download] Downloading item' in msg:
             import re
@@ -37,16 +44,37 @@ class Downloader:
                 self.current_item_index = int(match.group(1))
                 self.playlist_total = int(match.group(2))
                 self.signals.status_update.emit(f"📥 [{self.current_item_index}/{self.playlist_total}] Playlist indiriliyor...")
-    
-    def warning(self, msg):
-        """Called by yt-dlp for warnings"""
+
+    def warning(self, msg: str) -> None:
+        """Called by yt-dlp for warnings
+
+        Args:
+            msg: Warning message from yt-dlp
+        """
         pass
-    
-    def error(self, msg):
-        """Called by yt-dlp for errors"""
+
+    def error(self, msg: str) -> None:
+        """Called by yt-dlp for errors
+
+        Args:
+            msg: Error message from yt-dlp
+
+        Emits status update signal with error message.
+        """
         self.signals.status_update.emit(f"❌ Hata: {msg}")
     
-    def __init__(self, signals):
+    def __init__(self, signals: DownloadSignals) -> None:
+        """Initialize the downloader with download signals
+
+        Args:
+            signals: DownloadSignals instance for emitting progress and status updates
+
+        Sets up the download engine including:
+        - FFmpeg availability detection and auto-installation
+        - Thread-safe data structures for multi-threaded downloads
+        - Database connection for download history
+        - Playlist tracking mechanisms
+        """
         self.signals = signals
         self.is_running = False
         self.current_url = None
@@ -73,11 +101,15 @@ class Downloader:
             if not self.ffmpeg_available:
                 self.signals.status_update.emit(f"FFmpeg yüklenemedi: {str(e)}")
     
-    def check_system_ffmpeg(self):
-        """Sistem FFmpeg'ini kontrol et"""
+    def check_system_ffmpeg(self) -> bool:
+        """Check if FFmpeg is available in system PATH
+
+        Returns:
+            True if FFmpeg is found in system PATH, False otherwise
+        """
         return shutil.which('ffmpeg') is not None
 
-    def _cleanup_temp_files(self, base_filename=None):
+    def _cleanup_temp_files(self, base_filename: Optional[str] = None) -> None:
         """
         Clean up temporary download files (.part, .ytdl, incomplete files)
 
@@ -140,8 +172,23 @@ class Downloader:
         if cleaned_count > 0:
             logger.info(f"Cleanup complete: removed {cleaned_count} temporary file(s)")
 
-    def save_to_database(self, info):
-        """Video bilgilerini veritabanına kaydet"""
+    def save_to_database(self, info: Dict[str, Any]) -> None:
+        """Save video metadata to database
+
+        Args:
+            info: Video information dictionary from yt-dlp containing:
+                - id: Video ID
+                - title: Video title
+                - ext: File extension
+                - webpage_url: Full video URL
+                - filesize: File size in bytes
+                - duration: Video duration in seconds
+                - uploader: Channel name
+
+        Thread-safe operation that prevents duplicate database entries
+        using video ID tracking. Handles filename sanitization matching
+        yt-dlp's template pattern.
+        """
         if not info:
             return
         
@@ -227,8 +274,17 @@ class Downloader:
             # Log individual video
             self.signals.status_update.emit(f"✅ Kaydedildi: {title}")
     
-    def postprocessor_hook(self, d):
-        """Dönüştürme işlemi için hook"""
+    def postprocessor_hook(self, d: Dict[str, Any]) -> None:
+        """Hook for FFmpeg post-processing progress updates
+
+        Args:
+            d: Progress dictionary from yt-dlp containing:
+                - status: Current status ('started', 'processing', 'finished')
+                - info_dict: Video metadata including playlist information
+
+        Emits status updates for MP3 conversion progress with playlist
+        context when applicable.
+        """
         # Check if this is part of a playlist
         status_prefix = ""
         # First check our tracked values from logger
@@ -252,8 +308,24 @@ class Downloader:
         elif d['status'] == 'finished':
             self.signals.status_update.emit(f"✨ {status_prefix}Dönüştürme tamamlandı!")
     
-    def download_progress_hook(self, d):
-        """İndirme ilerlemesini takip eden fonksiyon"""
+    def download_progress_hook(self, d: Dict[str, Any]) -> None:
+        """Track download progress and emit status updates
+
+        Args:
+            d: Progress dictionary from yt-dlp containing:
+                - status: Download status ('downloading', 'finished', 'error')
+                - filename: Current file being downloaded
+                - downloaded_bytes: Bytes downloaded so far
+                - total_bytes: Total file size in bytes (if known)
+                - info_dict: Video metadata including playlist information
+
+        Raises:
+            yt_dlp.DownloadError: When download is cancelled via is_running flag
+
+        Tracks temporary files for cleanup and emits real-time progress
+        updates with playlist context. Handles cancellation by raising
+        DownloadError to interrupt yt-dlp processing.
+        """
         # Track temp files for cleanup
         if 'filename' in d:
             with self._lock:
@@ -325,8 +397,20 @@ class Downloader:
             filename = os.path.basename(d.get('filename', 'Bilinmeyen dosya'))
             self.signals.error.emit(filename, str(d.get('error', 'Bilinmeyen hata')))
 
-    def process_url(self, url, output_path):
-        """URL'yi işler ve MP3 olarak indirir"""
+    def process_url(self, url: str, output_path: str) -> bool:
+        """Process a YouTube URL and download as MP3
+
+        Args:
+            url: YouTube video or playlist URL to download
+            output_path: Directory path to save downloaded files
+
+        Returns:
+            True if download completed successfully, False on error or cancellation
+
+        Handles both single videos and playlists. Uses FFmpeg for MP3 conversion
+        when available, otherwise downloads in original format. Implements
+        proper error handling, timeout configuration, and cancellation support.
+        """
         self.current_url = url
         self.current_output_path = output_path
         self.signals.status_update.emit(f"🔗 Bağlantı kontrol ediliyor: {url}")
@@ -438,8 +522,18 @@ class Downloader:
             self.current_item_index = 0
             self.playlist_total = 0
 
-    def download_all(self, urls, output_path):
-        """Tüm URL'leri indir"""
+    def download_all(self, urls: List[str], output_path: str) -> None:
+        """Download all URLs sequentially
+
+        Args:
+            urls: List of YouTube video or playlist URLs to download
+            output_path: Directory path to save all downloaded files
+
+        Processes each URL in sequence, maintaining proper state management
+        and cleanup between downloads. Creates output directory if needed.
+        Handles cancellation gracefully by checking is_running flag between
+        downloads. Emits appropriate completion or cancellation messages.
+        """
         self.is_running = True
 
         # P0-3 FIX: Reset temp files tracking along with other state
@@ -476,8 +570,16 @@ class Downloader:
         else:
             self.signals.status_update.emit(translation_manager.tr("main.status.all_downloads_completed"))
 
-    def stop(self):
-        """İndirmeyi durdur"""
+    def stop(self) -> None:
+        """Stop the current download operation
+
+        Sets the is_running flag to False to trigger cancellation in
+        download_progress_hook. Attempts to set yt-dlp internal flags
+        for faster cancellation. Performs cleanup of all temporary files
+        created during download.
+
+        Thread-safe operation that can be called from any thread.
+        """
         logger.info("Stop requested - setting is_running to False")
         self.is_running = False
 

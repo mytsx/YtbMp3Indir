@@ -2,9 +2,10 @@ import os
 import re
 import threading
 import logging
+from typing import List, Dict, Any
 import yt_dlp
-from PyQt5.QtWidgets import (QMainWindow, QTextEdit, QPushButton, 
-                            QVBoxLayout, QHBoxLayout, QWidget, QLabel, 
+from PyQt5.QtWidgets import (QMainWindow, QTextEdit, QPushButton,
+                            QVBoxLayout, QHBoxLayout, QWidget, QLabel,
                             QProgressBar, QMessageBox, QMenuBar, QMenu,
                             QAction, QTabWidget, QApplication, QShortcut,
                             QDialog, QDialogButtonBox)
@@ -34,16 +35,34 @@ STATUS_KEYWORDS = {"QUEUED": "kuyrukta", "ADDED": "eklendi", "FAILED": "ekleneme
 
 
 class QueueProcessThread(QThread):
-    """Kuyruk işleme thread'i"""
+    """Background thread for processing URLs and adding to queue
+
+    Fetches video metadata using yt-dlp and performs duplicate checking
+    before adding videos to the download queue. Handles both individual
+    videos and playlists.
+    """
     finished_signal = pyqtSignal(int, list)  # added_count, duplicate_videos
-    
-    def __init__(self, urls, db_manager):
+
+    def __init__(self, urls: List[str], db_manager: DatabaseManager) -> None:
+        """Initialize queue processing thread
+
+        Args:
+            urls: List of YouTube video or playlist URLs to process
+            db_manager: Database manager instance for queue operations
+        """
         super().__init__()
         self.urls = urls
         self.db_manager = db_manager
-    
-    def run(self):
-        """Thread içinde çalış"""
+
+    def run(self) -> None:
+        """Process URLs and add to queue
+
+        Extracts metadata from URLs using yt-dlp, checks for duplicates
+        against existing queue items, and performs batch insertion.
+        Emits finished_signal with count and duplicate list when complete.
+
+        Always emits finished_signal even on error for proper UI cleanup.
+        """
         # Initialize variables for proper cleanup
         items_to_add = []
         duplicate_videos = []

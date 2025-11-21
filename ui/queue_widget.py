@@ -32,8 +32,14 @@ class QueueWidget(QWidget):
         self.refresh_timer.timeout.connect(self.check_and_refresh)
         self.refresh_timer.start(5000)  # 5 saniyede bir kontrol et
         
-    def init_ui(self):
-        """Arayüzü oluştur"""
+    def init_ui(self) -> None:
+        """Initialize the queue widget user interface
+
+        Creates and configures all UI components including:
+        - Control buttons (start, pause, clear)
+        - Search and filter controls
+        - Queue table view
+        """
         layout = QVBoxLayout()
         
         
@@ -244,8 +250,14 @@ class QueueWidget(QWidget):
             self.current_items_hash = items_hash
             self.load_queue()
     
-    def load_queue(self, force_refresh=False):
-        """Kuyruğu veritabanından yükle"""
+    def load_queue(self, force_refresh: bool = False) -> None:
+        """Load queue items from database and update the UI
+
+        Args:
+            force_refresh: If True, force reload even if data hasn't changed
+
+        Applies current filter and search criteria to the displayed items.
+        """
         # Filtre durumunu al - data kullan
         filter_status = self.status_filter.currentData()
         
@@ -385,8 +397,13 @@ class QueueWidget(QWidget):
         """Duruma göre filtrele"""
         self.load_queue()
     
-    def start_queue(self):
-        """Kuyruğu başlat"""
+    def start_queue(self) -> None:
+        """Start processing the download queue
+
+        Resets any stuck downloads, emits queue_started signal,
+        and begins downloading the next pending item.
+        Updates UI button states accordingly.
+        """
         # İndiriliyor durumunda kalmış olanları düzelt
         self.db.reset_stuck_downloads()
         

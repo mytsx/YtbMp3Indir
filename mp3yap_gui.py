@@ -6,6 +6,7 @@ Modern ve kullanıcı dostu YouTube'dan MP3 indirme aracı
 
 import sys
 import os
+import logging
 
 # Modül yolunu ekle
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -14,6 +15,8 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QIcon
 from ui.splash_screen import SplashScreen
+
+logger = logging.getLogger(__name__)
 
 
 def main():
@@ -34,7 +37,7 @@ def main():
         splash.start()  # start metodunu çağır
         # print("[MP3YAP] Splash screen displayed")
     except Exception as e:
-        print(f"[MP3YAP ERROR] Failed to create splash screen: {e}")
+        logger.error(f"Failed to create splash screen: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
@@ -53,7 +56,7 @@ def main():
             from ui.main_window import MP3YapMainWindow
             app.processEvents()
         except Exception as e:
-            print(f"[MP3YAP ERROR] Failed to load modules: {e}")
+            logger.error(f"Failed to load modules: {e}")
             import traceback
             traceback.print_exc()
             return

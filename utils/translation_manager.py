@@ -151,7 +151,7 @@ class TranslationManager(QObject):
         
         # Check if language is supported
         if language_code not in self.SUPPORTED_LANGUAGES:
-            print(f"Unsupported language: {language_code}")
+            logger.warning(f"Unsupported language: {language_code}")
             return False
         
         # If same language, no need to reload
@@ -170,8 +170,8 @@ class TranslationManager(QObject):
         
         # Emit signal for UI updates
         self.languageChanged.emit(language_code)
-        
-        print(f"Language changed to: {language_code}")
+
+        logger.info(f"Language changed to: {language_code}")
         return True
     
     def set_language(self, language_code: str) -> bool:

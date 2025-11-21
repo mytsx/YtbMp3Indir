@@ -26,6 +26,8 @@ from utils.translation_manager import translation_manager
 from services.url_analyzer import UrlAnalysisWorker, UrlAnalysisResult, UrlAnalyzer
 from version import __version__, __app_name__, __author__
 
+logger = logging.getLogger(__name__)
+
 
 class QueueProcessThread(QThread):
     """Kuyruk işleme thread'i"""
@@ -95,7 +97,7 @@ class QueueProcessThread(QThread):
                                     'video_id': video_id
                                 })
             except Exception as e:
-                print(f"Video bilgisi alınamadı: {e}")
+                logger.warning(f"Failed to fetch video info: {e}")
                 # Hata durumunda URL ile ekle
                 items_to_add.append({
                     'url': url,

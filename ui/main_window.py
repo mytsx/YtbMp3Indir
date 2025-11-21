@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (QMainWindow, QTextEdit, QPushButton,
                             QProgressBar, QMessageBox, QMenuBar, QMenu,
                             QAction, QTabWidget, QApplication, QShortcut,
                             QDialog, QDialogButtonBox)
-from PyQt5.QtGui import QDesktopServices, QColor, QIcon, QKeySequence
+from PyQt5.QtGui import QDesktopServices, QIcon, QKeySequence
 from PyQt5.QtCore import QUrl, QTimer, QThread, pyqtSignal, Qt
 from core.downloader import Downloader, DownloadSignals
 from ui.settings_dialog import SettingsDialog

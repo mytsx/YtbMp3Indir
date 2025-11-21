@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 def main():
     """Ana uygulama başlatıcı"""
-    # print("[MP3YAP] Starting application...")
+    logger.debug("Starting application...")
     app = QApplication(sys.argv)
     app.setApplicationName("YouTube MP3 İndirici")
     
@@ -31,11 +31,11 @@ def main():
         app.setWindowIcon(QIcon(icon_path))
     
     # Splash screen'i göster
-    # print("[MP3YAP] Creating splash screen...")
+    logger.debug("Creating splash screen...")
     try:
         splash = SplashScreen()
         splash.start()  # start metodunu çağır
-        # print("[MP3YAP] Splash screen displayed")
+        logger.debug("Splash screen displayed")
     except Exception as e:
         logger.exception("Failed to create splash screen")
         sys.exit(1)
@@ -49,7 +49,7 @@ def main():
         
         try:
             # Modülleri import et (lazy loading)
-            # print("[MP3YAP] Loading modules...")
+            logger.debug("Loading modules...")
             # splash.update_status("Modüller yükleniyor...") # Translation manager not loaded yet
             from ui.main_window import MP3YapMainWindow
             app.processEvents()
@@ -109,7 +109,7 @@ def main():
                 window.show()
                 window.raise_()
                 window.activateWindow()
-                # print("[MP3YAP] Main window displayed")
+                logger.debug("Main window displayed")
         
         # Uygulama hazır, splash'i bilgilendir
         splash.update_status(translation_manager.tr("main.status.ready"))

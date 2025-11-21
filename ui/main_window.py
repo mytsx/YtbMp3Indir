@@ -786,8 +786,9 @@ class MP3YapMainWindow(QMainWindow):
         try:
             self.signals.finished.disconnect()
             self.signals.error.disconnect()
-        except:
-            pass
+        except (TypeError, RuntimeError) as e:
+            # Signal zaten disconnect veya hiç bağlı değil
+            logger.debug(f"Signal disconnect ignored: {e}")
         
         self.signals.finished.connect(self.queue_download_finished)
         self.signals.error.connect(self.queue_download_error)

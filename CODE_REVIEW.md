@@ -608,125 +608,111 @@ Aşağıdaki iyileştirmeler başarıyla uygulanmış:
 
 ---
 
-## 📊 ÖZET
+## 📊 FİNAL ÖZET - 2. Kapsamlı Review Sonrası
 
-### İlk Review Sonrası Durum (8 Commit Öncesi)
+### Genel Durum
 
-| Kategori | Sayı | Durum |
-|----------|------|-------|
-| 🔴 Yüksek Öncelik | 3 | Tespit Edildi |
-| 🟡 Orta Öncelik | 4 | Tespit Edildi |
-| 🟢 Düşük Öncelik | 4 | Tespit Edildi |
-| **TOPLAM** | **11** | **Bekliyor** |
+| Kategori | İlk Review | 8 Commit Sonrası | 2. Review Sonrası |
+|----------|-----------|------------------|-------------------|
+| 🔴 CRITICAL | - | - | 2 (bare except) |
+| 🔴 HIGH Priority | 3 | 1 | 1 |
+| 🟡 MEDIUM Priority | 4 | 0 ✅ | 5 (detaylı analiz) |
+| 🟢 LOW Priority | 4 | 7 | 10 |
+| **TOPLAM** | **11** | **8** | **18** |
 
-### Mevcut Durum (8 Commit Sonrası - ab45c6e → eb2278b)
+### Exception Handling - Detaylı Durum
 
-| Kategori | Tamamlanan | Devam Eden | Yeni |
-|----------|------------|------------|------|
-| 🔴 HIGH Priority | 2/3 | 1/3 | - |
-| 🟡 MEDIUM Priority | 4/4 | - | - |
-| 🟢 LOW Priority | - | 4/4 | +3 |
-| **TOPLAM** | **6/11** (✅ 55%) | **5/11** (⏳ 45%) | **+3** |
+#### ✅ KABUL EDİLEBİLİR (Production Ready)
 
-### Tamamlanan İyileştirmeler (6/7 MEDIUM+HIGH)
+- `core/downloader.py` satır 131 - Cleanup operation, logger.exception()
+- `core/downloader.py` satır 430 - Pylint disabled, documented fallback
+- `core/downloader.py` satır 493 - Cleanup operation, logger.exception()
+- `services/url_analyzer.py` satır 134, 294 - External library, finally guarantee
+- `database/manager.py` satır 43, 68 - Specific + fallback pattern
+- `utils/config.py` satır 38, 48 - JSON/IO specific exceptions
 
-1. ✅ **c155438** - Hard-coded Turkish strings → translation keys
-   - `services/url_analyzer.py`: "İsimsiz Liste", "Tek Video", "Bilinmeyen" → `translation_manager.tr()`
+#### 🔴 CRITICAL - Hemen Düzeltilmeli
 
-2. ✅ **3649ddd** - print() statements → logger calls
-   - Çoğu `print()` logger'a çevrildi
-   - `mp3yap_gui.py`: 5 print() comment'lendi (silinmedi)
+1. `utils/translation_manager.py` satır 133 - **BARE EXCEPT**
+2. `ui/main_window.py` satır 787 - **BARE EXCEPT** (signal disconnect)
 
-3. ✅ **1f4e20c** - Queue button translation keys corrected
-   - `ui/queue_widget.py`: Çeviri anahtarları düzeltildi
+#### 🟡 MEDIUM - İyileştirme Önerilir
 
-4. ✅ **6495148** - Config key consistency verified
-   - Config key tutarlılığı sağlandı, FIX comment'leri kaldırıldı
+1. `core/downloader.py` satır 70 - FFmpeg loading
+2. `core/downloader.py` satır 175 - Filename sanitization
+3. `ui/main_window.py` satır 104 - Video info fetch
+4. `ui/main_window.py` satır 116 - Queue processing
 
-5. ✅ **8a8f64d** - Magic strings → constants
-   - `ui/main_window.py`: `STATUS_SYMBOLS` ve `STATUS_KEYWORDS` constant'ları eklendi
+#### 🟢 LOW - Script Files (20+ lokasyon)
 
-6. ✅ **3df83ec** - Thread cleanup guarantee
-   - `ui/main_window.py`: `QueueProcessThread` finally bloğu eklendi
-
-7. ✅ **eb2278b** - Translation key validation
-   - `database/translation_db.py`: `HIERARCHICAL_KEY_PATTERN` regex validation eklendi
-
-### Devam Eden İyileştirmeler (1 HIGH + 4 LOW)
-
-#### 🔴 HIGH #1: Exception Handling (38 lokasyon tespit edildi)
-
-**Production Code (Kritik - 11 lokasyon):**
-
-- `core/downloader.py`: 5 lokasyon (satır 70, 131, 171, 426, 489)
-- `ui/main_window.py`: 1 lokasyon (satır 116 - import error)
-- `services/url_analyzer.py`: 2 lokasyon (satır 134, 294) - ✅ Kabul edilebilir
-- `database/manager.py`: 2 lokasyon (satır 43, 68) - ✅ Zaten iyi yapılandırılmış
-- `utils/config.py`: 2 lokasyon (satır 38, 48)
-
-**Script Files (Daha Az Kritik - 27 lokasyon):**
-
-- Migration/setup script'lerinde yaygın kullanım
-
-#### 🟢 LOW Priority (7 İyileştirme)
-
-1. **Commented Debug Code:** `mp3yap_gui.py` - 5 comment'li print() temizlenmeli
-2. **Unused Import:** `ui/main_window.py` - QColor kullanılmıyor
-3. **Hard-coded Strings:** `ui/main_window.py` - Birkaç durum mesajı kaldı
-4. **Type Hints:** Kritik fonksiyonlar için coverage artırılmalı
-5. **Docstrings:** Karmaşık fonksiyonlara documentation
-6. **Unused Imports:** Çeşitli dosyalarda kullanılmayan import'lar
-7. **Translation Key Mapping:** Tutarlılık kontrolü
+Script dosyalarında broad exception - production'ı etkilemiyor
 
 ---
 
-## 🎯 ÖNCELİKLİ AKSIYONLAR
+### Öncelikli Yapılacaklar - Final
 
-### ⚡ Hemen Yapılması Gerekenler
+#### ⚡ CRITICAL (Hemen)
 
-1. **Exception Handling Refinement:**
-   - `core/downloader.py`: 5 lokasyon - Spesifik exception'lar tanımla
-   - `utils/config.py`: 2 lokasyon - JSON/IO hatalarını ayır
-   - `ui/main_window.py`: 1 lokasyon - Import error handling
+1. **Bare except kaldır:**
+   - `utils/translation_manager.py` satır 133
+   - `ui/main_window.py` satır 787
 
-2. **Commented Code Cleanup:**
-   - `mp3yap_gui.py`: 5 commented `print()` satırını tamamen kaldır veya logger'a çevir
+2. **QColor unused import:**
+   - `ui/main_window.py` satır 11 - import satırından kaldır
 
-### 📅 Sonraki Sprint
+#### 🔴 HIGH (Bu Sprint)
 
-3. **Code Cleanliness:**
-   - `ui/main_window.py`: QColor import'unu kaldır (kullanılmıyorsa)
-   - Hard-coded string'leri translation key'lere çevir
+1. **Exception handling refinement:**
+   - `core/downloader.py` satır 70, 175
+   - `ui/main_window.py` satır 104, 116
 
-4. **Documentation & Type Safety:**
-   - Type hint coverage'ı artır
-   - Karmaşık fonksiyonlara docstring ekle
-   - Kullanılmayan import'ları temizle
+#### 🟡 MEDIUM (Sonraki Sprint)
 
----
+1. **Hard-coded strings:**
+   - `ui/main_window.py` satır ~641, ~665
+   
+2. **Commented code cleanup:**
+   - `mp3yap_gui.py` - 5 commented print()
 
-## 🎉 GENEL DEĞERLENDİRME
-
-### Olumlu Gelişmeler
-
-- **%85 Major Issues Çözüldü:** 6/7 MEDIUM+HIGH öncelikli sorun tamamlandı
-- **8 Commit, 7 İyileştirme:** Hızlı ve etkili uygulama
-- **Code Quality Improvement:** Translation keys, constants, thread safety
-- **Maintainability:** Logger migration, config consistency
-
-### Kalan Zorluklar
-
-- **Exception Handling:** Tek kalan HIGH priority - 11 kritik lokasyon
-- **Production-Ready Polish:** Commented code, unused imports gibi minör detaylar
-
-### Sonuç
-
-✅ **Proje production'a %85 hazır.** Exception handling refinement'i tamamlandıktan sonra kod review standartlarını tam olarak karşılayacak.
+3. **Type hints & docstrings:**
+   - Kritik metodlara ekle
 
 ---
 
-**Son Güncelleme:** 22 Kasım 2025  
+## 🎯 SONUÇlar
+
+### ✅ Başarılar
+
+- **6/7 MEDIUM+HIGH issue çözüldü** (ilk review'dan)
+- **Thread safety garantileri** eklendi
+- **Translation key consistency** sağlandı
+- **Logger migration** tamamlandı (production code)
+- **Config handling** proper exception usage
+
+### ⚠️ Kalan Sorunlar
+
+- **2 CRITICAL:** Bare except kullanımı (Python anti-pattern)
+- **4 MEDIUM:** Exception handling detaylandırma gerekiyor
+- **~10 LOW:** Code cleanliness (unused imports, type hints, etc.)
+
+### 📈 Kalite Değerlendirmesi
+
+**İlk Review:** 11 sorun tespit edildi  
+**8 Commit Sonrası:** 6/7 major issue çözüldü ✅  
+**2. Review:** 2 critical, 4 medium yeni detay tespit edildi
+
+**Genel Skor:** 🟢 **PRODUCTION-READY %75** 
+
+- CRITICAL issues çözülürse → **%90 production-ready**
+- MEDIUM issues tamamlanırsa → **%95 production-ready**
+- LOW cleanup yapılırsa → **%100 code review compliant**
+
+---
+
+**Son Güncelleme:** 22 Kasım 2025 (2. Kapsamlı Review)  
 **İlgili PR:** #6 Development  
-**Durum:** 📋 Re-Review Tamamlandı - 6/7 Major Issues ✅ | 1 HIGH Issue ⏳
+**Durum:** 📋 Comprehensive Re-Review Complete
+
+**Sonraki Adım:** CRITICAL bare except issues'ları düzelt
 
 

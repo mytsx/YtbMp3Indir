@@ -185,13 +185,24 @@ class TranslationDatabase:
         # Eğer scope verilmemişse, hierarchical key'den çıkar
         # Örnek: "main.labels.paste_urls" -> scope="main.labels", key_text="main.labels.paste_urls"
         # Key'in kendisi değişmez, sadece scope parametresi belirlenir
+        # NOT: Sadece hierarchical key pattern için scope çıkar (lowercase, no spaces)
+        # Plain-text keys (spaces, uppercase, sentences) için scope çıkarma
+        extracted_scope = None
         if scope is None and '.' in key:
-            # Son noktadan önceki kısım scope olabilir
-            parts = key.rsplit('.', 1)
-            if len(parts) == 2:
-                potential_scope = parts[0]
-                # Scope'u dene, yoksa None olarak devam et
-                scope = potential_scope
+            # Hierarchical key pattern: lowercase letters, dots, underscores only
+            # Not plain text: no spaces, no uppercase at start
+            is_hierarchical = (
+                ' ' not in key and  # No spaces
+                not key[0].isupper() and  # Doesn't start with uppercase
+                key.replace('.', '').replace('_', '').isalnum()  # Only alphanumeric, dots, underscores
+            )
+
+            if is_hierarchical:
+                # Son noktadan önceki kısım scope olabilir
+                parts = key.rsplit('.', 1)
+                if len(parts) == 2:
+                    extracted_scope = parts[0]
+                    scope = extracted_scope
 
         # Önbellekte ara
         cache_key = f"{lang_code}:{scope}:{key}" if scope else f"{lang_code}:{key}"
@@ -239,10 +250,71 @@ class TranslationDatabase:
             
             result = cursor.fetchone()
             text = result[0] if result else key
-            
+
+            # Eğer çeviri bulunamadı ve scope otomatik çıkarılmışsa, scope=NULL ile tekrar dene
+            # Çünkü bazı eski keyler scope'suz saklanmış olabilir
+            if text == key and extracted_scope is not None:
+                # scope=NULL ile tekrar ara
+                cursor.execute('''
+                    WITH requested_translation AS (
+                        SELECT t.translated_text
+                        FROM translations t
+                        JOIN translation_keys k ON t.key_id = k.key_id
+                        WHERE k.key_text = ?
+                        AND k.scope IS NULL
+                        AND t.lang_code = ?
+                    ),
+                    fallback_translation AS (
+                        SELECT t.translated_text
+                        FROM translations t
+                        JOIN translation_keys k ON t.key_id = k.key_id
+                        JOIN languages l ON l.lang_code = ?
+                        WHERE k.key_text = ?
+                        AND k.scope IS NULL
+                        AND t.lang_code = l.fallback_lang
+                    ),
+                    default_translation AS (
+                        SELECT default_text
+                        FROM translation_keys
+                        WHERE key_text = ?
+                        AND scope IS NULL
+                    )
+                    SELECT COALESCE(
+                        (SELECT translated_text FROM requested_translation),
+                        (SELECT translated_text FROM fallback_translation),
+                        (SELECT default_text FROM default_translation),
+                        ?
+                    )
+                ''', (key, lang_code,
+                      lang_code, key,
+                      key,
+                      key))
+
+                result = cursor.fetchone()
+                text = result[0] if result else key
+
+                # Cache with scope=None key
+                cache_key = f"{lang_code}:{key}"
+
+            # Eğer hala bulunamadı ve scope None ise (plain-text key), scope'u tamamen yoksay
+            # Sadece key_text ile eşleştir (scope ne olursa olsun)
+            if text == key and scope is None and extracted_scope is None:
+                cursor.execute('''
+                    SELECT t.translated_text
+                    FROM translations t
+                    JOIN translation_keys k ON t.key_id = k.key_id
+                    WHERE k.key_text = ?
+                    AND t.lang_code = ?
+                    LIMIT 1
+                ''', (key, lang_code))
+
+                result = cursor.fetchone()
+                if result:
+                    text = result[0]
+
             # Önbelleğe ekle
             self._cache[cache_key] = text
-            
+
             return text
     
     def get_key_description(self, key: str) -> Optional[str]:

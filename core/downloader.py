@@ -345,6 +345,10 @@ class Downloader:
                 'continuedl': False,  # Don't continue partial downloads
                 'noprogress': False,
                 'logger': self,  # Use self as logger to capture messages
+                # P1-6 FIX: Add timeout and retry configuration
+                'socket_timeout': 30,  # Socket timeout in seconds
+                'retries': 3,  # Number of retries on connection failure
+                'fragment_retries': 3,  # Number of retries for a fragment
             }
         else:
             # FFmpeg yoksa orijinal formatta indir
@@ -359,6 +363,10 @@ class Downloader:
                 'progress_hooks': [self.download_progress_hook],
                 'continuedl': False,  # Don't continue partial downloads
                 'logger': self,  # Use self as logger to capture messages
+                # P1-6 FIX: Add timeout and retry configuration
+                'socket_timeout': 30,  # Socket timeout in seconds
+                'retries': 3,  # Number of retries on connection failure
+                'fragment_retries': 3,  # Number of retries for a fragment
             }
             self.signals.status_update.emit("Uyarı: FFmpeg bulunamadı. Dosyalar orijinal formatta indirilecek.")
         

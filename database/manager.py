@@ -1,7 +1,10 @@
 import sqlite3
 import os
+import logging
 from datetime import datetime
 from typing import List, Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class DatabaseManager:
@@ -17,38 +20,53 @@ class DatabaseManager:
     
     def _add_is_deleted_columns(self, cursor):
         """Mevcut tablolara is_deleted sütununu ekle"""
+        # P1-4 FIX: Proper error handling in migrations
         try:
             # download_history tablosuna is_deleted ekle
             cursor.execute("PRAGMA table_info(download_history)")
             columns = [col[1] for col in cursor.fetchall()]
             if 'is_deleted' not in columns:
                 cursor.execute('ALTER TABLE download_history ADD COLUMN is_deleted INTEGER DEFAULT 0')
-            
+                logger.info("Added is_deleted column to download_history table")
+
             # download_queue tablosuna is_deleted ekle
             cursor.execute("PRAGMA table_info(download_queue)")
             columns = [col[1] for col in cursor.fetchall()]
             if 'is_deleted' not in columns:
                 cursor.execute('ALTER TABLE download_queue ADD COLUMN is_deleted INTEGER DEFAULT 0')
-        except:
-            # Tablo yoksa veya başka bir hata varsa sessizce geç
-            pass
+                logger.info("Added is_deleted column to download_queue table")
+        except sqlite3.OperationalError as e:
+            # Table might not exist yet (first run) or column already exists
+            logger.debug(f"Could not add is_deleted columns (likely first run or already exists): {e}")
+        except sqlite3.DatabaseError as e:
+            logger.error(f"Database error during is_deleted migration: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error during is_deleted migration: {e}")
     
     def _add_video_id_columns(self, cursor):
         """Mevcut tablolara video_id sütununu ekle"""
+        # P1-4 FIX: Proper error handling in migrations
         try:
             # download_queue tablosuna video_id ekle
             cursor.execute("PRAGMA table_info(download_queue)")
             columns = [col[1] for col in cursor.fetchall()]
             if 'video_id' not in columns:
                 cursor.execute('ALTER TABLE download_queue ADD COLUMN video_id TEXT')
-            
+                logger.info("Added video_id column to download_queue table")
+
             # download_history tablosuna video_id ekle
             cursor.execute("PRAGMA table_info(download_history)")
             columns = [col[1] for col in cursor.fetchall()]
             if 'video_id' not in columns:
                 cursor.execute('ALTER TABLE download_history ADD COLUMN video_id TEXT')
-        except:
-            pass
+                logger.info("Added video_id column to download_history table")
+        except sqlite3.OperationalError as e:
+            # Table might not exist yet (first run) or column already exists
+            logger.debug(f"Could not add video_id columns (likely first run or already exists): {e}")
+        except sqlite3.DatabaseError as e:
+            logger.error(f"Database error during video_id migration: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error during video_id migration: {e}")
     
     def init_database(self):
         """Veritabanını ve tabloları oluştur"""

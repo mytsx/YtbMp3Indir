@@ -10,6 +10,8 @@ from typing import Dict, List, Optional, Tuple, Any
 from PyQt5.QtCore import QThread, pyqtSignal, QObject
 import yt_dlp
 
+from utils.translation_manager import translation_manager
+
 logger = logging.getLogger(__name__)
 
 
@@ -109,7 +111,7 @@ class UrlAnalyzer:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
                 if info and info.get('_type') == 'playlist':
-                    playlist_title = info.get('title', 'İsimsiz Liste')
+                    playlist_title = info.get('title', translation_manager.tr("common.labels.unnamed_playlist"))
                     playlist_size = info.get('playlist_count', 0)
                     if playlist_size == 0 and 'entries' in info:
                         playlist_size = len(info['entries'])
@@ -126,7 +128,7 @@ class UrlAnalyzer:
                     return {
                         'url': url,
                         'is_playlist': False,
-                        'title': 'Tek Video',
+                        'title': translation_manager.tr("common.labels.single_video"),
                         'video_count': 1
                     }
         except Exception as e:
@@ -134,7 +136,7 @@ class UrlAnalyzer:
             return {
                 'url': url,
                 'is_playlist': False,
-                'title': 'Bilinmeyen',
+                'title': translation_manager.tr("common.labels.unknown"),
                 'video_count': 1
             }
     
@@ -239,7 +241,7 @@ class UrlAnalysisWorker(QThread):
                     if url not in self.url_cache:
                         self.url_cache[url] = {
                             'is_playlist': playlist_data.get('is_playlist', False),
-                            'title': playlist_data.get('title', 'Unknown'),
+                            'title': playlist_data.get('title', translation_manager.tr("common.labels.unknown")),
                             'video_count': playlist_data.get('video_count', 1),
                             'uploader': playlist_data.get('uploader', '')
                         }
@@ -247,13 +249,13 @@ class UrlAnalysisWorker(QThread):
                     # Single video
                     result.playlist_info.append({
                         'url': url,
-                        'title': 'Tek Video',
+                        'title': translation_manager.tr("common.labels.single_video"),
                         'video_count': 1
                     })
                     if url not in self.url_cache:
                         self.url_cache[url] = {
                             'is_playlist': False,
-                            'title': 'Tek Video',
+                            'title': translation_manager.tr("common.labels.single_video"),
                             'video_count': 1
                         }
 

@@ -6,6 +6,7 @@ Tüm uygulama çevirileri ayrı bir SQLite veritabanında tutulur
 import sqlite3
 import os
 import json
+import re
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 import logging
@@ -15,7 +16,11 @@ logger = logging.getLogger(__name__)
 
 class TranslationDatabase:
     """Çeviri veritabanı yönetim sınıfı"""
-    
+
+    # Hierarchical key validation pattern (MEDIUM #7)
+    # Valid keys: lowercase letters, numbers, dots, underscores
+    HIERARCHICAL_KEY_PATTERN = re.compile(r'^[a-z0-9_.]+$')
+
     def __init__(self, db_path: str = None):
         """
         Args:
@@ -277,16 +282,19 @@ class TranslationDatabase:
         # Eğer scope verilmemişse, hierarchical key'den çıkar
         # Örnek: "main.labels.paste_urls" -> scope="main.labels", key_text="main.labels.paste_urls"
         # Key'in kendisi değişmez, sadece scope parametresi belirlenir
-        # REFACTORED: Removed brittle heuristic detection
-        # Now: Always extract scope from hierarchical keys (contains '.' and no spaces)
-        # This is more explicit and maintainable than the previous heuristic approach
+        # MEDIUM #7: Added regex validation for hierarchical key format
         extracted_scope = None
         if scope is None and '.' in key and ' ' not in key:
-            # Hierarchical key detected: extract scope from last dot
-            parts = key.rsplit('.', 1)
-            if len(parts) == 2:
-                extracted_scope = parts[0]
-                scope = extracted_scope
+            # Validate hierarchical key format
+            if self.HIERARCHICAL_KEY_PATTERN.match(key):
+                # Valid hierarchical key: extract scope from last dot
+                parts = key.rsplit('.', 1)
+                if len(parts) == 2:
+                    extracted_scope = parts[0]
+                    scope = extracted_scope
+            else:
+                # Invalid format: log warning but continue
+                logger.warning(f"Invalid hierarchical key format: {key}")
 
         # Önbellekte ara
         cache_key = f"{lang_code}:{scope}:{key}" if scope else f"{lang_code}:{key}"

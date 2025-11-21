@@ -20,7 +20,11 @@ class DownloadSignals(QObject):
 
 class Downloader:
     """YouTube video indirme ve MP3 dönüştürme sınıfı"""
-    
+
+    # Filename truncation safety margin (bytes)
+    # Provides buffer for multi-byte UTF-8 characters and formatting overhead
+    FILENAME_TRUNCATION_SAFETY_MARGIN = 10
+
     # Logger interface for yt-dlp
     def debug(self, msg):
         """Called by yt-dlp for debug messages"""
@@ -158,7 +162,7 @@ class Downloader:
             sanitized_title = sanitize_filename(title, restricted=False, is_id=False)
             # Truncate to approximately 200 bytes (yt-dlp's .200B)
             # Account for " [video_id]" suffix and extension
-            max_title_bytes = 200 - len(f" [{video_id}]") - len(f".{ext if not self.ffmpeg_available else 'mp3'}") - 10
+            max_title_bytes = 200 - len(f" [{video_id}]") - len(f".{ext if not self.ffmpeg_available else 'mp3'}") - self.FILENAME_TRUNCATION_SAFETY_MARGIN
             if len(sanitized_title.encode('utf-8')) > max_title_bytes:
                 # Truncate by bytes, not characters
                 sanitized_title = sanitized_title.encode('utf-8')[:max_title_bytes].decode('utf-8', errors='ignore')

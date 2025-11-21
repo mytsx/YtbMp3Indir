@@ -38,6 +38,12 @@ class UrlAnalyzer:
     PLAYLIST_REGEX = re.compile(
         r'(https?://)?(www\.)?(youtube\.com/(playlist\?list=|watch\?.*[&?]list=))([a-zA-Z0-9_-]+)'
     )
+
+    # YouTube playlist ID patterns (for stricter validation)
+    # Common prefixes: PL (playlist), UU (user uploads), OLAK (album), RDCLAK (radio), WL (watch later), LL (liked)
+    PLAYLIST_ID_PATTERN = re.compile(
+        r'^(PL|UU|OLAK|RDCLAK|WL|LL|RD)[a-zA-Z0-9_-]{10,}$|^[a-zA-Z0-9_-]{13,}$'
+    )
     
     @classmethod
     def validate_youtube_urls(cls, urls: List[str]) -> Tuple[List[str], List[str]]:
@@ -68,8 +74,13 @@ class UrlAnalyzer:
             playlist_match = cls.PLAYLIST_REGEX.search(url)
             if playlist_match:
                 playlist_id = playlist_match.group(5)
-                # Playlist IDs can be various lengths, just check it's alphanumeric
-                if playlist_id and len(playlist_id) > 0 and playlist_id.replace('-', '').replace('_', '').isalnum():
+                # IMPROVED: Validate with YouTube-specific playlist ID patterns
+                # This prevents false positives from non-YouTube URLs with list= parameter
+                if playlist_id and cls.PLAYLIST_ID_PATTERN.match(playlist_id):
+                    valid_urls.append(url)
+                    continue
+                elif playlist_id and len(playlist_id) >= 10 and playlist_id.replace('-', '').replace('_', '').isalnum():
+                    # Fallback: Accept if at least 10 chars and alphanumeric (might be new format)
                     valid_urls.append(url)
                     continue
 

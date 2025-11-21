@@ -1,10 +1,13 @@
 import os
 import shutil
 import threading
+import logging
 import yt_dlp
 import static_ffmpeg
 from PyQt5.QtCore import QObject, pyqtSignal
 from database.manager import DatabaseManager
+
+logger = logging.getLogger(__name__)
 
 
 class DownloadSignals(QObject):
@@ -81,9 +84,26 @@ class Downloader:
             
         title = info.get('title', 'Unknown')
         ext = info.get('ext', 'webm')
-        
-        # Build file info
-        file_name = f"{title}.mp3" if self.ffmpeg_available else f"{title}.{ext}"
+
+        # CRITICAL FIX: Build file_name matching yt-dlp template pattern
+        # Template: '%(title).200B [%(id)s].%(ext)s'
+        # We must sanitize and truncate the same way yt-dlp does
+        try:
+            from yt_dlp.utils import sanitize_filename
+            # Sanitize title (removes illegal chars, Windows-compatible)
+            sanitized_title = sanitize_filename(title, restricted=False, is_id=False)
+            # Truncate to approximately 200 bytes (yt-dlp's .200B)
+            # Account for " [video_id]" suffix and extension
+            max_title_bytes = 200 - len(f" [{video_id}]") - len(f".{ext if not self.ffmpeg_available else 'mp3'}") - 10
+            if len(sanitized_title.encode('utf-8')) > max_title_bytes:
+                # Truncate by bytes, not characters
+                sanitized_title = sanitized_title.encode('utf-8')[:max_title_bytes].decode('utf-8', errors='ignore')
+            # Build filename matching template
+            file_name = f"{sanitized_title} [{video_id}].{'mp3' if self.ffmpeg_available else ext}"
+        except Exception as e:
+            # Fallback to simple format if sanitization fails
+            logger.warning(f"Filename sanitization failed, using fallback: {e}")
+            file_name = f"{title[:100]} [{video_id}].{'mp3' if self.ffmpeg_available else ext}"
         # Klasörün tam yolunu al
         output_dir = self.current_output_path or 'music'
         if not os.path.isabs(output_dir):
@@ -256,8 +276,8 @@ class Downloader:
                 }],
                 'postprocessor_hooks': [self.postprocessor_hook],
                 # SECURITY FIX: Sanitize filenames for cross-platform compatibility
-                # Use .200B to limit length, include video ID for uniqueness
-                'outtmpl': os.path.join(output_path, '%(title).200B.%(ext)s'),
+                # Use .200B to limit length, include %(id)s for uniqueness (prevents same-title overwrites)
+                'outtmpl': os.path.join(output_path, '%(title).200B [%(id)s].%(ext)s'),
                 'windowsfilenames': True,  # Remove Windows-illegal characters (: < > | etc)
                 'restrictfilenames': False,  # Keep unicode chars but sanitize via windowsfilenames
                 'ignoreerrors': False,  # Don't ignore errors for better control
@@ -273,7 +293,7 @@ class Downloader:
             ydl_opts = {
                 'format': 'bestaudio/best',
                 # SECURITY FIX: Sanitize filenames for cross-platform compatibility
-                'outtmpl': os.path.join(output_path, '%(title).200B.%(ext)s'),
+                'outtmpl': os.path.join(output_path, '%(title).200B [%(id)s].%(ext)s'),
                 'windowsfilenames': True,  # Remove Windows-illegal characters
                 'restrictfilenames': False,  # Keep unicode chars
                 'ignoreerrors': False,  # Don't ignore errors for better control

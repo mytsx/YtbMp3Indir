@@ -570,10 +570,14 @@ class MP3YapMainWindow(QMainWindow):
                 with open(filename, 'r', encoding='utf-8') as f:
                     urls = f.read()
                     self.url_text.setPlainText(urls)
-                    QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), 
+                    QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"),
                         translation_manager.tr("main.status.urls_loaded").format(len(urls.strip().split())))
-            except Exception as e:
-                QMessageBox.critical(self, translation_manager.tr("dialogs.titles.error"), translation_manager.tr("main.errors.file_read").format(str(e)))
+            except (IOError, OSError) as e:
+                QMessageBox.critical(self, translation_manager.tr("dialogs.titles.error"),
+                    translation_manager.tr("main.errors.file_read").format(str(e)))
+            except UnicodeDecodeError as e:
+                QMessageBox.critical(self, translation_manager.tr("dialogs.titles.error"),
+                    f"Dosya kodlama hatası: {str(e)}")
     
     def update_progress(self, filename, percent, text):
         """İlerleme çubuğunu güncelle"""

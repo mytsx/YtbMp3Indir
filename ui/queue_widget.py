@@ -419,21 +419,33 @@ class QueueWidget(QWidget):
         else:
             QMessageBox.information(self, translation_manager.tr("dialogs.titles.info"), translation_manager.tr("queue.status.no_pending"))
     
-    def pause_queue(self):
-        """Kuyruğu duraklat"""
+    def pause_queue(self) -> None:
+        """Pause queue processing
+
+        Enables start button, disables pause button, and emits queue_paused
+        signal to notify main window of pause state.
+        """
         self.start_button.setEnabled(True)
         self.pause_button.setEnabled(False)
         # Kuyruk modunu kapat
         self.queue_paused.emit()  # Ana pencereye duraklatıldığını bildir
-    
-    def clear_all(self):
-        """Tüm kuyruğu temizle"""
+
+    def clear_all(self) -> None:
+        """Clear all items from the queue
+
+        Removes all items from the database queue and refreshes the display.
+        Shows confirmation message with count of cleared items.
+        """
         count = self.db.clear_all_queue()
         self.load_queue()
         QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr("queue.messages.items_cleared").format(count))
-    
-    def clear_selected(self):
-        """Seçili öğeleri temizle"""
+
+    def clear_selected(self) -> None:
+        """Clear selected items from the queue
+
+        Removes only the items that are currently selected in the table.
+        Shows warning if no items are selected.
+        """
         selected_rows = set()
         for item in self.table.selectedItems():
             selected_rows.add(item.row())
@@ -451,31 +463,51 @@ class QueueWidget(QWidget):
         self.load_queue()
         QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr("queue.messages.selected_cleared").format(len(selected_rows)))
     
-    def clear_completed(self):
-        """Tamamlananları temizle"""
+    def clear_completed(self) -> None:
+        """Clear completed downloads from queue
+
+        Removes all items with 'completed' status, reorders remaining positions,
+        and refreshes the display. Shows confirmation message with count.
+        """
         count = self.db.clear_queue('completed')
         self.db.reorder_queue_positions()
         self.load_queue()
         QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr("queue.messages.completed_cleared").format(count))
-    
-    def clear_failed(self):
-        """Başarısız indirmeleri temizle"""
+
+    def clear_failed(self) -> None:
+        """Clear failed downloads from queue
+
+        Removes all items with 'failed' status, reorders remaining positions,
+        and refreshes the display. Shows confirmation message with count.
+        """
         count = self.db.clear_queue('failed')
         self.db.reorder_queue_positions()
         self.load_queue()
         QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr("queue.messages.failed_cleared").format(count))
-    
-    def clear_canceled(self):
-        """Iptal edilmiş indirmeleri temizle"""
+
+    def clear_canceled(self) -> None:
+        """Clear canceled and paused downloads from queue
+
+        Removes all items with 'canceled' or 'paused' status, reorders
+        remaining positions, and refreshes the display. Shows confirmation
+        message with total count.
+        """
         # canceled ve paused durumlarını temizle
         count = self.db.clear_queue('canceled')
         count += self.db.clear_queue('paused')
         self.db.reorder_queue_positions()
         self.load_queue()
         QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr("queue.messages.canceled_cleared").format(count))
-    
-    def move_up(self, item_id):
-        """Öğeyi yukarı taşı"""
+
+    def move_up(self, item_id: int) -> None:
+        """Move queue item up one position
+
+        Args:
+            item_id: Database ID of the item to move
+
+        Swaps position with the item above if not already at the top.
+        Refreshes the queue display after moving.
+        """
         # Mevcut pozisyonu bul
         items = self.db.get_queue_items()
         current_item = next((item for item in items if item['id'] == item_id), None)
@@ -491,8 +523,15 @@ class QueueWidget(QWidget):
                 self.db.update_queue_position(above_item['id'], current_item['position'])
                 self.load_queue()
     
-    def move_down(self, item_id):
-        """Öğeyi aşağı taşı"""
+    def move_down(self, item_id: int) -> None:
+        """Move queue item down one position
+
+        Args:
+            item_id: Database ID of the item to move
+
+        Swaps position with the item below if not already at the bottom.
+        Refreshes the queue display after moving.
+        """
         # Mevcut pozisyonu bul
         items = self.db.get_queue_items()
         current_item = next((item for item in items if item['id'] == item_id), None)

@@ -6,16 +6,18 @@
 - `services/url_analyzer.py`: URL validation/caching before enqueueing downloads.
 - `ui/`: Qt widgets (`main_window.py`, `queue_widget.py`, `history_widget.py`, `converter_widget.py`, etc.).
 - `utils/`: config/state helpers, translation management, update checks, YouTube utilities.
+- `database/`: SQLite database access modules (`manager.py` for download history, `translation_db.py` for i18n).
+- `data/`: Contains `translations.db` (SQLite i18n database), `translation_keys_mapping.json`, `translations_for_ai.json`, and other supporting artifacts.
+- `translations/`: Qt localization files (`.ts` source, `.qm` compiled) for legacy Qt translation system.
 - `assets/`: icons and bundled ffmpeg binaries; `resources/` holds original images.
-- `translations/`, `translation_keys_mapping.json`, `translations_for_ai.json`, `translations.db`: localization data; `data/`, `database/` store supporting artifacts.
-- `scripts/`: icon processing helpers; `mp3yap.spec` and `mp3yap_portable.spec` are PyInstaller configs.
+- `scripts/`: icon processing, translation management, and build helpers; `mp3yap.spec` and `mp3yap_portable.spec` are PyInstaller configs.
 
 ## Build, Test, and Development Commands
 - `pip install -r requirements.txt` — install runtime deps (PyQt5, yt-dlp, static-ffmpeg, etc.).
 - `pip install -r requirements-dev.txt` — add build-time tools (PyInstaller, Pillow).
 - `python mp3yap_gui.py` — run the app locally; verifies end-to-end download/conversion.
 - `pyinstaller mp3yap.spec` — build installer; `pyinstaller mp3yap_portable.spec` for portable build.
-- Translation maintenance (when needed): `python generate_translations.py` or `python manage_translations.py`.
+- Translation maintenance (when needed): `python scripts/translation/generate_translations.py` or `python scripts/translation/manage_translations.py`.
 
 ## Coding Style & Naming Conventions
 - Target Python 3.11 runtime; prefer 4-space indentation and PEP 8 spacing.

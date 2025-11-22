@@ -28,5 +28,7 @@ try:
             print(f"{key}: {text}")
 except sqlite3.Error as e:
     print(f"Database error: {e}")
-except Exception as e:
-    print(f"An unexpected error occurred: {e}")
+except Exception:
+    print("An unexpected error occurred:")
+    import traceback
+    traceback.print_exc()

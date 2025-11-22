@@ -392,6 +392,16 @@ INSERT INTO translation_keys VALUES(367,NULL,'update.messages.up_to_date','Messa
 INSERT INTO translation_keys VALUES(368,NULL,'update.errors.api_response_failed','Error message when GitHub API response cannot be read','Error: Could not read API response: {error}',1,'2025-11-22 01:30:50','2025-11-22 01:30:50');
 INSERT INTO translation_keys VALUES(369,NULL,'update.errors.check_failed','Error message when update check fails','Update check failed: {error}',1,'2025-11-22 01:30:50','2025-11-22 01:30:50');
 INSERT INTO translation_keys VALUES(370,NULL,'update.errors.unexpected_error','Generic error message for unexpected errors during update check','Error: An unexpected error occurred.',1,'2025-11-22 01:30:50','2025-11-22 01:30:50');
+INSERT INTO translation_keys VALUES(371,NULL,'shortcuts.descriptions.paste_url','Keyboard shortcut description: Paste URL from clipboard and validate','Paste URL and auto-validate',1,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translation_keys VALUES(372,NULL,'shortcuts.descriptions.quick_download','Keyboard shortcut description: Start quick download','Quick download start',1,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translation_keys VALUES(373,NULL,'shortcuts.descriptions.open_folder','Keyboard shortcut description: Open the downloads folder','Open download folder',1,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translation_keys VALUES(374,NULL,'shortcuts.descriptions.history_tab','Keyboard shortcut description: Navigate to history tab','Switch to history tab',1,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translation_keys VALUES(375,NULL,'shortcuts.descriptions.queue_tab','Keyboard shortcut description: Navigate to queue tab','Switch to queue tab',1,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translation_keys VALUES(376,NULL,'shortcuts.descriptions.show_help','Keyboard shortcut description: Display keyboard shortcuts help dialog','Show this help window',1,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translation_keys VALUES(377,NULL,'shortcuts.descriptions.cancel_download','Keyboard shortcut description: Cancel ongoing download','Cancel download',1,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translation_keys VALUES(378,NULL,'shortcuts.descriptions.quit_app','Keyboard shortcut description: Exit the application','Quit application',1,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translation_keys VALUES(380,'main.status','main.status.all_downloads_completed','Status message when all downloads (single/playlist/multi-URL) complete successfully',NULL,1,'2025-11-22 02:20:01','2025-11-22 02:20:01');
+INSERT INTO translation_keys VALUES(381,'main.status','main.status.download_stopped','Status message when download is stopped/cancelled by user during processing',NULL,1,'2025-11-22 02:20:01','2025-11-22 02:20:01');
 CREATE TABLE translations (
                 translation_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 key_id INTEGER NOT NULL,
@@ -1159,8 +1169,28 @@ INSERT INTO translations VALUES(775,369,'en','Update check failed: {error}',0,NU
 INSERT INTO translations VALUES(776,369,'tr','Güncelleme kontrolü başarısız: {error}',0,NULL,'2025-11-22 01:30:50','2025-11-22 01:30:50');
 INSERT INTO translations VALUES(777,370,'en','Error: An unexpected error occurred.',0,NULL,'2025-11-22 01:30:50','2025-11-22 01:30:50');
 INSERT INTO translations VALUES(778,370,'tr','Hata: Beklenmedik bir hata oluştu.',0,NULL,'2025-11-22 01:30:50','2025-11-22 01:30:50');
-INSERT INTO sqlite_sequence VALUES('translation_keys',370);
-INSERT INTO sqlite_sequence VALUES('translations',778);
+INSERT INTO translations VALUES(779,371,'en','Paste URL and auto-validate',0,NULL,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translations VALUES(780,371,'tr','URL yapıştır ve otomatik doğrula',0,NULL,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translations VALUES(781,372,'en','Quick download start',0,NULL,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translations VALUES(782,372,'tr','Hızlı indirme başlat',0,NULL,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translations VALUES(783,373,'en','Open download folder',0,NULL,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translations VALUES(784,373,'tr','İndirme klasörünü aç',0,NULL,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translations VALUES(785,374,'en','Switch to history tab',0,NULL,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translations VALUES(786,374,'tr','Geçmiş sekmesine geç',0,NULL,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translations VALUES(787,375,'en','Switch to queue tab',0,NULL,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translations VALUES(788,375,'tr','Kuyruk sekmesine geç',0,NULL,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translations VALUES(789,376,'en','Show this help window',0,NULL,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translations VALUES(790,376,'tr','Bu yardım penceresini göster',0,NULL,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translations VALUES(791,377,'en','Cancel download',0,NULL,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translations VALUES(792,377,'tr','İndirmeyi iptal et',0,NULL,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translations VALUES(793,378,'en','Quit application',0,NULL,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translations VALUES(794,378,'tr','Uygulamadan çık',0,NULL,'2025-11-22 01:46:21','2025-11-22 01:46:21');
+INSERT INTO translations VALUES(795,380,'en','All downloads completed',0,NULL,'2025-11-22 02:20:01','2025-11-22 02:20:01');
+INSERT INTO translations VALUES(796,380,'tr','Tüm indirmeler tamamlandı',0,NULL,'2025-11-22 02:20:01','2025-11-22 02:20:01');
+INSERT INTO translations VALUES(797,381,'en','Download stopped',0,NULL,'2025-11-22 02:20:01','2025-11-22 02:20:01');
+INSERT INTO translations VALUES(798,381,'tr','İndirme durduruldu',0,NULL,'2025-11-22 02:20:01','2025-11-22 02:20:01');
+INSERT INTO sqlite_sequence VALUES('translation_keys',381);
+INSERT INTO sqlite_sequence VALUES('translations',798);
 CREATE INDEX idx_translations_key_lang ON translations(key_id, lang_code);
 CREATE INDEX idx_translation_keys_text ON translation_keys(key_text);
 CREATE INDEX idx_keys_scope ON translation_keys(scope);

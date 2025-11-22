@@ -1146,31 +1146,31 @@ class MP3YapMainWindow(QMainWindow):
             # Ana kısayollar
             {
                 'key': QKeySequence.Paste,
-                'description': 'URL yapıştır ve otomatik doğrula',
+                'description': translation_manager.tr('shortcuts.descriptions.paste_url'),
                 'action': self.paste_and_validate_url,
                 'category': 'main'
             },
             {
                 'key': QKeySequence("Ctrl+Return"),
-                'description': 'Hızlı indirme başlat',
+                'description': translation_manager.tr('shortcuts.descriptions.quick_download'),
                 'action': self.quick_download,
                 'category': 'main'
             },
             {
                 'key': QKeySequence("Ctrl+D"),
-                'description': 'İndirme klasörünü aç',
+                'description': translation_manager.tr('shortcuts.descriptions.open_folder'),
                 'action': self.open_output_folder,
                 'category': 'main'
             },
             {
                 'key': QKeySequence("Ctrl+H"),
-                'description': 'Geçmiş sekmesine geç',
+                'description': translation_manager.tr('shortcuts.descriptions.history_tab'),
                 'action': lambda: self.tab_widget.setCurrentIndex(1),
                 'category': 'navigation'
             },
             {
                 'key': QKeySequence("Ctrl+K"),
-                'description': 'Kuyruk sekmesine geç',
+                'description': translation_manager.tr('shortcuts.descriptions.queue_tab'),
                 'action': lambda: self.tab_widget.setCurrentIndex(2),
                 'category': 'navigation'
             },
@@ -1182,13 +1182,13 @@ class MP3YapMainWindow(QMainWindow):
             },
             {
                 'key': QKeySequence.HelpContents,
-                'description': 'Bu yardım penceresini göster',
+                'description': translation_manager.tr('shortcuts.descriptions.show_help'),
                 'action': self.show_shortcuts_help,
                 'category': 'help'
             },
             {
                 'key': QKeySequence("Escape"),
-                'description': 'İndirmeyi iptal et',
+                'description': translation_manager.tr('shortcuts.descriptions.cancel_download'),
                 'action': self.handle_escape,
                 'category': 'main'
             },
@@ -1206,7 +1206,7 @@ class MP3YapMainWindow(QMainWindow):
             },
             {
                 'key': QKeySequence("Ctrl+Q"),
-                'description': 'Uygulamadan çık',
+                'description': translation_manager.tr('shortcuts.descriptions.quit_app'),
                 'action': None,  # Menüde tanımlı
                 'category': 'file'
             }
@@ -1286,23 +1286,9 @@ class MP3YapMainWindow(QMainWindow):
                         key = QKeySequence(key)
                     key_str = key.toString(QKeySequence.NativeText)
                     
-                    # Açıklamaları çevir
+                    # Description is already translated (from translation_manager.tr())
                     desc = shortcut['description']
-                    desc_translated = {
-                        'URL yapıştır ve otomatik doğrula': translation_manager.tr("main.tooltips.paste_auto_validate"),
-                        'Hızlı indirme başlat': translation_manager.tr("dialogs.shortcuts.quick_download"),
-                        'İndirme klasörünü aç': translation_manager.tr("dialogs.shortcuts.open_folder"),
-                        'Geçmiş sekmesine geç': translation_manager.tr("dialogs.shortcuts.switch_history"),
-                        'Kuyruk sekmesine geç': translation_manager.tr("dialogs.shortcuts.switch_queue"),
-                        'Mevcut sekmeyi yenile': translation_manager.tr("dialogs.shortcuts.refresh_tab"),
-                        'Bu yardım penceresini göster': translation_manager.tr("dialogs.shortcuts.show_help"),
-                        'İndirmeyi iptal et': translation_manager.tr("dialogs.shortcuts.cancel_download"),
-                        "URL'leri dosyadan içe aktar": translation_manager.tr("main.menu.import_urls"),
-                        'Tercihler/Ayarlar': translation_manager.tr("dialogs.shortcuts.preferences"),
-                        'Uygulamadan çık': translation_manager.tr("dialogs.shortcuts.quit_app")
-                    }.get(desc, desc)
-                    
-                    html += f"<tr><td><b>{key_str}</b></td><td>{desc_translated}</td></tr>"
+                    html += f"<tr><td><b>{key_str}</b></td><td>{desc}</td></tr>"
                 
                 html += "</table>"
         

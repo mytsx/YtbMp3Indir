@@ -78,4 +78,5 @@ portable_package/
 # *.iss  # Installer scripts are now tracked
 
 # NSIS files
-*.nsi
+*.nsi# Translation database (generated from migrations)
+data/translations.db

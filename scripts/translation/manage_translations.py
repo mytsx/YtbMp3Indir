@@ -30,15 +30,17 @@ def find_lrelease():
             result = subprocess.run([path, "-version"], capture_output=True, text=True)
             if result.returncode == 0:
                 return path
-        except:
+        except (FileNotFoundError, OSError, subprocess.SubprocessError):
+            # lrelease not found at this path, try next
             continue
-    
+
     # Try to find via which command
     try:
         result = subprocess.run(["which", "lrelease"], capture_output=True, text=True)
         if result.returncode == 0:
             return result.stdout.strip()
-    except:
+    except (FileNotFoundError, OSError, subprocess.SubprocessError):
+        # which command failed or lrelease not in PATH
         pass
     
     return None

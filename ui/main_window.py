@@ -1028,7 +1028,7 @@ class MP3YapMainWindow(QMainWindow):
     
     def on_url_analysis_started(self):
         """URL analysis started"""
-        self.url_status_bar.setText(translation_manager.tr("⏳ URL'ler kontrol ediliyor..."))
+        self.url_status_bar.setText(translation_manager.tr('main.url_validation.checking_urls'))
         style_manager.set_widget_property(self.url_status_bar, "statusType", "warning")
         self.url_status_bar.setVisible(True)
     

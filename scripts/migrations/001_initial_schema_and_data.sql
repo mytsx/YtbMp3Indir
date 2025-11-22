@@ -402,6 +402,7 @@ INSERT INTO translation_keys VALUES(377,NULL,'shortcuts.descriptions.cancel_down
 INSERT INTO translation_keys VALUES(378,NULL,'shortcuts.descriptions.quit_app','Keyboard shortcut description: Exit the application','Quit application',1,'2025-11-22 01:46:21','2025-11-22 01:46:21');
 INSERT INTO translation_keys VALUES(380,'main.status','main.status.all_downloads_completed','Status message when all downloads (single/playlist/multi-URL) complete successfully',NULL,1,'2025-11-22 02:20:01','2025-11-22 02:20:01');
 INSERT INTO translation_keys VALUES(381,'main.status','main.status.download_stopped','Status message when download is stopped/cancelled by user during processing',NULL,1,'2025-11-22 02:20:01','2025-11-22 02:20:01');
+INSERT INTO translation_keys VALUES(382,'main.url_validation','main.url_validation.checking_urls','Status message when URL validation/analysis is in progress',NULL,1,'2025-11-22 02:30:43','2025-11-22 02:30:43');
 CREATE TABLE translations (
                 translation_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 key_id INTEGER NOT NULL,
@@ -1189,8 +1190,10 @@ INSERT INTO translations VALUES(795,380,'en','All downloads completed',0,NULL,'2
 INSERT INTO translations VALUES(796,380,'tr','Tüm indirmeler tamamlandı',0,NULL,'2025-11-22 02:20:01','2025-11-22 02:20:01');
 INSERT INTO translations VALUES(797,381,'en','Download stopped',0,NULL,'2025-11-22 02:20:01','2025-11-22 02:20:01');
 INSERT INTO translations VALUES(798,381,'tr','İndirme durduruldu',0,NULL,'2025-11-22 02:20:01','2025-11-22 02:20:01');
-INSERT INTO sqlite_sequence VALUES('translation_keys',381);
-INSERT INTO sqlite_sequence VALUES('translations',798);
+INSERT INTO translations VALUES(799,382,'en','⏳ Checking URLs...',0,NULL,'2025-11-22 02:30:43','2025-11-22 02:30:43');
+INSERT INTO translations VALUES(800,382,'tr','⏳ URL''ler kontrol ediliyor...',0,NULL,'2025-11-22 02:30:43','2025-11-22 02:30:43');
+INSERT INTO sqlite_sequence VALUES('translation_keys',382);
+INSERT INTO sqlite_sequence VALUES('translations',800);
 CREATE INDEX idx_translations_key_lang ON translations(key_id, lang_code);
 CREATE INDEX idx_translation_keys_text ON translation_keys(key_text);
 CREATE INDEX idx_keys_scope ON translation_keys(scope);

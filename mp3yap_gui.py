@@ -12,7 +12,7 @@ import logging
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QIcon
 from ui.splash_screen import SplashScreen
 
@@ -36,7 +36,7 @@ def main():
         splash = SplashScreen()
         splash.start()  # start metodunu çağır
         logger.debug("Splash screen displayed")
-    except Exception as e:
+    except (ImportError, RuntimeError):
         logger.exception("Failed to create splash screen")
         sys.exit(1)
     
@@ -50,10 +50,10 @@ def main():
         try:
             # Modülleri import et (lazy loading)
             logger.debug("Loading modules...")
-            # splash.update_status("Modüller yükleniyor...") # Translation manager not loaded yet
+            # splash.update_status("Modüller yüklenior...") # Translation manager not loaded yet
             from ui.main_window import MP3YapMainWindow
             app.processEvents()
-        except Exception as e:
+        except (ImportError, RuntimeError):
             logger.exception("Failed to load modules")
             return
         
@@ -97,24 +97,11 @@ def main():
         splash.update_status("Arayüz oluşturuluyor...")
         window = MP3YapMainWindow()
         app.processEvents()
-        
-        # Pencereyi göster
-        def show_main_window():
-            if window:
-                # Splash animasyonunu durdur
-                if hasattr(splash, 'color_animation_timer') and splash.color_animation_timer:
-                    splash.color_animation_timer.stop()
-                splash.hide()  # Splash'i gizle
-                splash.close()  # Splash'i kapat
-                window.show()
-                window.raise_()
-                window.activateWindow()
-                logger.debug("Main window displayed")
-        
+
         # Uygulama hazır, splash'i bilgilendir
         splash.update_status(translation_manager.tr("main.status.ready"))
         splash.set_app_ready()  # Logaritmik doldurma başlat
-        
+
         # Ana pencereyi göster
         def final_show():
             if window:

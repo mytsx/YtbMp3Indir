@@ -341,13 +341,34 @@ class TranslationDatabase:
 
             return text
     
+    def has_key(self, key: str) -> bool:
+        """
+        Check if a translation key exists in the database
+
+        Args:
+            key: Translation key to check
+
+        Returns:
+            True if key exists, False otherwise
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 1
+                FROM translation_keys
+                WHERE key_text = ?
+                LIMIT 1
+            """, (key,))
+
+            return cursor.fetchone() is not None
+
     def get_key_description(self, key: str) -> Optional[str]:
         """
         Get the description for a translation key
-        
+
         Args:
             key: Translation key
-        
+
         Returns:
             Description text or None if not found
         """
@@ -358,7 +379,7 @@ class TranslationDatabase:
                 FROM translation_keys
                 WHERE key_text = ?
             """, (key,))
-            
+
             result = cursor.fetchone()
             return result[0] if result else None
     

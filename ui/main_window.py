@@ -214,12 +214,14 @@ class MP3YapMainWindow(QMainWindow):
         self.signals.finished.connect(self.download_finished)
         self.signals.error.connect(self.download_error)
         self.signals.status_update.connect(self.update_status)
-        
+        self.signals.all_downloads_complete.connect(self.on_all_downloads_complete)
+
         # Kuyruk sinyalleri
         self.queue_signals.progress.connect(self.queue_download_progress)
         self.queue_signals.finished.connect(self.queue_download_finished)
         self.queue_signals.error.connect(self.queue_download_error)
         self.queue_signals.status_update.connect(self.queue_status_update)
+        self.queue_signals.all_downloads_complete.connect(self.on_queue_downloads_complete)
         
         # Connect to language change signal for decoupled UI updates
         translation_manager.languageChanged.connect(self.on_language_changed)
@@ -620,20 +622,31 @@ class MP3YapMainWindow(QMainWindow):
         self.progress_percent.setText(text)
     
     def download_finished(self, filename):
-        """İndirme tamamlandığında çağrılır"""
+        """İndirme tamamlandığında çağrılır (tek dosya)"""
         self.status_label.setText(translation_manager.tr("main.status.download_completed_file").format(filename))
+        # ⚠️ NOT: Butonları burada enable etme! Playlist'lerde her dosya için çağrılır.
+        # Butonlar sadece TÜM indirmeler bitince on_all_downloads_complete()'te enable edilir.
 
+    def on_all_downloads_complete(self, success):
+        """
+        Tüm indirmeler tamamlandığında çağrılır (playlist, multi-URL, vs.)
+
+        Args:
+            success: True if all downloads completed successfully, False if cancelled/error
+        """
         # ✅ THREAD-SAFE: Signal/slot mekanizması ile main thread'te çalışır
         self.download_button.setEnabled(True)
         self.open_folder_button.setEnabled(True)
 
-        # Ayarlara göre klasörü aç
-        if self.config.get('auto_open_folder', False):
+        # Ayarlara göre klasörü aç (sadece başarılı tamamlamalarda)
+        if success and self.config.get('auto_open_folder', False):
             self.open_output_folder()
-    
+
     def download_error(self, filename, error):
         """İndirme hatası durumunda çağrılır"""
         self.status_label.setText(translation_manager.tr("main.errors.error_format").format(filename, error))
+        # ⚠️ NOT: Butonları burada enable etme! Error'dan sonra da devam edebilir.
+        # Butonlar sadece TÜM indirmeler bitince on_all_downloads_complete()'te enable edilir.
     
     def update_status(self, status):
         """Durum mesajını güncelle"""
@@ -861,13 +874,24 @@ class MP3YapMainWindow(QMainWindow):
                 # Normal kuyruk modunda ise, bir sonraki öğeyi al
                 QTimer.singleShot(500, lambda: self.queue_widget.start_queue())
     
+    def on_queue_downloads_complete(self, success):
+        """
+        Kuyruk indirmesi tamamlandığında çağrılır (tek item'ın tüm dosyaları)
+
+        Args:
+            success: True if download completed successfully, False if cancelled/error
+        """
+        # Queue downloads için özel bir işlem gerekmeyebilir
+        # queue_download_finished zaten bir sonraki item'ı başlatıyor
+        pass
+
     def queue_download_error(self, filename, error):
         """Kuyruk indirmesinde hata oluştuğunda"""
         if self.current_queue_item is not None:
             self.queue_widget.update_download_status(
                 self.current_queue_item['id'], 'failed', error
             )
-            
+
             # Mevcut indirmeyi temizle
             self.current_queue_item = None
             

@@ -23,6 +23,7 @@ class DownloadSignals(QObject):
     finished = pyqtSignal(str)
     error = pyqtSignal(str, str)
     status_update = pyqtSignal(str)
+    all_downloads_complete = pyqtSignal(bool)  # True if successful, False if cancelled/error
 
 
 class Downloader:
@@ -570,8 +571,12 @@ class Downloader:
         # Show appropriate final message
         if was_cancelled:
             self.signals.status_update.emit(translation_manager.tr("main.status.download_cancelled"))
+            # ✅ CRITICAL: Always emit completion signal for UI re-enable
+            self.signals.all_downloads_complete.emit(False)
         else:
             self.signals.status_update.emit(translation_manager.tr("main.status.all_downloads_completed"))
+            # ✅ CRITICAL: Always emit completion signal for UI re-enable
+            self.signals.all_downloads_complete.emit(True)
 
     def stop(self) -> None:
         """Stop the current download operation

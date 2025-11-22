@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import traceback
 
 db_path = 'data/translations.db'
 if not os.path.exists(db_path):
@@ -28,7 +29,6 @@ try:
             print(f"{key}: {text}")
 except sqlite3.Error as e:
     print(f"Database error: {e}")
-except Exception:
-    print("An unexpected error occurred:")
-    import traceback
+except Exception as e:
+    print(f"An unexpected error occurred: {e}")
     traceback.print_exc()

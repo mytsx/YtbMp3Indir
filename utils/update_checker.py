@@ -7,6 +7,7 @@ import requests
 from packaging import version
 from PyQt5.QtCore import QThread, pyqtSignal
 from version import __version__, __github_repo__
+from utils.translation_manager import translation_manager
 
 
 class UpdateChecker(QThread):
@@ -39,16 +40,16 @@ class UpdateChecker(QThread):
                     'published_at': data.get('published_at', '')
                 }
                 self.update_available.emit(update_info)
-                self.check_finished.emit(True, f"Yeni sürüm mevcut: v{latest_version}")
+                self.check_finished.emit(True, translation_manager.tr('update.messages.new_version_available').format(version=latest_version))
             else:
-                self.check_finished.emit(True, "Güncel sürümü kullanıyorsunuz")
+                self.check_finished.emit(True, translation_manager.tr('update.messages.up_to_date'))
         except json.JSONDecodeError as e:
-            self.check_finished.emit(False, f"Hata: API yanıtı okunamadı: {e}")
+            self.check_finished.emit(False, translation_manager.tr('update.errors.api_response_failed').format(error=str(e)))
         except requests.exceptions.RequestException as e:
-            self.check_finished.emit(False, f"Güncelleme kontrolü başarısız: {e}")
+            self.check_finished.emit(False, translation_manager.tr('update.errors.check_failed').format(error=str(e)))
         except Exception as e:
             logging.exception("Unexpected error during update check")
-            self.check_finished.emit(False, "Hata: Beklenmedik bir hata oluştu.")
+            self.check_finished.emit(False, translation_manager.tr('update.errors.unexpected_error'))
     
     def is_newer_version(self, latest_version):
         """Check if latest version is newer than current"""

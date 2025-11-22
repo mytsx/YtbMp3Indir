@@ -603,7 +603,7 @@ class MP3YapMainWindow(QMainWindow):
                     translation_manager.tr("main.errors.file_read").format(str(e)))
             except UnicodeDecodeError as e:
                 QMessageBox.critical(self, translation_manager.tr("dialogs.titles.error"),
-                    f"Dosya kodlama hatası: {str(e)}")
+                    translation_manager.tr('dialogs.errors.file_encoding_error').format(error=str(e)))
     
     def update_progress(self, filename, percent, text):
         """İlerleme çubuğunu güncelle"""
@@ -836,7 +836,9 @@ class MP3YapMainWindow(QMainWindow):
         """Kuyruk durum güncellemesi"""
         if self.current_queue_item is not None:
             # Dönüştürme durumunu kontrol et
-            if "MP3'e dönüştürülüyor" in status or "Dönüştürme" in status:
+            converting_kw = translation_manager.tr('keywords.converting_to_mp3')
+            conversion_kw = translation_manager.tr('keywords.conversion')
+            if converting_kw in status or conversion_kw in status:
                 self.queue_widget.update_download_status(
                     self.current_queue_item['id'], 'converting'
                 )
@@ -1020,23 +1022,23 @@ class MP3YapMainWindow(QMainWindow):
         if result.valid_urls:
             playlists = [p for p in result.playlist_info if p.get('video_count', 1) > 1]
             single_videos = [p for p in result.playlist_info if p.get('video_count', 1) == 1]
-            
+
             if result.total_videos == len(result.valid_urls):
                 # Only single videos
-                status_parts.append(f"✓ {len(result.valid_urls)} video indirmeye hazır")
+                status_parts.append(translation_manager.tr('main.url_validation.videos_ready').format(count=len(result.valid_urls)))
             else:
                 # Mixed (playlists + videos)
                 parts = []
                 if playlists:
-                    parts.append(f"{len(playlists)} playlist")
+                    parts.append(translation_manager.tr('main.url_validation.playlists').format(count=len(playlists)))
                 if single_videos:
-                    parts.append(f"{len(single_videos)} video")
+                    parts.append(translation_manager.tr('main.url_validation.videos').format(count=len(single_videos)))
                 status_parts.append(f"✓ {' ve '.join(parts)} (toplam {result.total_videos} video)")
-                
+
                 # Playlist details
                 for p in playlists:
                     if p.get('title') and p['title'] not in ['Bilinmeyen', 'Tek Video']:
-                        playlist_text = f"  • {p['title'][:30]}"
+                        playlist_text = translation_manager.tr('main.url_validation.playlist_item').format(title=p['title'][:30])
                         if len(p['title']) > 30:
                             playlist_text += "..."
                         playlist_text += f" ({p.get('video_count', 1)} video)"
@@ -1044,18 +1046,18 @@ class MP3YapMainWindow(QMainWindow):
         
         # Invalid URLs
         if result.invalid_urls:
-            status_parts.append(f"✗ {len(result.invalid_urls)} geçersiz URL")
-        
+            status_parts.append(translation_manager.tr('main.url_validation.invalid_urls').format(count=len(result.invalid_urls)))
+
         # Database status
         if result.files_exist > 0:
-            status_parts.append(f"✓ {result.files_exist} dosya hem indirilmiş hem de klasörde mevcut")
-        
+            status_parts.append(translation_manager.tr('main.url_validation.files_exist').format(count=result.files_exist))
+
         if result.files_missing > 0:
-            status_parts.append(f"⚠ {result.files_missing} dosya daha önce indirilmiş ama klasörde bulunamadı")
-        
+            status_parts.append(translation_manager.tr('main.url_validation.files_missing').format(count=result.files_missing))
+
         if result.already_downloaded > result.files_exist + result.files_missing:
             unknown = result.already_downloaded - result.files_exist - result.files_missing
-            status_parts.append(f"? {unknown} dosya kaydı eksik bilgi içeriyor")
+            status_parts.append(translation_manager.tr('main.url_validation.unknown_records').format(count=unknown))
         
         # Update status bar
         if status_parts:

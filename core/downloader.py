@@ -5,11 +5,16 @@ import logging
 from typing import Optional, Dict, Any, List
 import yt_dlp
 import static_ffmpeg
+import re
+from yt_dlp.utils import sanitize_filename
 from PyQt5.QtCore import QObject, pyqtSignal
 from database.manager import DatabaseManager
 from utils.translation_manager import translation_manager
 
 logger = logging.getLogger(__name__)
+
+# Exception marker constant for programmatic checking
+DOWNLOAD_CANCELLED_MARKER = "DOWNLOAD_CANCELLED_BY_USER"
 
 
 class DownloadSignals(QObject):
@@ -38,12 +43,11 @@ class Downloader:
         """
         # Parse playlist download messages
         if '[download] Downloading item' in msg:
-            import re
             match = re.search(r'Downloading item (\d+) of (\d+)', msg)
             if match:
                 self.current_item_index = int(match.group(1))
                 self.playlist_total = int(match.group(2))
-                self.signals.status_update.emit(f"📥 [{self.current_item_index}/{self.playlist_total}] Playlist indiriliyor...")
+                self.signals.status_update.emit(translation_manager.tr('downloader.status.playlist_downloading_item').format(current=self.current_item_index, total=self.playlist_total))
 
     def warning(self, msg: str) -> None:
         """Called by yt-dlp for warnings
@@ -61,7 +65,7 @@ class Downloader:
 
         Emits status update signal with error message.
         """
-        self.signals.status_update.emit(f"❌ Hata: {msg}")
+        self.signals.status_update.emit(translation_manager.tr('downloader.status.error_prefix').format(msg=msg))
     
     def __init__(self, signals: DownloadSignals) -> None:
         """Initialize the downloader with download signals
@@ -205,7 +209,6 @@ class Downloader:
         # Template: '%(title).200B [%(id)s].%(ext)s'
         # We must sanitize and truncate the same way yt-dlp does
         try:
-            from yt_dlp.utils import sanitize_filename
             # Sanitize title (removes illegal chars, Windows-compatible)
             sanitized_title = sanitize_filename(title, restricted=False, is_id=False)
             # Truncate to approximately 200 bytes (yt-dlp's .200B)
@@ -302,11 +305,11 @@ class Downloader:
             status_prefix = f"[{current_idx}/{total_videos}] "
             
         if d['status'] == 'started':
-            self.signals.status_update.emit(f"🔄 {status_prefix}MP3'e dönüştürülüyor...")
+            self.signals.status_update.emit(translation_manager.tr('downloader.status.converting_to_mp3').format(prefix=status_prefix))
         elif d['status'] == 'processing':
-            self.signals.status_update.emit(f"🔄 {status_prefix}Dönüştürme devam ediyor...")
+            self.signals.status_update.emit(translation_manager.tr('downloader.status.conversion_in_progress').format(prefix=status_prefix))
         elif d['status'] == 'finished':
-            self.signals.status_update.emit(f"✨ {status_prefix}Dönüştürme tamamlandı!")
+            self.signals.status_update.emit(translation_manager.tr('downloader.status.conversion_completed').format(prefix=status_prefix))
     
     def download_progress_hook(self, d: Dict[str, Any]) -> None:
         """Track download progress and emit status updates
@@ -338,7 +341,7 @@ class Downloader:
                 logger.info(f"Download cancelled, cleaning up: {os.path.basename(d['filename'])}")
                 self._cleanup_temp_files(d['filename'])
             # Raise DownloadError to stop the download
-            raise yt_dlp.DownloadError(translation_manager.tr('downloader.errors.download_cancelled'))
+            raise yt_dlp.DownloadError(DOWNLOAD_CANCELLED_MARKER)
 
         if d['status'] == 'downloading':
             filename = os.path.basename(d['filename'])
@@ -367,12 +370,12 @@ class Downloader:
                 percent = d['downloaded_bytes'] / d['total_bytes'] * 100
                 progress_text = f"{status_prefix}%{percent:.1f}" if status_prefix else f"%{percent:.1f}"
                 self.signals.progress.emit(filename, percent, progress_text)
-                self.signals.status_update.emit(f"📥 {status_prefix}İndiriliyor: {filename} - %{percent:.1f}")
+                self.signals.status_update.emit(translation_manager.tr('downloader.status.downloading_percent').format(prefix=status_prefix, filename=filename, percent=percent))
             else:
                 mb_downloaded = d['downloaded_bytes']/1024/1024
                 progress_text = f"{status_prefix}{mb_downloaded:.1f} MB" if status_prefix else f"{mb_downloaded:.1f} MB"
                 self.signals.progress.emit(filename, -1, progress_text)
-                self.signals.status_update.emit(f"📥 {status_prefix}İndiriliyor: {filename} - {mb_downloaded:.1f} MB")
+                self.signals.status_update.emit(translation_manager.tr('downloader.status.downloading_mb').format(prefix=status_prefix, filename=filename, mb=mb_downloaded))
         elif d['status'] == 'finished':
             filename = os.path.basename(d['filename'])
             # Check playlist info for finished status
@@ -386,7 +389,7 @@ class Downloader:
                 status_prefix = f"[{current_idx}/{total_videos}] "
             
             if filename.endswith('.webm') or filename.endswith('.m4a') or filename.endswith('.opus'):
-                self.signals.status_update.emit(f"✅ {status_prefix}İndirme tamamlandı, MP3'e dönüştürülüyor...")
+                self.signals.status_update.emit(translation_manager.tr('downloader.status.download_complete_converting').format(prefix=status_prefix))
             else:
                 self.signals.finished.emit(filename)
             
@@ -394,8 +397,8 @@ class Downloader:
             if 'info_dict' in d:
                 self.save_to_database(d['info_dict'])
         elif d['status'] == 'error':
-            filename = os.path.basename(d.get('filename', 'Bilinmeyen dosya'))
-            self.signals.error.emit(filename, str(d.get('error', 'Bilinmeyen hata')))
+            filename = os.path.basename(d.get('filename', translation_manager.tr('downloader.errors.unknown_file')))
+            self.signals.error.emit(filename, str(d.get('error', translation_manager.tr('downloader.errors.unknown_error'))))
 
     def process_url(self, url: str, output_path: str) -> bool:
         """Process a YouTube URL and download as MP3
@@ -471,7 +474,7 @@ class Downloader:
                     # Check if this is a playlist
                     if info.get('_type') == 'playlist':
                         # Playlist - individual videos are saved via hooks
-                        playlist_title = info.get('title', 'İsimsiz Playlist')
+                        playlist_title = info.get('title', translation_manager.tr('downloader.default.unnamed_playlist'))
                         entry_count = len(info.get('entries', []))
                         
                         # Store playlist info
@@ -480,8 +483,8 @@ class Downloader:
                             'count': entry_count
                         }
                         self.current_playlist_index[url] = 0
-                        
-                        self.signals.status_update.emit(f"📋 Playlist başlatıldı: {playlist_title} ({entry_count} video)")
+
+                        self.signals.status_update.emit(translation_manager.tr('downloader.status.playlist_started').format(title=playlist_title, count=entry_count))
                     else:
                         # Single video - save to database if not already saved by hooks
                         title = info.get('title', 'Unknown')
@@ -490,33 +493,32 @@ class Downloader:
                         
                         if not self.ffmpeg_available:
                             ext = info.get('ext', 'webm')
-                            self.signals.status_update.emit(f"✅ İndirildi: {title}.{ext} (MP3 dönüşümü için FFmpeg gerekli)")
+                            self.signals.status_update.emit(translation_manager.tr('downloader.status.downloaded_no_ffmpeg').format(title=title, ext=ext))
                         else:
-                            self.signals.status_update.emit(f"✅ İşlem tamamlandı: {title}.mp3")
+                            self.signals.status_update.emit(translation_manager.tr('downloader.status.process_completed').format(title=title))
                             self.signals.finished.emit(f"{title}.mp3")
                 else:
-                    self.signals.status_update.emit(f"✅ İndirme tamamlandı")
+                    self.signals.status_update.emit(translation_manager.tr('downloader.status.download_completed'))
             self.ydl = None  # Clear the reference
             return True
         except yt_dlp.DownloadError as e:
-            cancelled_msg = translation_manager.tr('downloader.errors.download_cancelled')
-            if cancelled_msg in str(e):
-                self.signals.status_update.emit(cancelled_msg)
+            if DOWNLOAD_CANCELLED_MARKER in str(e):
+                self.signals.status_update.emit(translation_manager.tr('downloader.errors.download_cancelled'))
             else:
                 self.signals.error.emit(url, str(e))
-                self.signals.status_update.emit(f"İndirme hatası: {e}")
+                self.signals.status_update.emit(translation_manager.tr('downloader.errors.download_error').format(error=str(e)))
             return False
         except KeyboardInterrupt:
-            self.signals.status_update.emit("İndirme kullanıcı tarafından durduruldu")
+            self.signals.status_update.emit(translation_manager.tr('downloader.errors.stopped_by_user'))
             return False
         except (OSError, IOError) as e:
             self.signals.error.emit(url, str(e))
-            self.signals.status_update.emit(f"Dosya sistem hatası: {e}")
+            self.signals.status_update.emit(translation_manager.tr('downloader.errors.filesystem_error').format(error=str(e)))
             return False
         except Exception as e:  # pylint: disable=broad-except
             # Beklenmeyen hatalar için fallback
             self.signals.error.emit(url, str(e))
-            self.signals.status_update.emit(f"Beklenmeyen hata: {e}")
+            self.signals.status_update.emit(translation_manager.tr('downloader.errors.unexpected_error').format(error=str(e)))
             return False
         finally:
             self.ydl = None  # Always clear the reference

@@ -636,7 +636,13 @@ class MP3YapMainWindow(QMainWindow):
         """
         # ✅ THREAD-SAFE: Signal/slot mekanizması ile main thread'te çalışır
         self.download_button.setEnabled(True)
+        self.cancel_button.setEnabled(False)  # ✅ Cancel butonunu devre dışı bırak
         self.open_folder_button.setEnabled(True)
+
+        # ✅ FIX: Progress bar ve UI state'i temizle
+        self.progress_bar.setValue(0)
+        self.progress_bar.setRange(0, 100)  # Belirsiz moddan çık
+        self.progress_percent.setText('')
 
         # Ayarlara göre klasörü aç (sadece başarılı tamamlamalarda)
         if success and self.config.get('auto_open_folder', False):

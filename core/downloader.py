@@ -96,7 +96,7 @@ class Downloader:
         try:
             static_ffmpeg.add_paths()
             self.ffmpeg_available = True
-        except Exception as e:
+        except (ImportError, OSError, RuntimeError) as e:
             self.ffmpeg_available = self.check_system_ffmpeg()
             if not self.ffmpeg_available:
                 self.signals.status_update.emit(translation_manager.tr('downloader.errors.ffmpeg_load_failed').format(error=str(e)))

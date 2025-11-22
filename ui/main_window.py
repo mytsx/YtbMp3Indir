@@ -87,7 +87,7 @@ class QueueProcessThread(QThread):
                         if info:
                             if info.get('_type') == 'playlist':
                                 # Playlist ise her video için kontrol et
-                                playlist_title = info.get('title', 'İsimsiz Liste')
+                                playlist_title = info.get('title') or translation_manager.tr("common.labels.unnamed_playlist")
                                 entries = info.get('entries', [])
                                 for idx, entry in enumerate(entries):
                                     video_id = entry.get('id')
@@ -109,7 +109,7 @@ class QueueProcessThread(QThread):
                             else:
                                 # Tek video
                                 video_id = info.get('id')
-                                video_title = info.get('title', 'İsimsiz Video')
+                                video_title = info.get('title') or translation_manager.tr("common.labels.unnamed_video")
 
                                 # Duplicate kontrolü
                                 if video_id and video_id in existing_video_ids:

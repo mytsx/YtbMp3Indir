@@ -112,7 +112,10 @@ class TranslationManager(QObject):
     
     def has_translation(self, key: str) -> bool:
         """Check if a translation exists for a key"""
-        return key in TRANSLATIONS
+        if USE_DATABASE:
+            return translation_db.has_key(key)
+        else:
+            return key in TRANSLATIONS
     
     def get_system_language(self) -> str:
         """Get the system's default language"""

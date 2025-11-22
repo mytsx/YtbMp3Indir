@@ -475,14 +475,10 @@ class MP3YapMainWindow(QMainWindow):
             output_path = os.path.join(os.getcwd(), output_path)
         
         def download_thread():
+            # ✅ THREAD-SAFE: Sadece downloader'ı çalıştır
+            # UI güncellemeleri self.signals.finished -> download_finished() ile yapılır
             self.downloader.download_all(urls, output_path)
-            # İndirme bitince butonları etkinleştir
-            self.download_button.setEnabled(True)
-            self.open_folder_button.setEnabled(True)
-            # Ayarlara göre klasörü aç
-            if self.config.get('auto_open_folder', False):
-                self.open_output_folder()
-        
+
         thread = threading.Thread(target=download_thread)
         thread.start()
     
@@ -626,6 +622,14 @@ class MP3YapMainWindow(QMainWindow):
     def download_finished(self, filename):
         """İndirme tamamlandığında çağrılır"""
         self.status_label.setText(translation_manager.tr("main.status.download_completed_file").format(filename))
+
+        # ✅ THREAD-SAFE: Signal/slot mekanizması ile main thread'te çalışır
+        self.download_button.setEnabled(True)
+        self.open_folder_button.setEnabled(True)
+
+        # Ayarlara göre klasörü aç
+        if self.config.get('auto_open_folder', False):
+            self.open_output_folder()
     
     def download_error(self, filename, error):
         """İndirme hatası durumunda çağrılır"""
@@ -807,17 +811,9 @@ class MP3YapMainWindow(QMainWindow):
         
         # Downloader'ı hazırla
         self.current_queue_item = queue_item
-        
-        # Sinyal bağlantılarını güncelle (kuyruk için)
-        try:
-            self.signals.finished.disconnect()
-            self.signals.error.disconnect()
-        except (TypeError, RuntimeError) as e:
-            # Signal zaten disconnect veya hiç bağlı değil
-            logger.debug(f"Signal disconnect ignored: {e}")
-        
-        self.signals.finished.connect(self.queue_download_finished)
-        self.signals.error.connect(self.queue_download_error)
+
+        # queue_signals zaten doğru handler'lara bağlı (lines 219-222)
+        # Buradan disconnect/reconnect yapmaya gerek yok
 
         # İndirmeyi başlat
         output_dir = self.config.get('output_path', 'music')
@@ -982,7 +978,9 @@ class MP3YapMainWindow(QMainWindow):
         # Cancel any existing analysis
         if self.url_analysis_worker and self.url_analysis_worker.isRunning():
             self.url_analysis_worker.cancel()
-            self.url_analysis_worker.wait()
+            # ✅ NON-BLOCKING: Timeout ile UI freeze önlenir
+            if not self.url_analysis_worker.wait(2000):  # 2 second timeout
+                logger.warning("URL analysis didn't terminate in 2s, continuing anyway")
         
         # Start background analysis
         self.url_analysis_worker = UrlAnalysisWorker(

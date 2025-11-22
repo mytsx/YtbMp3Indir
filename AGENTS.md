@@ -26,9 +26,9 @@
 ## Testing Guidelines
 - No automated test suite yet; rely on manual smoke checks.
 - Validate: single and playlist downloads, cancel/resume paths, MP3 conversion of audio/video, and history updates.
-- Confirm output in `music/`, localization strings after changes, and absence of regressions in `debug.log`/`mp3yap_debug.log`.
+- Confirm output in `music/`, localization strings after changes, and absence of regressions in `debug.log`.
 
 ## Commit & Pull Request Guidelines
 - Follow conventional commit prefixes seen in history (`feat:`, `fix:`, `refactor:`, `chore:`); keep subjects imperative and concise.
 - PRs should include a brief summary, reproduction/verification steps, and screenshots or clips for UI changes.
-- Mention installer impact when touching `.spec` files or assets; update docs (`README.md`, `TODO.md`, `UI_FIXES.md`) and translation files when UI text changes.
+- Mention installer impact when touching `.spec` files or assets; update docs (`README.md`, `docs/TODO.md`, `docs/UI_FIXES.md`) and translation files when UI text changes.

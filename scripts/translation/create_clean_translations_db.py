@@ -399,8 +399,12 @@ def create_clean_database():
         
         return True
         
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        conn.rollback()
+        return False
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"An unexpected error occurred: {e}")
         conn.rollback()
         return False
     finally:

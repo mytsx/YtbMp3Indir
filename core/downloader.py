@@ -216,13 +216,13 @@ class Downloader:
                 sanitized_title = sanitized_title.encode('utf-8')[:max_title_bytes].decode('utf-8', errors='ignore')
             # Build filename matching template
             file_name = f"{sanitized_title} [{video_id}].{'mp3' if self.ffmpeg_available else ext}"
-        except (UnicodeEncodeError, UnicodeDecodeError) as e:
+        except (UnicodeEncodeError, UnicodeDecodeError, ValueError, AttributeError) as e:
             # Fallback to simple format if unicode sanitization fails
-            logger.warning(f"Unicode error in filename sanitization, using fallback: {e}")
+            logger.warning(f"Filename sanitization error, using fallback: {e}")
             file_name = f"{title[:100]} [{video_id}].{'mp3' if self.ffmpeg_available else ext}"
-        except Exception as e:
-            # Fallback for any other unexpected errors
-            logger.exception("Unexpected error in filename sanitization, using fallback")
+        except Exception:
+            # CRITICAL: Unexpected error that should be investigated
+            logger.exception("CRITICAL: Unexpected error in filename sanitization, using fallback")
             file_name = f"{title[:100]} [{video_id}].{'mp3' if self.ffmpeg_available else ext}"
         # Klasörün tam yolunu al
         output_dir = self.current_output_path or 'music'

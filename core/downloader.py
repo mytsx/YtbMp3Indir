@@ -99,7 +99,7 @@ class Downloader:
         except Exception as e:
             self.ffmpeg_available = self.check_system_ffmpeg()
             if not self.ffmpeg_available:
-                self.signals.status_update.emit(f"FFmpeg yüklenemedi: {str(e)}")
+                self.signals.status_update.emit(translation_manager.tr('downloader.errors.ffmpeg_load_failed').format(error=str(e)))
     
     def check_system_ffmpeg(self) -> bool:
         """Check if FFmpeg is available in system PATH
@@ -272,7 +272,7 @@ class Downloader:
             )
         else:
             # Log individual video
-            self.signals.status_update.emit(f"✅ Kaydedildi: {title}")
+            self.signals.status_update.emit(translation_manager.tr('downloader.status.saved').format(title=title))
     
     def postprocessor_hook(self, d: Dict[str, Any]) -> None:
         """Hook for FFmpeg post-processing progress updates
@@ -338,7 +338,7 @@ class Downloader:
                 logger.info(f"Download cancelled, cleaning up: {os.path.basename(d['filename'])}")
                 self._cleanup_temp_files(d['filename'])
             # Raise DownloadError to stop the download
-            raise yt_dlp.DownloadError("İndirme iptal edildi")
+            raise yt_dlp.DownloadError(translation_manager.tr('downloader.errors.download_cancelled'))
 
         if d['status'] == 'downloading':
             filename = os.path.basename(d['filename'])
@@ -413,7 +413,7 @@ class Downloader:
         """
         self.current_url = url
         self.current_output_path = output_path
-        self.signals.status_update.emit(f"🔗 Bağlantı kontrol ediliyor: {url}")
+        self.signals.status_update.emit(translation_manager.tr('downloader.status.checking_url').format(url=url))
         
         # yt-dlp seçenekleri
         if self.ffmpeg_available:
@@ -461,7 +461,7 @@ class Downloader:
                 'retries': 3,  # Number of retries on connection failure
                 'fragment_retries': 3,  # Number of retries for a fragment
             }
-            self.signals.status_update.emit("Uyarı: FFmpeg bulunamadı. Dosyalar orijinal formatta indirilecek.")
+            self.signals.status_update.emit(translation_manager.tr('downloader.warnings.ffmpeg_not_found_fallback'))
         
         try:
             self.ydl = yt_dlp.YoutubeDL(ydl_opts)
@@ -499,8 +499,9 @@ class Downloader:
             self.ydl = None  # Clear the reference
             return True
         except yt_dlp.DownloadError as e:
-            if "İndirme iptal edildi" in str(e):
-                self.signals.status_update.emit("İndirme iptal edildi")
+            cancelled_msg = translation_manager.tr('downloader.errors.download_cancelled')
+            if cancelled_msg in str(e):
+                self.signals.status_update.emit(cancelled_msg)
             else:
                 self.signals.error.emit(url, str(e))
                 self.signals.status_update.emit(f"İndirme hatası: {e}")
@@ -551,7 +552,7 @@ class Downloader:
                 self.signals.status_update.emit(translation_manager.tr("main.status.download_stopped"))
                 break
 
-            self.signals.status_update.emit(f"URL {i}/{len(urls)} işleniyor")
+            self.signals.status_update.emit(translation_manager.tr('downloader.status.processing_url_progress').format(current=i, total=len(urls)))
             success = self.process_url(url, output_path)
 
             if not success:
@@ -600,4 +601,4 @@ class Downloader:
         logger.info("Starting temp file cleanup")
         self._cleanup_temp_files()  # Clean all tracked temp files
 
-        self.signals.status_update.emit("İndirme iptal ediliyor...")
+        self.signals.status_update.emit(translation_manager.tr('downloader.status.cancelling'))

@@ -216,7 +216,7 @@ class UrlAnalysisWorker(QThread):
             self.started.emit()
 
             # Step 1: Validate URLs
-            self.progress.emit("⏳ URL'ler kontrol ediliyor...")
+            self.progress.emit(translation_manager.tr('url_analyzer.status.checking_urls'))
             result.valid_urls, result.invalid_urls = UrlAnalyzer.validate_youtube_urls(self.urls)
 
             if self._is_cancelled:
@@ -225,7 +225,7 @@ class UrlAnalysisWorker(QThread):
             # Step 2: Check for playlists
             has_playlist = any('list=' in url for url in result.valid_urls)
             if has_playlist:
-                self.progress.emit("⏳ Playlist bilgisi alınıyor...")
+                self.progress.emit(translation_manager.tr('url_analyzer.status.fetching_playlist_info'))
 
             # Step 3: Extract playlist information
             for url in result.valid_urls:
@@ -263,7 +263,7 @@ class UrlAnalysisWorker(QThread):
                 return  # Will emit finished in finally block
 
             # Step 4: Check database for existing downloads
-            self.progress.emit("⏳ Veritabanı kontrol ediliyor...")
+            self.progress.emit(translation_manager.tr('url_analyzer.status.checking_database'))
             output_dir = self.config.get('output_path', 'music')
 
             for url in result.valid_urls:

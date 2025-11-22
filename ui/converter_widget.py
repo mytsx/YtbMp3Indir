@@ -287,8 +287,7 @@ class ConverterWidget(QWidget):
             QMessageBox.warning(
                 self,
                 translation_manager.tr("dialogs.titles.error"),
-                translation_manager.tr("FFmpeg not found. MP3 conversion feature is disabled.\n\n"
-                       "Please install FFmpeg or restart the application.")
+                translation_manager.tr("converter.errors.ffmpeg_not_found_message")
             )
         
     def init_ui(self):

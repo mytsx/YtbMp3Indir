@@ -31,7 +31,14 @@ logger = logging.getLogger(__name__)
 
 # Status message detection constants
 STATUS_SYMBOLS = {"WARNING": "UYARI:", "SUCCESS": "✅", "ERROR": "❌"}
-STATUS_KEYWORDS = {"QUEUED": "kuyrukta", "ADDED": "eklendi", "FAILED": "eklenemedi"}
+
+def get_status_keywords():
+    """Get status keywords in the current language"""
+    return {
+        "QUEUED": translation_manager.tr("keywords.queued"),
+        "ADDED": translation_manager.tr("keywords.added"),
+        "FAILED": translation_manager.tr("keywords.failed_to_add")
+    }
 
 
 class QueueProcessThread(QThread):
@@ -629,7 +636,7 @@ class MP3YapMainWindow(QMainWindow):
         # Önemli uyarıları silme
         current_text = self.status_label.text()
         if any(x in current_text for x in STATUS_SYMBOLS.values()) and \
-           any(x in current_text.lower() for x in STATUS_KEYWORDS.values()):
+           any(x in current_text.lower() for x in get_status_keywords().values()):
             # Kuyruk işlemi mesajı varsa üzerine yazma
             return
         self.status_label.setText(status)
@@ -673,7 +680,7 @@ class MP3YapMainWindow(QMainWindow):
             existing_urls = set(line.strip() for line in current_text.split('\n') if line.strip())
             if url not in existing_urls:
                 self.url_text.setPlainText(current_text + '\n' + url)
-                self.status_label.setText(translation_manager.tr("main.status.url_added_download_tab"))
+                self.status_label.setText(translation_manager.tr("main.status.url_added_to_download_tab"))
                 style_manager.apply_alert_style(self.status_label, "success")
             # Zaten varsa sessizce geç
         else:
@@ -940,7 +947,7 @@ class MP3YapMainWindow(QMainWindow):
         """URL metni değiştiğinde"""
         # Eğer duplicate uyarısı varsa timer'ı başlatma
         current_text = self.status_label.text()
-        if STATUS_KEYWORDS["QUEUED"] in current_text.lower() and STATUS_SYMBOLS["WARNING"] in current_text:
+        if get_status_keywords()["QUEUED"] in current_text.lower() and STATUS_SYMBOLS["WARNING"] in current_text:
             return
             
         # Timer'ı durdur ve yeniden başlat (debounce)

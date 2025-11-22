@@ -6,19 +6,22 @@ Modern ve kullanıcı dostu YouTube'dan MP3 indirme aracı
 
 import sys
 import os
+import logging
 
 # Modül yolunu ekle
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QIcon
 from ui.splash_screen import SplashScreen
+
+logger = logging.getLogger(__name__)
 
 
 def main():
     """Ana uygulama başlatıcı"""
-    # print("[MP3YAP] Starting application...")
+    logger.debug("Starting application...")
     app = QApplication(sys.argv)
     app.setApplicationName("YouTube MP3 İndirici")
     
@@ -28,15 +31,13 @@ def main():
         app.setWindowIcon(QIcon(icon_path))
     
     # Splash screen'i göster
-    # print("[MP3YAP] Creating splash screen...")
+    logger.debug("Creating splash screen...")
     try:
         splash = SplashScreen()
         splash.start()  # start metodunu çağır
-        # print("[MP3YAP] Splash screen displayed")
-    except Exception as e:
-        print(f"[MP3YAP ERROR] Failed to create splash screen: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.debug("Splash screen displayed")
+    except (ImportError, RuntimeError):
+        logger.exception("Failed to create splash screen")
         sys.exit(1)
     
     # Ana pencere değişkeni
@@ -48,14 +49,12 @@ def main():
         
         try:
             # Modülleri import et (lazy loading)
-            # print("[MP3YAP] Loading modules...")
-            splash.update_status("Modüller yükleniyor...")
+            logger.debug("Loading modules...")
+            # splash.update_status("Modüller yüklenior...") # Translation manager not loaded yet
             from ui.main_window import MP3YapMainWindow
             app.processEvents()
-        except Exception as e:
-            print(f"[MP3YAP ERROR] Failed to load modules: {e}")
-            import traceback
-            traceback.print_exc()
+        except (ImportError, RuntimeError):
+            logger.exception("Failed to load modules")
             return
         
         # Veritabanını kontrol et
@@ -98,24 +97,11 @@ def main():
         splash.update_status("Arayüz oluşturuluyor...")
         window = MP3YapMainWindow()
         app.processEvents()
-        
-        # Pencereyi göster
-        def show_main_window():
-            if window:
-                # Splash animasyonunu durdur
-                if hasattr(splash, 'color_animation_timer') and splash.color_animation_timer:
-                    splash.color_animation_timer.stop()
-                splash.hide()  # Splash'i gizle
-                splash.close()  # Splash'i kapat
-                window.show()
-                window.raise_()
-                window.activateWindow()
-                # print("[MP3YAP] Main window displayed")
-        
+
         # Uygulama hazır, splash'i bilgilendir
-        splash.update_status("Hazır!")
+        splash.update_status(translation_manager.tr("main.status.ready"))
         splash.set_app_ready()  # Logaritmik doldurma başlat
-        
+
         # Ana pencereyi göster
         def final_show():
             if window:

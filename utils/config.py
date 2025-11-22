@@ -1,6 +1,9 @@
 import json
 import os
+import logging
 from typing import Dict, Any
+
+logger = logging.getLogger(__name__)
 
 
 class Config:
@@ -35,8 +38,11 @@ class Config:
                     config = self.DEFAULT_CONFIG.copy()
                     config.update(loaded_config)
                     return config
-            except Exception as e:
-                print(f"Ayarlar yüklenemedi: {e}")
+            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                logger.error(f"Config file corrupted or invalid encoding: {e}")
+                return self.DEFAULT_CONFIG.copy()
+            except (IOError, OSError) as e:
+                logger.error(f"Failed to read config file: {e}")
                 return self.DEFAULT_CONFIG.copy()
         return self.DEFAULT_CONFIG.copy()
     
@@ -45,8 +51,10 @@ class Config:
         try:
             with open(self.config_file, 'w', encoding='utf-8') as f:
                 json.dump(self.config, f, indent=4, ensure_ascii=False)
-        except Exception as e:
-            print(f"Ayarlar kaydedilemedi: {e}")
+        except (IOError, OSError) as e:
+            logger.error(f"Failed to save config file: {e}")
+        except TypeError as e:
+            logger.error(f"Invalid config data type for JSON serialization: {e}")
     
     def get(self, key: str, default: Any = None) -> Any:
         """Bir ayar değerini getir"""

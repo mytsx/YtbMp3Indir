@@ -5,6 +5,8 @@ from PyQt5.QtGui import QPainter, QBrush, QColor
 import random
 
 
+from utils.translation_manager import translation_manager
+
 class PreloaderWidget(QWidget):
     """Evrensel preloader widget'ı"""
     
@@ -44,7 +46,7 @@ class PreloaderWidget(QWidget):
         self.animation_widget.setFixedSize(180, 60)  # 6 kutu için
         
         # Açıklama metni
-        self.description_label = QLabel("İşlem yapılıyor...")
+        self.description_label = QLabel(translation_manager.tr("status.processing"))
         self.description_label.setAlignment(Qt.AlignCenter)
         self.description_label.setStyleSheet("""
             QLabel {
@@ -57,7 +59,7 @@ class PreloaderWidget(QWidget):
         """)
         
         # ESC iptal bildirimi
-        self.cancel_label = QLabel("İptal etmek için ESC tuşuna basın")
+        self.cancel_label = QLabel(translation_manager.tr("preloader.labels.cancel_hint"))
         self.cancel_label.setAlignment(Qt.AlignCenter)
         self.cancel_label.setStyleSheet("""
             QLabel {
@@ -76,8 +78,19 @@ class PreloaderWidget(QWidget):
         self.setLayout(layout)
     
     def show_with_text(self, text: str, cancelable: bool = False):
-        """Preloader'ı göster"""
+        """
+        Preloader'ı göster
+
+        Args:
+            text: Already translated text to display
+                  (Callers should use translation_manager.tr() before passing)
+            cancelable: Whether to show cancel instruction
+        """
+        # REFACTORED: Removed brittle heuristic detection
+        # Now: Always expect already-translated text from caller
+        # This makes the API more explicit and maintainable
         self.description_label.setText(text)
+             
         if cancelable:
             self.cancel_label.show()
         else:
@@ -101,6 +114,7 @@ class PreloaderWidget(QWidget):
     
     def paintEvent(self, event):
         """Arka plan çizimi"""
+        _ = event  # Unused
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         
@@ -171,7 +185,7 @@ class AnimationWidget(QWidget):
     
     def update_animation(self):
         """Renkleri rastgele değiştir"""
-        for i, box in enumerate(self.boxes):
+        for box in self.boxes:
             # Rastgele renk seç
             color = random.choice(self.colors)
             box.setStyleSheet(f"""

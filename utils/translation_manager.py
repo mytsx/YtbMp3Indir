@@ -5,9 +5,14 @@ Tüm uygulama çevirileri veritabanından yönetilir
 
 import os
 import locale
+import logging
 from PyQt5.QtCore import QTranslator, QLocale, QCoreApplication, pyqtSignal, QObject
 from PyQt5.QtWidgets import QApplication
 from typing import Optional, Dict, List
+
+# Configure logging for missing translations
+logging.basicConfig(level=logging.WARNING)
+logger = logging.getLogger(__name__)
 
 # Önce Python sözlüğünden çevirileri kullan, sonra veritabanına geçeceğiz
 try:
@@ -50,17 +55,29 @@ class TranslationManager(QObject):
     def tr(self, key: str, *args) -> str:
         """
         Get translation for a key (replaces Qt's tr() method)
-        
+        Supports both abstract keys (e.g., "main.buttons.download") and legacy Turkish text keys
+
         Args:
-            key: Translation key
+            key: Translation key (abstract or legacy Turkish text)
             *args: Format arguments if the translation contains placeholders
-            
+
         Returns:
             Translated text
         """
         if USE_DATABASE:
             # Veritabanından çeviri al (database kendi fallback mekanizmasına sahip)
             text = translation_db.get_translation(key, self._current_language)
+
+            # If translation not found (key returned as-is), log it
+            if text == key:
+                logger.warning(f"❌ MISSING TRANSLATION: key='{key}' lang='{self._current_language}'")
+
+            # If abstract key not found and it looks like Turkish text (no dots),
+            # try as legacy key for backward compatibility
+            if text == key and '.' not in key:
+                # This might be a legacy Turkish text key
+                # The database will handle it if it exists
+                pass
         else:
             # Python sözlüğünden çeviri al - database ile aynı fallback mantığı
             if key in TRANSLATIONS:
@@ -71,17 +88,21 @@ class TranslationManager(QObject):
                 # Fallback dili dene (İngilizce)
                 elif 'en' in trans_dict:
                     text = trans_dict['en']
+                    logger.warning(f"⚠️  FALLBACK TO EN: key='{key}' (no {self._current_language})")
                 # Son çare olarak anahtarı döndür
                 else:
                     text = key
+                    logger.warning(f"❌ MISSING TRANSLATION: key='{key}' (no translation found)")
             else:
                 text = key
-        
+                logger.warning(f"❌ MISSING KEY: '{key}' (not in database)")
+
         # Format argümanları uygula
         if args:
             try:
                 return text.format(*args)
-            except (IndexError, KeyError):
+            except (IndexError, KeyError) as e:
+                logger.error(f"❌ FORMAT ERROR: key='{key}' args={args} error={e}")
                 return text
         return text
     
@@ -101,17 +122,17 @@ class TranslationManager(QObject):
             if system_locale:
                 # Extract language code (e.g., 'en_US' -> 'en')
                 lang_code = system_locale.split('_')[0].lower()
-                
+
                 # Check if we support this language
                 if lang_code in self.SUPPORTED_LANGUAGES:
                     return lang_code
-                
+
                 # For Turkish locales
                 if lang_code == 'tr':
                     return 'tr'
-        except:
-            pass
-        
+        except (AttributeError, IndexError, TypeError) as e:
+            logger.debug(f"Could not detect system language: {e}")
+
         # Default to Turkish if system language is not supported
         return 'tr'
     
@@ -130,7 +151,7 @@ class TranslationManager(QObject):
         
         # Check if language is supported
         if language_code not in self.SUPPORTED_LANGUAGES:
-            print(f"Unsupported language: {language_code}")
+            logger.warning(f"Unsupported language: {language_code}")
             return False
         
         # If same language, no need to reload
@@ -149,8 +170,8 @@ class TranslationManager(QObject):
         
         # Emit signal for UI updates
         self.languageChanged.emit(language_code)
-        
-        print(f"Language changed to: {language_code}")
+
+        logger.info(f"Language changed to: {language_code}")
         return True
     
     def set_language(self, language_code: str) -> bool:
@@ -176,6 +197,31 @@ class TranslationManager(QObject):
             lang_info = self.SUPPORTED_LANGUAGES[language_code]
             return lang_info['native'] if native else lang_info['name']
         return language_code
+    
+    def get_key_description(self, key: str) -> Optional[str]:
+        """
+        Get the description for a translation key
+        
+        Args:
+            key: Translation key
+        
+        Returns:
+            Description text or None if not found
+        """
+        if USE_DATABASE:
+            return translation_db.get_key_description(key)
+        return None
+    
+    def get_all_keys_with_descriptions(self) -> Dict[str, str]:
+        """
+        Get all translation keys with their descriptions
+        
+        Returns:
+            Dictionary mapping keys to descriptions
+        """
+        if USE_DATABASE:
+            return translation_db.get_all_keys_with_descriptions()
+        return {}
     
     def get_available_languages(self, native: bool = True) -> List[tuple]:
         """

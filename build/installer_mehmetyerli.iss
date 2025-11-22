@@ -12,12 +12,12 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 OutputDir=installer_output
 OutputBaseFilename=Youtube_Mp3_Indir_Setup_v2.2.0_by_MehmetYerli
-SetupIconFile=assets\icon.ico
+SetupIconFile=..\assets\icon.ico
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
-LicenseFile=LICENSE.txt
-InfoBeforeFile=README.md
+LicenseFile=..\LICENSE.txt
+InfoBeforeFile=..\README.md
 
 ; Branding
 WizardImageFile=
@@ -34,9 +34,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 6.1
 
 [Files]
-Source: "dist\Youtube Mp3 İndir\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\dist\Youtube Mp3 İndir\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\Youtube Mp3 İndir"; Filename: "{app}\Youtube Mp3 İndir.exe"; Comment: "YouTube'dan MP3 indirme aracı - Mehmet Yerli"

@@ -15,7 +15,7 @@ class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.config = Config()
-        self.setWindowTitle(translation_manager.tr("Settings"))
+        self.setWindowTitle(translation_manager.tr("settings.window.title"))
         self.setModal(True)
         self.setFixedSize(650, 700)  # Genişletildi
         
@@ -33,11 +33,11 @@ class SettingsDialog(QDialog):
         
         # İndirme ayarları sekmesi
         download_tab = self.create_download_tab()
-        self.tab_widget.addTab(download_tab, translation_manager.tr("Download"))
+        self.tab_widget.addTab(download_tab, translation_manager.tr("main.buttons.download_action"))
         
         # Uygulama ayarları sekmesi
         app_tab = self.create_app_tab()
-        self.tab_widget.addTab(app_tab, translation_manager.tr("Application"))
+        self.tab_widget.addTab(app_tab, translation_manager.tr("settings.tabs.application"))
         
         main_layout.addWidget(self.tab_widget)
         
@@ -46,12 +46,12 @@ class SettingsDialog(QDialog):
         button_layout.setSpacing(10)
         button_layout.addStretch()
         
-        self.save_button = QPushButton(translation_manager.tr("Save"))
+        self.save_button = QPushButton(translation_manager.tr("common.buttons.save"))
         self.save_button.setIcon(icon_manager.get_icon("save", "#FFFFFF"))
         style_manager.apply_button_style(self.save_button, "primary")
         self.save_button.clicked.connect(self.save_settings)
         
-        self.cancel_button = QPushButton(translation_manager.tr("Cancel"))
+        self.cancel_button = QPushButton(translation_manager.tr("common.buttons.cancel"))
         self.cancel_button.setIcon(icon_manager.get_icon("x", "#FFFFFF"))
         style_manager.apply_button_style(self.cancel_button, "secondary")
         self.cancel_button.clicked.connect(self.reject)
@@ -70,16 +70,17 @@ class SettingsDialog(QDialog):
         layout.setSpacing(20)
         
         # Ses kalitesi
-        quality_group = self.create_group_box(translation_manager.tr("Audio Settings"))
+        quality_group = self.create_group_box(translation_manager.tr("settings.groups.audio_settings"))
         quality_layout = QVBoxLayout()
         quality_layout.setSpacing(10)
         quality_layout.setContentsMargins(10, 10, 10, 10)
         
         quality_row = QHBoxLayout()
-        quality_label = QLabel(translation_manager.tr("Audio Quality:"))
+        quality_label = QLabel(translation_manager.tr("settings.labels.audio_quality"))
         quality_label.setFixedWidth(150)
         self.quality_combo = QComboBox()
-        self.quality_combo.addItems(["128 kbps", "192 kbps", "320 kbps"])
+        kbps_suffix = translation_manager.tr("settings.suffixes.kbps")
+        self.quality_combo.addItems([f"128{kbps_suffix}", f"192{kbps_suffix}", f"320{kbps_suffix}"])
         quality_row.addWidget(quality_label)
         quality_row.addWidget(self.quality_combo)
         quality_row.addStretch()
@@ -89,14 +90,14 @@ class SettingsDialog(QDialog):
         layout.addWidget(quality_group)
         
         # İndirme klasörü
-        folder_group = self.create_group_box(translation_manager.tr("Download Location"))
+        folder_group = self.create_group_box(translation_manager.tr("settings.groups.download_location"))
         folder_layout = QVBoxLayout()
         folder_layout.setSpacing(10)
         folder_layout.setContentsMargins(10, 10, 10, 10)
         
         folder_row = QHBoxLayout()
         self.folder_edit = QLineEdit()
-        self.folder_button = QPushButton(translation_manager.tr("Browse..."))
+        self.folder_button = QPushButton(translation_manager.tr("common.buttons.browse"))
         self.folder_button.setIcon(icon_manager.get_icon("folder", "#666666"))
         # Icon button için sabit boyut gerekli
         self.folder_button.setFixedSize(80, 32)
@@ -110,14 +111,14 @@ class SettingsDialog(QDialog):
         layout.addWidget(folder_group)
         
         # Performans ayarları
-        perf_group = self.create_group_box(translation_manager.tr("Performance"))
+        perf_group = self.create_group_box(translation_manager.tr("settings.groups.performance"))
         perf_layout = QVBoxLayout()
         perf_layout.setSpacing(15)  # Arttırıldı
         perf_layout.setContentsMargins(15, 20, 15, 15)  # Arttırıldı
         
         # Eşzamanlı indirme
         concurrent_row = self.create_spinbox_row(
-            translation_manager.tr("Concurrent Downloads:"),
+            translation_manager.tr("settings.labels.concurrent_downloads"),
             self.create_spinbox(1, 5, 1)
         )
         self.concurrent_spin = concurrent_row.itemAt(1).widget()
@@ -125,23 +126,23 @@ class SettingsDialog(QDialog):
         
         # Playlist limiti
         playlist_row = self.create_spinbox_row(
-            translation_manager.tr("Playlist Limit:"),
-            self.create_spinbox(0, 1000, 1, translation_manager.tr("Unlimited"))
+            translation_manager.tr("settings.labels.playlist_limit"),
+            self.create_spinbox(0, 1000, 1, translation_manager.tr("settings.values.unlimited"))
         )
         self.playlist_spin = playlist_row.itemAt(1).widget()
         perf_layout.addLayout(playlist_row)
         
         # Cache limiti
         cache_row = self.create_spinbox_row(
-            translation_manager.tr("URL Cache Limit:"),
-            self.create_spinbox(100, 2000, 100, suffix=" URL")
+            translation_manager.tr("settings.labels.url_cache_limit"),
+            self.create_spinbox(100, 2000, 100, suffix=translation_manager.tr("settings.suffixes.url"))
         )
         self.cache_spin = cache_row.itemAt(1).widget()
-        self.cache_spin.setToolTip(translation_manager.tr("Maximum cache size for URL checking"))
+        self.cache_spin.setToolTip(translation_manager.tr("settings.labels.url_cache_limit"))
         perf_layout.addLayout(cache_row)
         
         # Otomatik yeniden deneme
-        self.auto_retry_check = QCheckBox(translation_manager.tr("Automatically retry failed downloads"))
+        self.auto_retry_check = QCheckBox(translation_manager.tr("settings.checkboxes.auto_retry"))
         perf_layout.addWidget(self.auto_retry_check)
         
         perf_group.setLayout(perf_layout)
@@ -159,16 +160,16 @@ class SettingsDialog(QDialog):
         layout.setSpacing(20)
         
         # Görünüm ayarları
-        appearance_group = self.create_group_box(translation_manager.tr("Appearance"))
+        appearance_group = self.create_group_box(translation_manager.tr("settings.groups.appearance"))
         appearance_layout = QVBoxLayout()
         appearance_layout.setSpacing(10)
         
         # Tema
         theme_row = QHBoxLayout()
-        theme_label = QLabel(translation_manager.tr("Theme:"))
+        theme_label = QLabel(translation_manager.tr("settings.labels.theme"))
         theme_label.setFixedWidth(150)
         self.theme_combo = QComboBox()
-        self.theme_combo.addItems([translation_manager.tr("Light"), translation_manager.tr("Dark")])
+        self.theme_combo.addItems([translation_manager.tr("settings.values.theme_light"), translation_manager.tr("settings.values.theme_dark")])
         theme_row.addWidget(theme_label)
         theme_row.addWidget(self.theme_combo)
         theme_row.addStretch()
@@ -177,7 +178,7 @@ class SettingsDialog(QDialog):
         
         # Dil seçimi
         language_row = QHBoxLayout()
-        language_label = QLabel(translation_manager.tr("Language:"))
+        language_label = QLabel(translation_manager.tr("settings.labels.language"))
         language_label.setFixedWidth(150)
         self.language_combo = QComboBox()
         
@@ -205,29 +206,29 @@ class SettingsDialog(QDialog):
         layout.addWidget(appearance_group)
         
         # Bildirim ayarları
-        notif_group = self.create_group_box(translation_manager.tr("Notifications"))
+        notif_group = self.create_group_box(translation_manager.tr("settings.groups.notifications"))
         notif_layout = QVBoxLayout()
         notif_layout.setSpacing(10)
         
-        self.notif_sound_check = QCheckBox(translation_manager.tr("Play sound when download completes"))
+        self.notif_sound_check = QCheckBox(translation_manager.tr("settings.checkboxes.notification_sound"))
         notif_layout.addWidget(self.notif_sound_check)
         
-        self.auto_open_check = QCheckBox(translation_manager.tr("Automatically open folder after download"))
+        self.auto_open_check = QCheckBox(translation_manager.tr("settings.checkboxes.auto_open_folder"))
         notif_layout.addWidget(self.auto_open_check)
         
         notif_group.setLayout(notif_layout)
         layout.addWidget(notif_group)
         
         # Geçmiş ayarları
-        history_group = self.create_group_box(translation_manager.tr("Download History"))
+        history_group = self.create_group_box(translation_manager.tr("history.title"))
         history_layout = QVBoxLayout()
         history_layout.setSpacing(10)
         
         history_row = QHBoxLayout()
-        history_label = QLabel(translation_manager.tr("Keep history:"))
+        history_label = QLabel(translation_manager.tr("settings.labels.keep_history"))
         history_label.setFixedWidth(150)
         self.history_combo = QComboBox()
-        self.history_combo.addItems([translation_manager.tr("30 days"), translation_manager.tr("60 days"), translation_manager.tr("90 days"), translation_manager.tr("Forever")])
+        self.history_combo.addItems([translation_manager.tr("settings.values.history_30_days"), translation_manager.tr("settings.values.history_60_days"), translation_manager.tr("settings.values.history_90_days"), translation_manager.tr("settings.values.history_forever")])
         history_row.addWidget(history_label)
         history_row.addWidget(self.history_combo)
         history_row.addStretch()
@@ -275,7 +276,7 @@ class SettingsDialog(QDialog):
         """İndirme klasörü seç"""
         folder = QFileDialog.getExistingDirectory(
             self, 
-            translation_manager.tr("Select Download Folder"),
+            translation_manager.tr("dialogs.titles.select_folder"),
             self.folder_edit.text()
         )
         if folder:
@@ -350,8 +351,8 @@ class SettingsDialog(QDialog):
                 from PyQt5.QtWidgets import QMessageBox
                 QMessageBox.warning(
                     self,
-                    translation_manager.tr("Error"),
-                    translation_manager.tr("Language could not be changed. Please restart the application.")
+                    translation_manager.tr("dialogs.titles.error"),
+                    translation_manager.tr("dialogs.messages.language_change_error")
                 )
         else:
             # Dil değişmemişse sadece kaydet
@@ -361,12 +362,12 @@ class SettingsDialog(QDialog):
     
     def retranslateUi(self):
         """UI metinlerini yeniden çevir"""
-        self.setWindowTitle(translation_manager.tr("Settings"))
+        self.setWindowTitle(translation_manager.tr("settings.window.title"))
         
         # Tab başlıkları
-        self.tab_widget.setTabText(0, translation_manager.tr("Download"))
-        self.tab_widget.setTabText(1, translation_manager.tr("Application"))
+        self.tab_widget.setTabText(0, translation_manager.tr("main.buttons.download_action"))
+        self.tab_widget.setTabText(1, translation_manager.tr("settings.tabs.application"))
         
         # Butonlar
-        self.save_button.setText(translation_manager.tr("Save"))
-        self.cancel_button.setText(translation_manager.tr("Cancel"))
+        self.save_button.setText(translation_manager.tr("common.buttons.save"))
+        self.cancel_button.setText(translation_manager.tr("common.buttons.cancel"))

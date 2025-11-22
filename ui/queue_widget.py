@@ -32,8 +32,14 @@ class QueueWidget(QWidget):
         self.refresh_timer.timeout.connect(self.check_and_refresh)
         self.refresh_timer.start(5000)  # 5 saniyede bir kontrol et
         
-    def init_ui(self):
-        """Arayüzü oluştur"""
+    def init_ui(self) -> None:
+        """Initialize the queue widget user interface
+
+        Creates and configures all UI components including:
+        - Control buttons (start, pause, clear)
+        - Search and filter controls
+        - Queue table view
+        """
         layout = QVBoxLayout()
         
         
@@ -41,7 +47,7 @@ class QueueWidget(QWidget):
         control_layout = QHBoxLayout()
         
         # Başlık
-        self.title_label = QLabel(translation_manager.tr("Download Queue"))
+        self.title_label = QLabel(translation_manager.tr("queue.title"))
         title_font = QFont()
         title_font.setPointSize(14)
         title_font.setBold(True)
@@ -51,45 +57,45 @@ class QueueWidget(QWidget):
         control_layout.addStretch()
         
         # Kontrol butonları
-        self.start_button = QPushButton(translation_manager.tr("Start Queue"))
+        self.start_button = QPushButton(translation_manager.tr("queue.buttons.start_queue"))
         self.start_button.setIcon(icon_manager.get_icon("play", "#FFFFFF"))
         self.start_button.clicked.connect(self.start_queue)
-        self.start_button.setToolTip(translation_manager.tr("Start downloading queue items"))
+        self.start_button.setToolTip(translation_manager.tr("queue.tooltips.start_queue"))
         style_manager.apply_button_style(self.start_button, "primary")
         
-        self.pause_button = QPushButton(translation_manager.tr("Pause"))
+        self.pause_button = QPushButton(translation_manager.tr("queue.buttons.pause_all"))
         self.pause_button.setIcon(icon_manager.get_icon("pause", "#FFFFFF"))
         self.pause_button.clicked.connect(self.pause_queue)
         self.pause_button.setEnabled(False)
-        self.pause_button.setToolTip(translation_manager.tr("Pause queue download"))
+        self.pause_button.setToolTip(translation_manager.tr("queue.tooltips.pause_queue"))
         style_manager.apply_button_style(self.pause_button, "warning")
         
         # Temizleme butonları için dropdown menü
-        self.clear_button = QPushButton(translation_manager.tr("Clear"))
+        self.clear_button = QPushButton(translation_manager.tr("queue.buttons.clear"))
         self.clear_button.setIcon(icon_manager.get_icon("trash-2", "#FFFFFF"))
-        self.clear_button.setToolTip(translation_manager.tr("Queue clear options"))
+        self.clear_button.setToolTip(translation_manager.tr("queue.tooltips.clear_options"))
         style_manager.apply_button_style(self.clear_button, "danger")
         
         # Temizleme menüsü
         self.clear_menu = QMenu(self)
         
-        self.clear_all_action = self.clear_menu.addAction(translation_manager.tr("Clear All"))
+        self.clear_all_action = self.clear_menu.addAction(translation_manager.tr("queue.menu.clear_all"))
         self.clear_all_action.setIcon(icon_manager.get_icon("trash-2", "#DC3545"))
         self.clear_all_action.triggered.connect(self.clear_all)
         
-        self.clear_selected_action = self.clear_menu.addAction(translation_manager.tr("Clear Selected"))
+        self.clear_selected_action = self.clear_menu.addAction(translation_manager.tr("queue.menu.clear_selected"))
         self.clear_selected_action.setIcon(icon_manager.get_icon("check-square", "#DC3545"))
         self.clear_selected_action.triggered.connect(self.clear_selected)
         
-        self.clear_completed_action = self.clear_menu.addAction(translation_manager.tr("Clear Completed"))
+        self.clear_completed_action = self.clear_menu.addAction(translation_manager.tr("queue.menu.clear_completed"))
         self.clear_completed_action.setIcon(icon_manager.get_icon("check-circle", "#28A745"))
         self.clear_completed_action.triggered.connect(self.clear_completed)
         
-        self.clear_failed_action = self.clear_menu.addAction(translation_manager.tr("Clear Failed"))
+        self.clear_failed_action = self.clear_menu.addAction(translation_manager.tr("queue.menu.clear_failed"))
         self.clear_failed_action.setIcon(icon_manager.get_icon("x-circle", "#DC3545"))
         self.clear_failed_action.triggered.connect(self.clear_failed)
         
-        self.clear_canceled_action = self.clear_menu.addAction(translation_manager.tr("Clear Canceled"))
+        self.clear_canceled_action = self.clear_menu.addAction(translation_manager.tr("queue.menu.clear_canceled"))
         self.clear_canceled_action.setIcon(icon_manager.get_icon("slash", "#FFC107"))
         self.clear_canceled_action.triggered.connect(self.clear_canceled)
         
@@ -102,22 +108,22 @@ class QueueWidget(QWidget):
         # Arama ve filtre alanı - ayrı satırda
         search_layout = QHBoxLayout()
         
-        self.search_label = QLabel(translation_manager.tr("Search:"))
+        self.search_label = QLabel(translation_manager.tr("queue.labels.search"))
         search_layout.addWidget(self.search_label)
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText(translation_manager.tr("Search song name or URL..."))
+        self.search_input.setPlaceholderText(translation_manager.tr("queue.placeholders.search"))
         self.search_input.textChanged.connect(self.search_queue)
         search_layout.addWidget(self.search_input)
         
-        self.filter_label = QLabel(translation_manager.tr("Filter:"))
+        self.filter_label = QLabel(translation_manager.tr("queue.labels.filter"))
         search_layout.addWidget(self.filter_label)
         self.status_filter = QComboBox()
         # Add items with data (status values)
-        self.status_filter.addItem(translation_manager.tr("All"), None)
-        self.status_filter.addItem(translation_manager.tr("Waiting"), "pending")
-        self.status_filter.addItem(translation_manager.tr("Downloading"), "downloading")
-        self.status_filter.addItem(translation_manager.tr("Completed"), "completed")
-        self.status_filter.addItem(translation_manager.tr("Failed"), "failed")
+        self.status_filter.addItem(translation_manager.tr("queue.filters.all"), None)
+        self.status_filter.addItem(translation_manager.tr("queue.status.waiting"), "pending")
+        self.status_filter.addItem(translation_manager.tr("queue.status.downloading"), "downloading")
+        self.status_filter.addItem(translation_manager.tr("queue.status.completed"), "completed")
+        self.status_filter.addItem(translation_manager.tr("queue.status.failed"), "failed")
         self.status_filter.currentIndexChanged.connect(self.filter_by_status)
         search_layout.addWidget(self.status_filter)
         
@@ -125,8 +131,8 @@ class QueueWidget(QWidget):
         self.table = QTableWidget()
         self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels([
-            translation_manager.tr("URL/Title"), translation_manager.tr("Status"), 
-            translation_manager.tr("Added Time"), translation_manager.tr("Action")
+            translation_manager.tr("queue.columns.title"), translation_manager.tr("queue.columns.status"), 
+            translation_manager.tr("queue.columns.added"), translation_manager.tr("queue.columns.action")
         ])
         
         # Tablo ayarları
@@ -156,7 +162,8 @@ class QueueWidget(QWidget):
         self.table.customContextMenuRequested.connect(self.show_context_menu)
         
         # İstatistikler
-        self.stats_label = QLabel(translation_manager.tr("Total: 0 | Waiting: 0 | Completed: 0"))
+        self.stats_label = QLabel()
+        self.update_statistics()
         
         # Layout'a ekle
         layout.addLayout(control_layout)
@@ -200,7 +207,7 @@ class QueueWidget(QWidget):
             # Toplu silme işlemi
             deleted_count = self.db.remove_from_queue_batch(queue_ids)
             self.load_queue()
-            QMessageBox.information(self, translation_manager.tr("Success"), translation_manager.tr(f"{deleted_count} items removed from queue."))
+            QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr("queue.messages.items_removed").format(deleted_count))
     
     def toggle_selected_items(self):
         """Seçili öğelerin durumunu değiştir (bekleyen/duraklatıldı)"""
@@ -243,8 +250,14 @@ class QueueWidget(QWidget):
             self.current_items_hash = items_hash
             self.load_queue()
     
-    def load_queue(self, force_refresh=False):
-        """Kuyruğu veritabanından yükle"""
+    def load_queue(self, force_refresh: bool = False) -> None:
+        """Load queue items from database and update the UI
+
+        Args:
+            force_refresh: If True, force reload even if data hasn't changed
+
+        Applies current filter and search criteria to the displayed items.
+        """
         # Filtre durumunu al - data kullan
         filter_status = self.status_filter.currentData()
         
@@ -295,7 +308,7 @@ class QueueWidget(QWidget):
                 download_button = QPushButton()
                 download_button.setIcon(icon_manager.get_icon("download", "#FFFFFF"))
                 download_button.setFixedSize(24, 24)
-                download_button.setToolTip(translation_manager.tr("Download Now"))
+                download_button.setToolTip(translation_manager.tr("queue.menu.download_now"))
                 download_button.setObjectName("queueDownloadButton")
                 download_button.clicked.connect(lambda checked, id=item['id']: self.download_now(id))
                 action_layout.addWidget(download_button)
@@ -305,7 +318,7 @@ class QueueWidget(QWidget):
             up_button = QPushButton()
             up_button.setIcon(icon_manager.get_icon("arrow-up", "#FFFFFF"))
             up_button.setFixedSize(24, 24)
-            up_button.setToolTip(translation_manager.tr("Move Up"))
+            up_button.setToolTip(translation_manager.tr("queue.buttons.move_up"))
             up_button.setObjectName("upButton")
             up_button.clicked.connect(lambda checked, id=item['id']: self.move_up(id))
             
@@ -313,7 +326,7 @@ class QueueWidget(QWidget):
             down_button = QPushButton()
             down_button.setIcon(icon_manager.get_icon("arrow-down", "#FFFFFF"))
             down_button.setFixedSize(24, 24)
-            down_button.setToolTip(translation_manager.tr("Move Down"))
+            down_button.setToolTip(translation_manager.tr("queue.buttons.move_down"))
             down_button.setObjectName("downButton")
             down_button.clicked.connect(lambda checked, id=item['id']: self.move_down(id))
             
@@ -321,7 +334,7 @@ class QueueWidget(QWidget):
             delete_button = QPushButton()
             delete_button.setIcon(icon_manager.get_icon("x", "#FFFFFF"))
             delete_button.setFixedSize(24, 24)
-            delete_button.setToolTip(translation_manager.tr("Remove from Queue"))
+            delete_button.setToolTip(translation_manager.tr("queue.buttons.remove"))
             delete_button.setObjectName("deleteButton")
             delete_button.clicked.connect(lambda checked, id=item['id']: self.delete_item(id))
             
@@ -341,13 +354,13 @@ class QueueWidget(QWidget):
     def get_status_text(self, status):
         """Durum metnini döndür"""
         status_map = {
-            'pending': translation_manager.tr('Waiting'),
-            'queued': translation_manager.tr('Queued'),
-            'downloading': translation_manager.tr('Downloading'),
-            'converting': translation_manager.tr('Converting'),
-            'completed': translation_manager.tr('Completed'),
-            'failed': translation_manager.tr('Failed'),
-            'paused': translation_manager.tr('Paused')
+            'pending': translation_manager.tr("queue.status.waiting"),
+            'queued': translation_manager.tr('queue.status.queued'),
+            'downloading': translation_manager.tr("queue.status.downloading"),
+            'converting': translation_manager.tr('queue.status.converting'),
+            'completed': translation_manager.tr("queue.status.completed"),
+            'failed': translation_manager.tr("queue.status.failed"),
+            'paused': translation_manager.tr('queue.status.paused')
         }
         return status_map.get(status, status)
     
@@ -374,18 +387,23 @@ class QueueWidget(QWidget):
     def get_priority_text(self, priority):
         """Öncelik metnini döndür"""
         if priority >= 2:
-            return translation_manager.tr("High")
+            return translation_manager.tr("queue.priority.high")
         elif priority == 1:
-            return translation_manager.tr("Normal")
+            return translation_manager.tr("queue.priority.normal")
         else:
-            return translation_manager.tr("Low")
+            return translation_manager.tr("queue.priority.low")
     
     def filter_by_status(self):
         """Duruma göre filtrele"""
         self.load_queue()
     
-    def start_queue(self):
-        """Kuyruğu başlat"""
+    def start_queue(self) -> None:
+        """Start processing the download queue
+
+        Resets any stuck downloads, emits queue_started signal,
+        and begins downloading the next pending item.
+        Updates UI button states accordingly.
+        """
         # İndiriliyor durumunda kalmış olanları düzelt
         self.db.reset_stuck_downloads()
         
@@ -399,29 +417,41 @@ class QueueWidget(QWidget):
             self.start_button.setEnabled(False)
             self.pause_button.setEnabled(True)
         else:
-            QMessageBox.information(self, translation_manager.tr("Info"), translation_manager.tr("No pending downloads in queue."))
+            QMessageBox.information(self, translation_manager.tr("dialogs.titles.info"), translation_manager.tr("queue.status.no_pending"))
     
-    def pause_queue(self):
-        """Kuyruğu duraklat"""
+    def pause_queue(self) -> None:
+        """Pause queue processing
+
+        Enables start button, disables pause button, and emits queue_paused
+        signal to notify main window of pause state.
+        """
         self.start_button.setEnabled(True)
         self.pause_button.setEnabled(False)
         # Kuyruk modunu kapat
         self.queue_paused.emit()  # Ana pencereye duraklatıldığını bildir
-    
-    def clear_all(self):
-        """Tüm kuyruğu temizle"""
+
+    def clear_all(self) -> None:
+        """Clear all items from the queue
+
+        Removes all items from the database queue and refreshes the display.
+        Shows confirmation message with count of cleared items.
+        """
         count = self.db.clear_all_queue()
         self.load_queue()
-        QMessageBox.information(self, translation_manager.tr("Success"), translation_manager.tr(f"{count} items cleared from queue."))
-    
-    def clear_selected(self):
-        """Seçili öğeleri temizle"""
+        QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr("queue.messages.items_cleared").format(count))
+
+    def clear_selected(self) -> None:
+        """Clear selected items from the queue
+
+        Removes only the items that are currently selected in the table.
+        Shows warning if no items are selected.
+        """
         selected_rows = set()
         for item in self.table.selectedItems():
             selected_rows.add(item.row())
         
         if not selected_rows:
-            QMessageBox.warning(self, translation_manager.tr("Warning"), translation_manager.tr("Please select items to clear."))
+            QMessageBox.warning(self, translation_manager.tr("dialogs.titles.warning"), translation_manager.tr("queue.errors.no_selection"))
             return
         
         # Seçili öğeleri sil
@@ -431,33 +461,53 @@ class QueueWidget(QWidget):
                 self.db.remove_from_queue(item_data['id'])
         
         self.load_queue()
-        QMessageBox.information(self, translation_manager.tr("Success"), translation_manager.tr(f"{len(selected_rows)} items cleared."))
+        QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr("queue.messages.selected_cleared").format(len(selected_rows)))
     
-    def clear_completed(self):
-        """Tamamlananları temizle"""
+    def clear_completed(self) -> None:
+        """Clear completed downloads from queue
+
+        Removes all items with 'completed' status, reorders remaining positions,
+        and refreshes the display. Shows confirmation message with count.
+        """
         count = self.db.clear_queue('completed')
         self.db.reorder_queue_positions()
         self.load_queue()
-        QMessageBox.information(self, translation_manager.tr("Success"), translation_manager.tr(f"{count} completed downloads cleared."))
-    
-    def clear_failed(self):
-        """Başarısız indirmeleri temizle"""
+        QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr("queue.messages.completed_cleared").format(count))
+
+    def clear_failed(self) -> None:
+        """Clear failed downloads from queue
+
+        Removes all items with 'failed' status, reorders remaining positions,
+        and refreshes the display. Shows confirmation message with count.
+        """
         count = self.db.clear_queue('failed')
         self.db.reorder_queue_positions()
         self.load_queue()
-        QMessageBox.information(self, translation_manager.tr("Success"), translation_manager.tr(f"{count} failed downloads cleared."))
-    
-    def clear_canceled(self):
-        """Iptal edilmiş indirmeleri temizle"""
+        QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr("queue.messages.failed_cleared").format(count))
+
+    def clear_canceled(self) -> None:
+        """Clear canceled and paused downloads from queue
+
+        Removes all items with 'canceled' or 'paused' status, reorders
+        remaining positions, and refreshes the display. Shows confirmation
+        message with total count.
+        """
         # canceled ve paused durumlarını temizle
         count = self.db.clear_queue('canceled')
         count += self.db.clear_queue('paused')
         self.db.reorder_queue_positions()
         self.load_queue()
-        QMessageBox.information(self, translation_manager.tr("Success"), translation_manager.tr(f"{count} canceled downloads cleared."))
-    
-    def move_up(self, item_id):
-        """Öğeyi yukarı taşı"""
+        QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr("queue.messages.canceled_cleared").format(count))
+
+    def move_up(self, item_id: int) -> None:
+        """Move queue item up one position
+
+        Args:
+            item_id: Database ID of the item to move
+
+        Swaps position with the item above if not already at the top.
+        Refreshes the queue display after moving.
+        """
         # Mevcut pozisyonu bul
         items = self.db.get_queue_items()
         current_item = next((item for item in items if item['id'] == item_id), None)
@@ -473,8 +523,15 @@ class QueueWidget(QWidget):
                 self.db.update_queue_position(above_item['id'], current_item['position'])
                 self.load_queue()
     
-    def move_down(self, item_id):
-        """Öğeyi aşağı taşı"""
+    def move_down(self, item_id: int) -> None:
+        """Move queue item down one position
+
+        Args:
+            item_id: Database ID of the item to move
+
+        Swaps position with the item below if not already at the bottom.
+        Refreshes the queue display after moving.
+        """
         # Mevcut pozisyonu bul
         items = self.db.get_queue_items()
         current_item = next((item for item in items if item['id'] == item_id), None)
@@ -520,41 +577,41 @@ class QueueWidget(QWidget):
             # Tek seçim için menü
             item_id = selected_ids[0]
             
-            download_now_action = menu.addAction(translation_manager.tr("Download Now"))
+            download_now_action = menu.addAction(translation_manager.tr("queue.menu.download_now"))
             download_now_action.setIcon(icon_manager.get_icon("download", "#1976D2"))
             download_now_action.triggered.connect(lambda: self.download_now(item_id))
             
             menu.addSeparator()
             
-            retry_action = menu.addAction(translation_manager.tr("Retry"))
+            retry_action = menu.addAction(translation_manager.tr("queue.menu.retry"))
             retry_action.setIcon(icon_manager.get_icon("refresh-cw", "#FFA500"))
             retry_action.triggered.connect(lambda: self.retry_item(item_id))
             
-            priority_menu = menu.addMenu(translation_manager.tr("Priority"))
+            priority_menu = menu.addMenu(translation_manager.tr("queue.menu.priority"))
             priority_menu.setIcon(icon_manager.get_icon("star", "#9C27B0"))
-            high_priority = priority_menu.addAction(translation_manager.tr("High"))
+            high_priority = priority_menu.addAction(translation_manager.tr("queue.priority.high"))
             high_priority.triggered.connect(lambda: self.set_priority(item_id, 2))
             
-            normal_priority = priority_menu.addAction(translation_manager.tr("Normal"))
+            normal_priority = priority_menu.addAction(translation_manager.tr("queue.priority.normal"))
             normal_priority.triggered.connect(lambda: self.set_priority(item_id, 1))
             
-            low_priority = priority_menu.addAction(translation_manager.tr("Low"))
+            low_priority = priority_menu.addAction(translation_manager.tr("queue.priority.low"))
             low_priority.triggered.connect(lambda: self.set_priority(item_id, 0))
             
             menu.addSeparator()
             
-            delete_action = menu.addAction(translation_manager.tr("Delete"))
+            delete_action = menu.addAction(translation_manager.tr("history.buttons.delete"))
             delete_action.setIcon(icon_manager.get_icon("trash-2", "#DC3545"))
             delete_action.triggered.connect(lambda: self.delete_item(item_id))
         else:
             # Çoklu seçim için menü
-            download_selected_action = menu.addAction(translation_manager.tr("Download Selected") + f" ({len(selected_ids)} {translation_manager.tr('item' if len(selected_ids) == 1 else 'items')})")
+            download_selected_action = menu.addAction(translation_manager.tr("queue.menu.download_selected") + f" ({len(selected_ids)} {translation_manager.tr('queue.menu.item' if len(selected_ids) == 1 else 'queue.menu.items')})")
             download_selected_action.setIcon(icon_manager.get_icon("download", "#1976D2"))
             download_selected_action.triggered.connect(lambda: self.download_selected(selected_ids))
             
             menu.addSeparator()
             
-            delete_selected_action = menu.addAction(translation_manager.tr("Delete Selected") + f" ({len(selected_ids)} {translation_manager.tr('item' if len(selected_ids) == 1 else 'items')})")
+            delete_selected_action = menu.addAction(translation_manager.tr("history.buttons.delete") + f" ({len(selected_ids)} {translation_manager.tr('queue.menu.item' if len(selected_ids) == 1 else 'queue.menu.items')})")
             delete_selected_action.setIcon(icon_manager.get_icon("trash-2", "#DC3545"))
             delete_selected_action.triggered.connect(lambda: self.delete_selected(selected_ids))
         
@@ -582,8 +639,13 @@ class QueueWidget(QWidget):
         total = len(items)
         pending = sum(1 for item in items if item['status'] == 'pending')
         completed = sum(1 for item in items if item['status'] == 'completed')
-        
-        self.stats_label.setText(translation_manager.tr("Total: %d | Waiting: %d | Completed: %d") % (total, pending, completed))
+
+        stats_text = "{} {} | {} {} | {} {}".format(
+            translation_manager.tr("main.labels.total"), total,
+            translation_manager.tr("main.labels.waiting"), pending,
+            translation_manager.tr("main.labels.completed"), completed
+        )
+        self.stats_label.setText(stats_text)
     
     def add_to_queue(self, url, title=None):
         """Kuyruğa yeni öğe ekle"""
@@ -666,39 +728,39 @@ class QueueWidget(QWidget):
         """UI metinlerini yeniden çevir"""
         # Başlık
         if hasattr(self, 'title_label'):
-            self.title_label.setText(translation_manager.tr("Download Queue"))
+            self.title_label.setText(translation_manager.tr("queue.title"))
         
         # Arama ve filtre label'ları
         if hasattr(self, 'search_label'):
-            self.search_label.setText(translation_manager.tr("Search:"))
+            self.search_label.setText(translation_manager.tr("queue.labels.search"))
         if hasattr(self, 'filter_label'):
-            self.filter_label.setText(translation_manager.tr("Filter:"))
+            self.filter_label.setText(translation_manager.tr("queue.labels.filter"))
         
         # Tablo başlıkları
         self.table.setHorizontalHeaderLabels([
-            translation_manager.tr("URL/Title"), translation_manager.tr("Status"), 
-            translation_manager.tr("Added Time"), translation_manager.tr("Action")
+            translation_manager.tr("queue.columns.title"), translation_manager.tr("queue.columns.status"), 
+            translation_manager.tr("queue.columns.added"), translation_manager.tr("queue.columns.action")
         ])
         
         # Butonlar
-        self.start_button.setText(translation_manager.tr("Start Queue"))
-        self.start_button.setToolTip(translation_manager.tr("Start downloading queue items"))
-        self.pause_button.setText(translation_manager.tr("Pause"))
-        self.pause_button.setToolTip(translation_manager.tr("Pause queue download"))
-        self.clear_button.setText(translation_manager.tr("Clear"))
-        self.clear_button.setToolTip(translation_manager.tr("Queue clear options"))
+        self.start_button.setText(translation_manager.tr("queue.buttons.start_queue"))
+        self.start_button.setToolTip(translation_manager.tr("queue.tooltips.start_queue"))
+        self.pause_button.setText(translation_manager.tr("queue.buttons.pause_all"))
+        self.pause_button.setToolTip(translation_manager.tr("queue.tooltips.pause_queue"))
+        self.clear_button.setText(translation_manager.tr("queue.buttons.clear"))
+        self.clear_button.setToolTip(translation_manager.tr("queue.tooltips.clear_options"))
         
         # Arama ve filtre
-        self.search_input.setPlaceholderText(translation_manager.tr("Search song name or URL..."))
+        self.search_input.setPlaceholderText(translation_manager.tr("queue.placeholders.search"))
         
         # Filtre combobox'ı yeniden doldur - mevcut veriyi sakla
         current_data = self.status_filter.currentData()
         self.status_filter.clear()
-        self.status_filter.addItem(translation_manager.tr("All"), None)
-        self.status_filter.addItem(translation_manager.tr("Waiting"), "pending")
-        self.status_filter.addItem(translation_manager.tr("Downloading"), "downloading")
-        self.status_filter.addItem(translation_manager.tr("Completed"), "completed")
-        self.status_filter.addItem(translation_manager.tr("Failed"), "failed")
+        self.status_filter.addItem(translation_manager.tr("queue.filters.all"), None)
+        self.status_filter.addItem(translation_manager.tr("queue.status.waiting"), "pending")
+        self.status_filter.addItem(translation_manager.tr("queue.status.downloading"), "downloading")
+        self.status_filter.addItem(translation_manager.tr("queue.status.completed"), "completed")
+        self.status_filter.addItem(translation_manager.tr("queue.status.failed"), "failed")
         # Önceki seçimi geri yükle (data ile)
         for i in range(self.status_filter.count()):
             if self.status_filter.itemData(i) == current_data:
@@ -707,15 +769,18 @@ class QueueWidget(QWidget):
         
         # Clear menü action'larını güncelle
         if hasattr(self, 'clear_all_action'):
-            self.clear_all_action.setText(translation_manager.tr("Clear All"))
+            self.clear_all_action.setText(translation_manager.tr("queue.menu.clear_all"))
         if hasattr(self, 'clear_selected_action'):
-            self.clear_selected_action.setText(translation_manager.tr("Clear Selected"))
+            self.clear_selected_action.setText(translation_manager.tr("queue.menu.clear_selected"))
         if hasattr(self, 'clear_completed_action'):
-            self.clear_completed_action.setText(translation_manager.tr("Clear Completed"))
+            self.clear_completed_action.setText(translation_manager.tr("queue.menu.clear_completed"))
         if hasattr(self, 'clear_failed_action'):
-            self.clear_failed_action.setText(translation_manager.tr("Clear Failed"))
+            self.clear_failed_action.setText(translation_manager.tr("queue.menu.clear_failed"))
         if hasattr(self, 'clear_canceled_action'):
-            self.clear_canceled_action.setText(translation_manager.tr("Clear Canceled"))
+            self.clear_canceled_action.setText(translation_manager.tr("queue.menu.clear_canceled"))
         
         # Tabloyu yeniden yükle
         self.load_queue()
+        
+        # İstatistikleri güncelle
+        self.update_statistics()

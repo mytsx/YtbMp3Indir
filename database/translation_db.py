@@ -6,6 +6,7 @@ Tüm uygulama çevirileri ayrı bir SQLite veritabanında tutulur
 import sqlite3
 import os
 import json
+import re
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 import logging
@@ -15,7 +16,11 @@ logger = logging.getLogger(__name__)
 
 class TranslationDatabase:
     """Çeviri veritabanı yönetim sınıfı"""
-    
+
+    # Hierarchical key validation pattern (MEDIUM #7)
+    # Valid keys: lowercase letters, numbers, dots, underscores
+    HIERARCHICAL_KEY_PATTERN = re.compile(r'^[a-z0-9_.]+$')
+
     def __init__(self, db_path: str = None):
         """
         Args:
@@ -166,37 +171,67 @@ class TranslationDatabase:
             
             # Clear entire cache - simpler and more performant for infrequent write operations
             self._cache.clear()
-    
-    def get_translation(self, key: str, lang_code: str = None, scope: str = None) -> str:
+
+    def _fetch_translation_with_fallback(self, cursor, key: str, scope: Optional[str],
+                                          lang_code: str, use_scope_null: bool = False) -> Optional[str]:
         """
-        Çeviri al
-        
+        Helper method to fetch translation with fallback mechanism
+        Reduces code duplication by centralizing the complex CTE query
+
         Args:
-            key: Anahtar metni
-            lang_code: Dil kodu (None ise mevcut dil kullanılır)
-            scope: Kapsam
-            
+            cursor: Database cursor
+            key: Translation key
+            scope: Scope filter (or None)
+            lang_code: Language code
+            use_scope_null: If True, forces scope to be NULL in query
+
         Returns:
-            Çevrilmiş metin veya anahtar
+            Translated text or None if not found
         """
-        if lang_code is None:
-            lang_code = self._current_language
-        
-        # Önbellekte ara
-        cache_key = f"{lang_code}:{scope}:{key}" if scope else f"{lang_code}:{key}"
-        if cache_key in self._cache:
-            return self._cache[cache_key]
-        
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            
-            # Çeviriyi al (fallback mekanizması ile)
+        if use_scope_null:
+            # Force scope to be NULL (for fallback queries)
             cursor.execute('''
                 WITH requested_translation AS (
                     SELECT t.translated_text
                     FROM translations t
                     JOIN translation_keys k ON t.key_id = k.key_id
-                    WHERE k.key_text = ? 
+                    WHERE k.key_text = ?
+                    AND k.scope IS NULL
+                    AND t.lang_code = ?
+                ),
+                fallback_translation AS (
+                    SELECT t.translated_text
+                    FROM translations t
+                    JOIN translation_keys k ON t.key_id = k.key_id
+                    JOIN languages l ON l.lang_code = ?
+                    WHERE k.key_text = ?
+                    AND k.scope IS NULL
+                    AND t.lang_code = l.fallback_lang
+                ),
+                default_translation AS (
+                    SELECT default_text
+                    FROM translation_keys
+                    WHERE key_text = ?
+                    AND scope IS NULL
+                )
+                SELECT COALESCE(
+                    (SELECT translated_text FROM requested_translation),
+                    (SELECT translated_text FROM fallback_translation),
+                    (SELECT default_text FROM default_translation),
+                    ?
+                )
+            ''', (key, lang_code,
+                  lang_code, key,
+                  key,
+                  key))
+        else:
+            # Use provided scope (with NULL handling)
+            cursor.execute('''
+                WITH requested_translation AS (
+                    SELECT t.translated_text
+                    FROM translations t
+                    JOIN translation_keys k ON t.key_id = k.key_id
+                    WHERE k.key_text = ?
                     AND (k.scope = ? OR (k.scope IS NULL AND ? IS NULL))
                     AND t.lang_code = ?
                 ),
@@ -225,14 +260,126 @@ class TranslationDatabase:
                   lang_code, key, scope, scope,
                   key, scope, scope,
                   key))
-            
-            result = cursor.fetchone()
-            text = result[0] if result else key
-            
+
+        result = cursor.fetchone()
+        return result[0] if result else None
+
+    def get_translation(self, key: str, lang_code: str = None, scope: str = None) -> str:
+        """
+        Çeviri al
+
+        Args:
+            key: Anahtar metni
+            lang_code: Dil kodu (None ise mevcut dil kullanılır)
+            scope: Kapsam
+
+        Returns:
+            Çevrilmiş metin veya anahtar
+        """
+        if lang_code is None:
+            lang_code = self._current_language
+
+        # Eğer scope verilmemişse, hierarchical key'den çıkar
+        # Örnek: "main.labels.paste_urls" -> scope="main.labels", key_text="main.labels.paste_urls"
+        # Key'in kendisi değişmez, sadece scope parametresi belirlenir
+        # MEDIUM #7: Added regex validation for hierarchical key format
+        extracted_scope = None
+        if scope is None and '.' in key and ' ' not in key:
+            # Validate hierarchical key format
+            if self.HIERARCHICAL_KEY_PATTERN.match(key):
+                # Valid hierarchical key: extract scope from last dot
+                parts = key.rsplit('.', 1)
+                if len(parts) == 2:
+                    extracted_scope = parts[0]
+                    scope = extracted_scope
+            else:
+                # Invalid format: log warning but continue
+                logger.warning(f"Invalid hierarchical key format: {key}")
+
+        # Önbellekte ara
+        cache_key = f"{lang_code}:{scope}:{key}" if scope else f"{lang_code}:{key}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+        
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            # Çeviriyi al (fallback mekanizması ile) - using refactored helper method
+            text = self._fetch_translation_with_fallback(cursor, key, scope, lang_code)
+            if text is None:
+                text = key
+
+            # Eğer çeviri bulunamadı ve scope otomatik çıkarılmışsa, scope=NULL ile tekrar dene
+            # Çünkü bazı eski keyler scope'suz saklanmış olabilir
+            if text == key and extracted_scope is not None:
+                # scope=NULL ile tekrar ara - using refactored helper method with use_scope_null=True
+                fallback_text = self._fetch_translation_with_fallback(cursor, key, None, lang_code, use_scope_null=True)
+                if fallback_text:
+                    text = fallback_text
+
+                # Cache with scope=None key
+                cache_key = f"{lang_code}:{key}"
+
+            # Eğer hala bulunamadı ve scope None ise (plain-text key), scope'u tamamen yoksay
+            # Sadece key_text ile eşleştir (scope ne olursa olsun)
+            if text == key and scope is None and extracted_scope is None:
+                cursor.execute('''
+                    SELECT t.translated_text
+                    FROM translations t
+                    JOIN translation_keys k ON t.key_id = k.key_id
+                    WHERE k.key_text = ?
+                    AND t.lang_code = ?
+                    LIMIT 1
+                ''', (key, lang_code))
+
+                result = cursor.fetchone()
+                if result:
+                    text = result[0]
+
             # Önbelleğe ekle
             self._cache[cache_key] = text
-            
+
             return text
+    
+    def get_key_description(self, key: str) -> Optional[str]:
+        """
+        Get the description for a translation key
+        
+        Args:
+            key: Translation key
+        
+        Returns:
+            Description text or None if not found
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT description
+                FROM translation_keys
+                WHERE key_text = ?
+            """, (key,))
+            
+            result = cursor.fetchone()
+            return result[0] if result else None
+    
+    def get_all_keys_with_descriptions(self) -> Dict[str, str]:
+        """
+        Get all translation keys with their descriptions
+        
+        Returns:
+            Dictionary mapping keys to descriptions
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT key_text, description
+                FROM translation_keys
+                WHERE key_text LIKE '%.%'
+                AND description IS NOT NULL
+                AND description NOT LIKE 'Migrated from:%'
+            """)
+            
+            return {row[0]: row[1] for row in cursor.fetchall()}
     
     def get_all_translations(self, lang_code: str = None) -> Dict[str, str]:
         """

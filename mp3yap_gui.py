@@ -69,7 +69,13 @@ def main():
         from utils.config import Config
         config = Config()
         app.processEvents()
-        
+
+        # ✅ CRITICAL: Translation database'i migration'lardan oluştur
+        splash.update_status("Çeviri veritabanı hazırlanıyor...")
+        from database.migration_runner import ensure_translations_db
+        ensure_translations_db()
+        app.processEvents()
+
         # Dil ayarlarını yükle
         splash.update_status("Dil ayarları yükleniyor...")
         from utils.translation_manager import translation_manager

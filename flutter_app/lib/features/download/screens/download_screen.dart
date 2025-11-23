@@ -107,7 +107,7 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
                     color: Colors.grey.shade600,
                   ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
 
             // URL Input section
             Card(
@@ -167,7 +167,7 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
               ),
             ),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
 
             // Downloads header
             Row(
@@ -208,13 +208,14 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             Icons.download_outlined,
-                            size: 64,
+                            size: 48,
                             color: Colors.grey.shade300,
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
                           Text(
                             'No downloads yet',
                             style: TextStyle(
@@ -223,7 +224,7 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 6),
                           Text(
                             'Enter a YouTube URL above to get started',
                             style: TextStyle(

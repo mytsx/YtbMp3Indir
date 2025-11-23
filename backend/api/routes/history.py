@@ -2,20 +2,30 @@
 History API Routes
 Handles download history retrieval and management
 """
-from fastapi import APIRouter
-from ..models import ApiResponse, ErrorDetail, HistoryItem
+from fastapi import APIRouter, Query
+from ..models import ApiResponse, ErrorDetail
+from database.manager import get_database_manager
+from services.download_service import get_download_service
 from datetime import datetime
 
 router = APIRouter()
 
-# In-memory storage for demo (will be replaced with database)
-history_items = []
+# Get global managers
+db_manager = get_database_manager()
+download_service = get_download_service()
 
 
 @router.get("", response_model=ApiResponse)
-async def get_history():
+async def get_history(
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0)
+):
     """
     Get download history
+
+    Query params:
+    - limit: Max items to return (default 100, max 500)
+    - offset: Skip first N items (default 0)
 
     Response:
     {
@@ -35,9 +45,10 @@ async def get_history():
     }
     """
     try:
+        history = await db_manager.get_history(limit=limit, offset=offset)
         return ApiResponse(
             success=True,
-            data=[item.dict() for item in history_items]
+            data=history
         )
     except Exception as e:
         return ApiResponse(
@@ -63,8 +74,7 @@ async def get_history_item(history_id: int):
     }
     """
     try:
-        # Find item by ID
-        item = next((h for h in history_items if h.id == history_id), None)
+        item = await db_manager.get_history_item(history_id)
 
         if not item:
             return ApiResponse(
@@ -74,7 +84,7 @@ async def get_history_item(history_id: int):
 
         return ApiResponse(
             success=True,
-            data=item.dict()
+            data=item
         )
     except Exception as e:
         return ApiResponse(
@@ -101,8 +111,8 @@ async def redownload(history_id: int):
     }
     """
     try:
-        # Find item by ID
-        item = next((h for h in history_items if h.id == history_id), None)
+        # Get item from database
+        item = await db_manager.get_history_item(history_id)
 
         if not item:
             return ApiResponse(
@@ -110,13 +120,12 @@ async def redownload(history_id: int):
                 error=ErrorDetail(code="NOT_FOUND", message="History item not found")
             )
 
-        # TODO: Start download using the URL from history
-        # from .downloads import create_download
-        # return await create_download(DownloadRequest(url=item.url))
+        # Start new download using the URL from history
+        download = await download_service.start_download(item['url'])
 
         return ApiResponse(
             success=True,
-            data={"message": "Re-download started", "url": item.url}
+            data=download.to_dict()
         )
     except Exception as e:
         return ApiResponse(
@@ -138,18 +147,14 @@ async def delete_history_item(history_id: int):
     }
     """
     try:
-        # Find item by ID
-        item = next((h for h in history_items if h.id == history_id), None)
+        # Soft delete in database
+        deleted = await db_manager.delete_history_item(history_id)
 
-        if not item:
+        if not deleted:
             return ApiResponse(
                 success=False,
                 error=ErrorDetail(code="NOT_FOUND", message="History item not found")
             )
-
-        # TODO: Mark as deleted in database (soft delete)
-        # For now, just remove from list
-        history_items.remove(item)
 
         return ApiResponse(
             success=True,
@@ -159,4 +164,67 @@ async def delete_history_item(history_id: int):
         return ApiResponse(
             success=False,
             error=ErrorDetail(code="DELETE_FAILED", message=str(e))
+        )
+
+
+@router.get("/search", response_model=ApiResponse)
+async def search_history(q: str = Query(..., min_length=1)):
+    """
+    Search download history by video title
+
+    Query params:
+    - q: Search query (required, min 1 character)
+
+    Response:
+    {
+        "success": true,
+        "data": [
+            {
+                "id": 1,
+                "video_title": "Matching Song Name",
+                ...
+            }
+        ],
+        "error": null
+    }
+    """
+    try:
+        results = await db_manager.search_history(q)
+        return ApiResponse(
+            success=True,
+            data=results
+        )
+    except Exception as e:
+        return ApiResponse(
+            success=False,
+            error=ErrorDetail(code="SEARCH_FAILED", message=str(e))
+        )
+
+
+@router.get("/stats", response_model=ApiResponse)
+async def get_statistics():
+    """
+    Get download statistics
+
+    Response:
+    {
+        "success": true,
+        "data": {
+            "total_downloads": 42,
+            "total_size": 125829120,
+            "total_duration": 7200
+        },
+        "error": null
+    }
+    """
+    try:
+        stats = await db_manager.get_statistics()
+        return ApiResponse(
+            success=True,
+            data=stats
+        )
+    except Exception as e:
+        return ApiResponse(
+            success=False,
+            error=ErrorDetail(code="STATS_FAILED", message=str(e))
         )

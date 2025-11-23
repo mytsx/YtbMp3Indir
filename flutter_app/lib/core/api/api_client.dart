@@ -104,17 +104,61 @@ class ApiClient {
   // History
   // ==========================================================================
 
-  Future<List<Map<String, dynamic>>> getHistory() {
+  Future<Map<String, dynamic>> getHistory({
+    int limit = 100,
+    int offset = 0,
+  }) {
     return _handleResponse(
-      _dio.get('/api/history'),
-      (data) => (data as List).cast<Map<String, dynamic>>(),
+      _dio.get('/api/history', queryParameters: {
+        'limit': limit,
+        'offset': offset,
+      }),
+      (data) => {
+        'data': data,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> getHistoryItem(int id) {
+    return _handleResponse(
+      _dio.get('/api/history/$id'),
+      (data) => data as Map<String, dynamic>,
+    );
+  }
+
+  Future<Map<String, dynamic>> searchHistory(String query) {
+    return _handleResponse(
+      _dio.get('/api/history/search', queryParameters: {
+        'q': query,
+      }),
+      (data) => {
+        'data': data,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> getStatistics() {
+    return _handleResponse(
+      _dio.get('/api/history/stats'),
+      (data) => {
+        'data': data,
+      },
+    );
+  }
+
+  Future<void> deleteHistoryItem(int id) {
+    return _handleResponse(
+      _dio.delete('/api/history/$id'),
+      (_) => null,
     );
   }
 
   Future<Map<String, dynamic>> redownload(int id) {
     return _handleResponse(
       _dio.post('/api/history/$id/redownload'),
-      (data) => data as Map<String, dynamic>,
+      (data) => {
+        'data': data,
+      },
     );
   }
 

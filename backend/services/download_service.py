@@ -9,6 +9,7 @@ import logging
 from typing import Dict, Optional
 from datetime import datetime
 import yt_dlp
+from database.manager import get_database_manager
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,7 @@ class DownloadService:
         self.output_dir = output_dir
         self.active_downloads: Dict[str, Download] = {}
         self.websocket_manager = None  # Will be injected
+        self.db_manager = get_database_manager()
 
         # Ensure output directory exists
         os.makedirs(self.output_dir, exist_ok=True)
@@ -174,6 +176,29 @@ class DownloadService:
             video_id = info.get('id', '')
             expected_filename = f"{download.video_title} [{video_id}].mp3"
             download.file_path = os.path.join(self.output_dir, expected_filename)
+
+            # Get file size
+            file_size = None
+            if os.path.exists(download.file_path):
+                file_size = os.path.getsize(download.file_path)
+
+            # Save to database
+            try:
+                video_info = {
+                    'title': download.video_title,
+                    'file_name': os.path.basename(download.file_path),
+                    'file_path': download.file_path,
+                    'format': 'mp3',
+                    'url': download.url,
+                    'file_size': file_size,
+                    'duration': info.get('duration'),
+                    'channel_name': info.get('uploader'),
+                    'video_id': video_id,
+                }
+                await self.db_manager.add_download(video_info)
+                logger.info(f"Download saved to database: {download.video_title}")
+            except Exception as e:
+                logger.error(f"Failed to save download to database: {e}")
 
             await self.broadcast_progress(download.id, {
                 "type": "completed",

@@ -57,8 +57,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         ? ref.watch(searchHistoryProvider(_searchQuery))
         : ref.watch(historyProvider);
 
-    final statsAsync = ref.watch(statsProvider);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Download History'),
@@ -71,7 +69,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               } else {
                 ref.read(historyProvider.notifier).refresh();
               }
-              ref.invalidate(statsProvider);
             },
             tooltip: 'Refresh',
           ),
@@ -79,13 +76,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       ),
       body: Column(
         children: [
-          // Statistics card
-          statsAsync.when(
-            data: (stats) => _buildStatsCard(stats, colorScheme),
-            loading: () => const LinearProgressIndicator(),
-            error: (_, __) => const SizedBox.shrink(),
-          ),
-
           // Search bar
           Padding(
             padding: const EdgeInsets.all(16),
@@ -191,68 +181,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildStatsCard(DownloadStats stats, ColorScheme colorScheme) {
-    return Card(
-      margin: const EdgeInsets.all(16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildStatItem(
-              icon: Icons.download,
-              label: 'Downloads',
-              value: stats.totalDownloads.toString(),
-              color: colorScheme.primary,
-            ),
-            _buildStatItem(
-              icon: Icons.storage,
-              label: 'Total Size',
-              value: stats.formattedSize,
-              color: colorScheme.secondary,
-            ),
-            _buildStatItem(
-              icon: Icons.timer,
-              label: 'Total Time',
-              value: stats.formattedDuration,
-              color: colorScheme.tertiary,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatItem({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 32),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
-        ),
-      ],
     );
   }
 

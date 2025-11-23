@@ -21,12 +21,12 @@ class HistoryCard extends ConsumerWidget {
     final colorScheme = theme.colorScheme;
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: InkWell(
         onTap: () => _showDetailsDialog(context, ref),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -36,28 +36,28 @@ class HistoryCard extends ConsumerWidget {
                   Icon(
                     Icons.music_note,
                     color: colorScheme.primary,
-                    size: 20,
+                    size: 18,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       item.videoTitle,
-                      style: theme.textTheme.titleMedium?.copyWith(
+                      style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
 
               // Metadata row
               Wrap(
-                spacing: 16,
-                runSpacing: 8,
+                spacing: 12,
+                runSpacing: 6,
                 children: [
                   _buildMetadata(
                     icon: Icons.access_time,
@@ -77,16 +77,7 @@ class HistoryCard extends ConsumerWidget {
                 ],
               ),
 
-              if (item.channelName != null) ...[
-                const SizedBox(height: 8),
-                _buildMetadata(
-                  icon: Icons.person,
-                  text: item.channelName!,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ],
-
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
 
               // Action buttons
               Row(
@@ -95,22 +86,19 @@ class HistoryCard extends ConsumerWidget {
                   // Play button (if file exists)
                   if (item.filePath != null)
                     _buildPlayButton(context, ref, colorScheme),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   // Redownload button
-                  TextButton.icon(
+                  IconButton(
                     onPressed: () => _redownload(context, ref),
-                    icon: const Icon(Icons.download, size: 18),
-                    label: const Text('Redownload'),
+                    icon: const Icon(Icons.download, size: 20),
+                    tooltip: 'Redownload',
                   ),
-                  const SizedBox(width: 8),
                   // Delete button
-                  TextButton.icon(
+                  IconButton(
                     onPressed: () => _confirmDelete(context, ref),
-                    icon: const Icon(Icons.delete_outline, size: 18),
-                    label: const Text('Delete'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: colorScheme.error,
-                    ),
+                    icon: const Icon(Icons.delete_outline, size: 20),
+                    tooltip: 'Delete',
+                    color: colorScheme.error,
                   ),
                 ],
               ),
@@ -129,12 +117,12 @@ class HistoryCard extends ConsumerWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: color),
+        Icon(icon, size: 14, color: color),
         const SizedBox(width: 4),
         Text(
           text,
           style: TextStyle(
-            fontSize: 13,
+            fontSize: 12,
             color: color,
           ),
         ),
@@ -153,7 +141,7 @@ class HistoryCard extends ConsumerWidget {
     return IconButton(
       icon: Icon(
         isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
-        size: 32,
+        size: 28,
       ),
       color: colorScheme.primary,
       onPressed: () async {

@@ -93,22 +93,6 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header
-            Text(
-              'Download YouTube MP3',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Enter a YouTube URL to download and convert to MP3',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey.shade600,
-                  ),
-            ),
-            const SizedBox(height: 24),
-
             // URL Input section
             Card(
               child: Padding(
@@ -126,7 +110,7 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
                         border: const OutlineInputBorder(),
                         errorText: _errorMessage,
                       ),
-                      maxLines: 2,
+                      maxLines: 1,
                       textInputAction: TextInputAction.done,
                       onSubmitted: (_) => _startDownload(),
                     ),

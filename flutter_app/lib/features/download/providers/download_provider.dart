@@ -59,19 +59,17 @@ final startDownloadProvider =
 final downloadProgressProvider =
     StreamProvider.family<ProgressUpdate, String>((ref, downloadId) {
   // Get port from backend
-  final portAsync = ref.watch(backendPortProvider);
+  final port = ref.watch(backendPortProvider);
 
-  return portAsync.when(
-    data: (port) {
-      final wsUrl = 'ws://127.0.0.1:$port/ws/download/$downloadId';
-      final channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+  final wsUrl = 'ws://127.0.0.1:$port/ws/download/$downloadId';
+  final channel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
-      // Clean up on dispose
-      ref.onDispose(() {
-        channel.sink.close();
-      });
+  // Clean up on dispose
+  ref.onDispose(() {
+    channel.sink.close();
+  });
 
-      // Map WebSocket messages to ProgressUpdate
+  // Map WebSocket messages to ProgressUpdate
       return channel.stream.map((data) {
         final json = jsonDecode(data as String) as Map<String, dynamic>;
         final update = ProgressUpdate.fromJson(json);
@@ -125,11 +123,4 @@ final downloadProgressProvider =
 
         return update;
       });
-    },
-    loading: () => const Stream.empty(),
-    error: (err, stack) {
-      print('WebSocket error: $err');
-      return const Stream.empty();
-    },
-  );
 });

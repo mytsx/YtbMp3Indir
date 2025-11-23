@@ -403,6 +403,15 @@ INSERT INTO translation_keys VALUES(378,NULL,'shortcuts.descriptions.quit_app','
 INSERT INTO translation_keys VALUES(380,'main.status','main.status.all_downloads_completed','Status message when all downloads (single/playlist/multi-URL) complete successfully',NULL,1,'2025-11-22 02:20:01','2025-11-22 02:20:01');
 INSERT INTO translation_keys VALUES(381,'main.status','main.status.download_stopped','Status message when download is stopped/cancelled by user during processing',NULL,1,'2025-11-22 02:20:01','2025-11-22 02:20:01');
 INSERT INTO translation_keys VALUES(382,'main.url_validation','main.url_validation.checking_urls','Status message when URL validation/analysis is in progress',NULL,1,'2025-11-22 02:30:43','2025-11-22 02:30:43');
+INSERT INTO translation_keys VALUES(383,'history.messages','history.messages.file_not_found_in_db','Error when download record not found in database',NULL,1,'2025-11-22 17:57:43','2025-11-22 17:57:43');
+INSERT INTO translation_keys VALUES(384,'history.messages','history.messages.file_path_missing','Error when file path is missing in download record',NULL,1,'2025-11-22 17:57:43','2025-11-22 17:57:43');
+INSERT INTO translation_keys VALUES(385,'history.messages','history.messages.file_not_found','Error when file does not exist on disk',NULL,1,'2025-11-22 17:57:43','2025-11-22 17:57:43');
+INSERT INTO translation_keys VALUES(386,'history.messages','history.messages.cannot_open_file','Error when system cannot open file',NULL,1,'2025-11-22 17:57:43','2025-11-22 17:57:43');
+INSERT INTO translation_keys VALUES(387,'history.messages','history.messages.open_error','Generic error when opening file fails',NULL,1,'2025-11-22 17:57:43','2025-11-22 17:57:43');
+INSERT INTO translation_keys VALUES(388,'player.tooltips','player.tooltips.play','Tooltip for play button',NULL,1,'2025-11-22 18:08:19','2025-11-22 18:08:19');
+INSERT INTO translation_keys VALUES(389,'player.tooltips','player.tooltips.pause','Tooltip for pause button',NULL,1,'2025-11-22 18:08:19','2025-11-22 18:08:19');
+INSERT INTO translation_keys VALUES(390,'player.tooltips','player.tooltips.stop','Tooltip for stop button',NULL,1,'2025-11-22 18:08:19','2025-11-22 18:08:19');
+INSERT INTO translation_keys VALUES(391,'player.tooltips','player.tooltips.close','Tooltip for close player button',NULL,1,'2025-11-22 18:08:19','2025-11-22 18:08:19');
 CREATE TABLE translations (
                 translation_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 key_id INTEGER NOT NULL,
@@ -1192,6 +1201,26 @@ INSERT INTO translations VALUES(797,381,'en','Download stopped',0,NULL,'2025-11-
 INSERT INTO translations VALUES(798,381,'tr','İndirme durduruldu',0,NULL,'2025-11-22 02:20:01','2025-11-22 02:20:01');
 INSERT INTO translations VALUES(799,382,'en','⏳ Checking URLs...',0,NULL,'2025-11-22 02:30:43','2025-11-22 02:30:43');
 INSERT INTO translations VALUES(800,382,'tr','⏳ URL''ler kontrol ediliyor...',0,NULL,'2025-11-22 02:30:43','2025-11-22 02:30:43');
+INSERT INTO translations VALUES(801,383,'en','Download record not found in database',0,NULL,'2025-11-22 17:57:43','2025-11-22 17:57:43');
+INSERT INTO translations VALUES(802,383,'tr','İndirme kaydı veritabanında bulunamadı',0,NULL,'2025-11-22 17:57:43','2025-11-22 17:57:43');
+INSERT INTO translations VALUES(803,384,'en','File path not found in record',0,NULL,'2025-11-22 17:57:43','2025-11-22 17:57:43');
+INSERT INTO translations VALUES(804,384,'tr','Kayıtta dosya yolu bulunamadı',0,NULL,'2025-11-22 17:57:43','2025-11-22 17:57:43');
+INSERT INTO translations VALUES(805,385,'en','File not found: {0}',0,NULL,'2025-11-22 17:57:43','2025-11-22 17:57:43');
+INSERT INTO translations VALUES(806,385,'tr','Dosya bulunamadı: {0}',0,NULL,'2025-11-22 17:57:43','2025-11-22 17:57:43');
+INSERT INTO translations VALUES(807,386,'en','Cannot open file with default player',0,NULL,'2025-11-22 17:57:43','2025-11-22 17:57:43');
+INSERT INTO translations VALUES(808,386,'tr','Dosya varsayılan oynatıcıda açılamadı',0,NULL,'2025-11-22 17:57:43','2025-11-22 17:57:43');
+INSERT INTO translations VALUES(809,387,'en','Error opening file: {0}',0,NULL,'2025-11-22 17:57:43','2025-11-22 17:57:43');
+INSERT INTO translations VALUES(810,387,'tr','Dosya açılırken hata: {0}',0,NULL,'2025-11-22 17:57:43','2025-11-22 17:57:43');
+INSERT INTO translations VALUES(811,388,'en','Play',0,NULL,'2025-11-22 18:08:19','2025-11-22 18:08:19');
+INSERT INTO translations VALUES(812,388,'tr','Oynat',0,NULL,'2025-11-22 18:08:19','2025-11-22 18:08:19');
+INSERT INTO translations VALUES(813,389,'en','Pause',0,NULL,'2025-11-22 18:08:19','2025-11-22 18:08:19');
+INSERT INTO translations VALUES(814,389,'tr','Duraklat',0,NULL,'2025-11-22 18:08:19','2025-11-22 18:08:19');
+INSERT INTO translations VALUES(815,390,'en','Stop',0,NULL,'2025-11-22 18:08:19','2025-11-22 18:08:19');
+INSERT INTO translations VALUES(816,390,'tr','Durdur',0,NULL,'2025-11-22 18:08:19','2025-11-22 18:08:19');
+INSERT INTO translations VALUES(817,391,'en','Close player',0,NULL,'2025-11-22 18:08:19','2025-11-22 18:08:19');
+INSERT INTO translations VALUES(818,391,'tr','Oynatıcıyı kapat',0,NULL,'2025-11-22 18:08:19','2025-11-22 18:08:19');
+INSERT INTO sqlite_sequence VALUES('translation_keys',391);
+INSERT INTO sqlite_sequence VALUES('translations',818);
 INSERT INTO sqlite_sequence VALUES('translation_keys',382);
 INSERT INTO sqlite_sequence VALUES('translations',800);
 CREATE INDEX idx_translations_key_lang ON translations(key_id, lang_code);

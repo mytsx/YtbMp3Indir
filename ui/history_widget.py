@@ -1,3 +1,5 @@
+import os
+import logging
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,
                             QTableWidgetItem, QPushButton, QLineEdit, QLabel,
                             QHeaderView, QMessageBox, QMenu)
@@ -8,6 +10,9 @@ from datetime import datetime
 from styles import style_manager
 from utils.icon_manager import icon_manager
 from utils.translation_manager import translation_manager
+from ui.music_player_widget import MusicPlayerWidget
+
+logger = logging.getLogger(__name__)
 
 
 class HistoryWidget(QWidget):
@@ -92,13 +97,23 @@ class HistoryWidget(QWidget):
         # Sağ tık menüsü
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_context_menu)
-        
+
+        # ✅ Çift tıklama ile dosyayı aç
+        self.table.itemDoubleClicked.connect(self.on_item_double_clicked)
+
         layout.addWidget(self.table)
         
         # İstatistikler - tablonun altında
         self.stats_label = QLabel()
         self.stats_label.setObjectName("statsLabel")
         layout.addWidget(self.stats_label)
+
+        # Müzik oynatıcı (başlangıçta gizli)
+        self.music_player = MusicPlayerWidget()
+        self.music_player.hide()
+        self.music_player.closed.connect(lambda: self.music_player.hide())
+        layout.addWidget(self.music_player)
+
         self.setLayout(layout)
     
     def load_history(self):
@@ -391,15 +406,83 @@ class HistoryWidget(QWidget):
             self.load_history()
             QMessageBox.information(self, translation_manager.tr("dialogs.titles.success"), translation_manager.tr("history.messages.deleted").format(deleted_count))
     
+    def on_item_double_clicked(self, item):
+        """
+        Tabloda bir öğeye çift tıklandığında dosyayı yerleşik oynatıcıda çal
+
+        Args:
+            item: Tıklanan QTableWidgetItem
+        """
+        # İlk sütundan record ID'yi al
+        row = item.row()
+        first_item = self.table.item(row, 0)
+        if not first_item:
+            return
+
+        record_id = first_item.data(Qt.UserRole)
+        if record_id is None:
+            return
+
+        # Database'den dosya yolunu al
+        try:
+            record = self.db_manager.get_download_by_id(record_id)
+            if not record:
+                QMessageBox.warning(
+                    self,
+                    translation_manager.tr("dialogs.titles.warning"),
+                    translation_manager.tr("history.messages.file_not_found_in_db")
+                )
+                return
+
+            file_path = record.get('file_path')
+            file_name = record.get('file_name')
+
+            if not file_path or not file_name:
+                QMessageBox.warning(
+                    self,
+                    translation_manager.tr("dialogs.titles.warning"),
+                    translation_manager.tr("history.messages.file_path_missing")
+                )
+                return
+
+            # Tam dosya yolunu oluştur (file_path klasör, file_name dosya adı)
+            full_path = os.path.join(file_path, file_name)
+
+            # Dosyanın var olup olmadığını kontrol et
+            if not os.path.exists(full_path):
+                QMessageBox.warning(
+                    self,
+                    translation_manager.tr("dialogs.titles.warning"),
+                    translation_manager.tr("history.messages.file_not_found").format(full_path)
+                )
+                return
+
+            # Yerleşik müzik oynatıcısını göster ve dosyayı çal
+            self.music_player.show()
+            if not self.music_player.play_file(full_path):
+                QMessageBox.warning(
+                    self,
+                    translation_manager.tr("dialogs.titles.error"),
+                    translation_manager.tr("history.messages.cannot_open_file")
+                )
+
+        except Exception as e:
+            logger.exception("Error playing file from history")
+            QMessageBox.critical(
+                self,
+                translation_manager.tr("dialogs.titles.error"),
+                translation_manager.tr("history.messages.open_error").format(str(e))
+            )
+
     def mousePressEvent(self, a0):
         """Mouse tıklaması olduğunda"""
         # Tıklanan widget'ı kontrol et
         widget = self.childAt(a0.pos())
-        
+
         # Eğer tablo dışında bir yere tıklandıysa seçimi temizle
         if widget != self.table and not self.table.isAncestorOf(widget):
             self.table.clearSelection()
-        
+
         # Normal event işlemeye devam et
         super().mousePressEvent(a0)
     

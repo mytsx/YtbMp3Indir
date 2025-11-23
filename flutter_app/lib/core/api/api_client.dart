@@ -163,6 +163,77 @@ class ApiClient {
   }
 
   // ==========================================================================
+  // Queue
+  // ==========================================================================
+
+  Future<Map<String, dynamic>> getQueue({
+    int limit = 100,
+    int offset = 0,
+  }) {
+    return _handleResponse(
+      _dio.get('/api/queue', queryParameters: {
+        'limit': limit,
+        'offset': offset,
+      }),
+      (data) => {
+        'data': data,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> addToQueue(String url, {int priority = 0}) {
+    return _handleResponse(
+      _dio.post('/api/queue', data: {
+        'url': url,
+        'priority': priority,
+      }),
+      (data) => {
+        'data': data,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> updateQueuePriority(int queueId, int priority) {
+    return _handleResponse(
+      _dio.patch('/api/queue/$queueId/priority', data: {
+        'priority': priority,
+      }),
+      (data) => {
+        'data': data,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> updateQueuePosition(int queueId, int position) {
+    return _handleResponse(
+      _dio.patch('/api/queue/$queueId/position', data: {
+        'position': position,
+      }),
+      (data) => {
+        'data': data,
+      },
+    );
+  }
+
+  Future<void> deleteQueueItem(int queueId) {
+    return _handleResponse(
+      _dio.delete('/api/queue/$queueId'),
+      (_) => null,
+    );
+  }
+
+  Future<Map<String, dynamic>> clearQueue({String status = 'all'}) {
+    return _handleResponse(
+      _dio.post('/api/queue/clear', data: {
+        'status': status,
+      }),
+      (data) => {
+        'data': data,
+      },
+    );
+  }
+
+  // ==========================================================================
   // Config
   // ==========================================================================
 

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../../../core/models/history_item.dart';
 import '../providers/history_provider.dart';
+import '../../player/audio_player_provider.dart';
 
 /// Card widget displaying a single history item
 class HistoryCard extends ConsumerWidget {
@@ -89,6 +91,10 @@ class HistoryCard extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  // Play button (if file exists)
+                  if (item.filePath != null)
+                    _buildPlayButton(ref, colorScheme),
+                  const SizedBox(width: 8),
                   // Redownload button
                   TextButton.icon(
                     onPressed: () => _redownload(context, ref),
@@ -132,6 +138,39 @@ class HistoryCard extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPlayButton(WidgetRef ref, ColorScheme colorScheme) {
+    final player = ref.watch(audioPlayerProvider);
+    final currentlyPlaying = ref.watch(currentlyPlayingProvider);
+    final playerStateAsync = ref.watch(playerStateProvider);
+
+    final isThisPlaying = currentlyPlaying == item.filePath;
+    final isPlaying = playerStateAsync.value == PlayerState.playing && isThisPlaying;
+
+    return IconButton(
+      icon: Icon(
+        isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+        size: 32,
+      ),
+      color: colorScheme.primary,
+      onPressed: () async {
+        if (item.filePath == null) return;
+
+        if (isThisPlaying && isPlaying) {
+          // Pause
+          await player.pause();
+        } else if (isThisPlaying) {
+          // Resume
+          await player.resume();
+        } else {
+          // Play new file
+          await player.stop();
+          await player.play(DeviceFileSource(item.filePath!));
+          ref.read(currentlyPlayingProvider.notifier).state = item.filePath;
+        }
+      },
     );
   }
 

@@ -1,23 +1,51 @@
 """
 Queue API Routes
-Handles download queue management
+Handles download queue management with priority and position
 """
-from fastapi import APIRouter
-from ..models import ApiResponse, ErrorDetail, QueueItem, QueueItemUpdate
+from fastapi import APIRouter, Query
+from ..models import ApiResponse, ErrorDetail
+from database.manager import get_database_manager
 
 router = APIRouter()
 
-# In-memory storage for demo (will be replaced with database)
-queue_items = []
+# Get global database manager
+db_manager = get_database_manager()
 
 
 @router.get("", response_model=ApiResponse)
-async def get_queue():
-    """Get all queue items"""
+async def get_queue(
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0)
+):
+    """
+    Get download queue items
+
+    Query params:
+    - limit: Max items to return (default 100, max 500)
+    - offset: Skip first N items (default 0)
+
+    Response:
+    {
+        "success": true,
+        "data": [
+            {
+                "id": 1,
+                "url": "https://youtube.com/...",
+                "video_title": "Song Name",
+                "priority": 0,
+                "position": 0,
+                "status": "pending",
+                "added_at": "2025-11-23T10:00:00"
+            }
+        ],
+        "error": null
+    }
+    """
     try:
+        queue = await db_manager.get_queue(limit=limit, offset=offset)
         return ApiResponse(
             success=True,
-            data=[item.dict() for item in queue_items]
+            data=queue
         )
     except Exception as e:
         return ApiResponse(
@@ -28,12 +56,34 @@ async def get_queue():
 
 @router.post("", response_model=ApiResponse)
 async def add_to_queue(url: str, priority: int = 0):
-    """Add item to queue"""
+    """
+    Add item to download queue
+
+    Request:
+    {
+        "url": "https://youtube.com/...",
+        "priority": 0
+    }
+
+    Response:
+    {
+        "success": true,
+        "data": {
+            "id": 1,
+            "url": "...",
+            "priority": 0,
+            "status": "pending"
+        },
+        "error": null
+    }
+    """
     try:
-        # TODO: Create queue item and add to database
+        queue_id = await db_manager.add_to_queue(url, priority)
+        item = await db_manager.get_queue_item(queue_id)
+
         return ApiResponse(
             success=True,
-            data={"message": "Added to queue", "url": url}
+            data=item
         )
     except Exception as e:
         return ApiResponse(
@@ -44,12 +94,38 @@ async def add_to_queue(url: str, priority: int = 0):
 
 @router.patch("/{queue_id}/priority", response_model=ApiResponse)
 async def update_priority(queue_id: int, priority: int):
-    """Update queue item priority"""
+    """
+    Update queue item priority
+
+    Request:
+    {
+        "priority": 5
+    }
+
+    Response:
+    {
+        "success": true,
+        "data": {
+            "id": 1,
+            "priority": 5,
+            ...
+        },
+        "error": null
+    }
+    """
     try:
-        # TODO: Update priority in database
+        success = await db_manager.update_queue_priority(queue_id, priority)
+
+        if not success:
+            return ApiResponse(
+                success=False,
+                error=ErrorDetail(code="NOT_FOUND", message="Queue item not found")
+            )
+
+        item = await db_manager.get_queue_item(queue_id)
         return ApiResponse(
             success=True,
-            data={"message": "Priority updated"}
+            data=item
         )
     except Exception as e:
         return ApiResponse(
@@ -60,12 +136,38 @@ async def update_priority(queue_id: int, priority: int):
 
 @router.patch("/{queue_id}/position", response_model=ApiResponse)
 async def update_position(queue_id: int, position: int):
-    """Update queue item position"""
+    """
+    Update queue item position (reorder)
+
+    Request:
+    {
+        "position": 2
+    }
+
+    Response:
+    {
+        "success": true,
+        "data": {
+            "id": 1,
+            "position": 2,
+            ...
+        },
+        "error": null
+    }
+    """
     try:
-        # TODO: Update position in database
+        success = await db_manager.update_queue_position(queue_id, position)
+
+        if not success:
+            return ApiResponse(
+                success=False,
+                error=ErrorDetail(code="NOT_FOUND", message="Queue item not found")
+            )
+
+        item = await db_manager.get_queue_item(queue_id)
         return ApiResponse(
             success=True,
-            data={"message": "Position updated"}
+            data=item
         )
     except Exception as e:
         return ApiResponse(
@@ -75,10 +177,26 @@ async def update_position(queue_id: int, position: int):
 
 
 @router.delete("/{queue_id}", response_model=ApiResponse)
-async def remove_from_queue(queue_id: int):
-    """Remove item from queue"""
+async def delete_queue_item(queue_id: int):
+    """
+    Remove item from queue (soft delete)
+
+    Response:
+    {
+        "success": true,
+        "data": null,
+        "error": null
+    }
+    """
     try:
-        # TODO: Remove from database
+        deleted = await db_manager.delete_queue_item(queue_id)
+
+        if not deleted:
+            return ApiResponse(
+                success=False,
+                error=ErrorDetail(code="NOT_FOUND", message="Queue item not found")
+            )
+
         return ApiResponse(
             success=True,
             data=None
@@ -87,4 +205,35 @@ async def remove_from_queue(queue_id: int):
         return ApiResponse(
             success=False,
             error=ErrorDetail(code="DELETE_FAILED", message=str(e))
+        )
+
+
+@router.post("/clear", response_model=ApiResponse)
+async def clear_queue(status: str = "all"):
+    """
+    Clear queue items by status
+
+    Query params:
+    - status: Filter by status (pending, completed, failed, all)
+
+    Response:
+    {
+        "success": true,
+        "data": {
+            "deleted_count": 5
+        },
+        "error": null
+    }
+    """
+    try:
+        count = await db_manager.clear_queue(status)
+
+        return ApiResponse(
+            success=True,
+            data={"deleted_count": count}
+        )
+    except Exception as e:
+        return ApiResponse(
+            success=False,
+            error=ErrorDetail(code="CLEAR_FAILED", message=str(e))
         )

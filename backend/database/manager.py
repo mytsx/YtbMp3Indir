@@ -235,6 +235,149 @@ class DatabaseManager:
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(_executor, self._search_history_sync, query)
 
+    # ==========================================================================
+    # Queue Management
+    # ==========================================================================
+
+    def _get_queue_sync(self, limit: int = 100, offset: int = 0) -> List[Dict]:
+        """Get download queue (sync)"""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT * FROM download_queue
+                WHERE is_deleted = 0
+                ORDER BY priority DESC, position ASC, added_at ASC
+                LIMIT ? OFFSET ?
+            ''', (limit, offset))
+
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+
+    async def get_queue(self, limit: int = 100, offset: int = 0) -> List[Dict]:
+        """Get download queue (async)"""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(_executor, self._get_queue_sync, limit, offset)
+
+    def _add_to_queue_sync(self, url: str, priority: int = 0) -> int:
+        """Add item to queue (sync)"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            # Get next position
+            cursor.execute('SELECT MAX(position) FROM download_queue WHERE is_deleted = 0')
+            max_pos = cursor.fetchone()[0]
+            position = (max_pos or -1) + 1
+
+            cursor.execute('''
+                INSERT INTO download_queue
+                (url, priority, position, status)
+                VALUES (?, ?, ?, 'pending')
+            ''', (url, priority, position))
+
+            conn.commit()
+            return cursor.lastrowid
+
+    async def add_to_queue(self, url: str, priority: int = 0) -> int:
+        """Add item to queue (async)"""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(_executor, self._add_to_queue_sync, url, priority)
+
+    def _get_queue_item_sync(self, queue_id: int) -> Optional[Dict]:
+        """Get specific queue item (sync)"""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT * FROM download_queue
+                WHERE id = ? AND is_deleted = 0
+            ''', (queue_id,))
+
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    async def get_queue_item(self, queue_id: int) -> Optional[Dict]:
+        """Get specific queue item (async)"""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(_executor, self._get_queue_item_sync, queue_id)
+
+    def _update_queue_priority_sync(self, queue_id: int, priority: int) -> bool:
+        """Update queue item priority (sync)"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE download_queue
+                SET priority = ?
+                WHERE id = ? AND is_deleted = 0
+            ''', (priority, queue_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    async def update_queue_priority(self, queue_id: int, priority: int) -> bool:
+        """Update queue item priority (async)"""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(_executor, self._update_queue_priority_sync, queue_id, priority)
+
+    def _update_queue_position_sync(self, queue_id: int, position: int) -> bool:
+        """Update queue item position (sync)"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE download_queue
+                SET position = ?
+                WHERE id = ? AND is_deleted = 0
+            ''', (position, queue_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    async def update_queue_position(self, queue_id: int, position: int) -> bool:
+        """Update queue item position (async)"""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(_executor, self._update_queue_position_sync, queue_id, position)
+
+    def _delete_queue_item_sync(self, queue_id: int) -> bool:
+        """Soft delete queue item (sync)"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE download_queue
+                SET is_deleted = 1
+                WHERE id = ?
+            ''', (queue_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    async def delete_queue_item(self, queue_id: int) -> bool:
+        """Soft delete queue item (async)"""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(_executor, self._delete_queue_item_sync, queue_id)
+
+    def _clear_queue_sync(self, status: str = "all") -> int:
+        """Clear queue items by status (sync)"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            if status == "all":
+                cursor.execute('''
+                    UPDATE download_queue
+                    SET is_deleted = 1
+                    WHERE is_deleted = 0
+                ''')
+            else:
+                cursor.execute('''
+                    UPDATE download_queue
+                    SET is_deleted = 1
+                    WHERE is_deleted = 0 AND status = ?
+                ''', (status,))
+
+            conn.commit()
+            return cursor.rowcount
+
+    async def clear_queue(self, status: str = "all") -> int:
+        """Clear queue items by status (async)"""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(_executor, self._clear_queue_sync, status)
+
 
 # Global database manager instance
 _db_manager = None

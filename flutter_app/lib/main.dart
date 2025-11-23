@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'features/download/screens/download_screen.dart';
 import 'features/history/screens/history_screen.dart';
+import 'features/settings/screens/settings_screen.dart';
 
 void main() {
   runApp(
@@ -51,6 +52,7 @@ class _MainNavigationState extends State<MainNavigation> {
   final List<Widget> _screens = const [
     DownloadScreen(),
     HistoryScreen(),
+    SettingsScreen(),
   ];
 
   @override
@@ -77,6 +79,11 @@ class _MainNavigationState extends State<MainNavigation> {
             icon: Icon(Icons.history_outlined),
             selectedIcon: Icon(Icons.history),
             label: 'History',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: 'Settings',
           ),
         ],
       ),

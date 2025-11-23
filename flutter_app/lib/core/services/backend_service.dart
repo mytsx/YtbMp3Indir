@@ -82,16 +82,38 @@ class BackendService {
 
   /// Get project root directory (parent of flutter_app)
   Future<String> _getProjectRoot() async {
-    // In development: flutter_app is in project root
-    // Get current working directory and go up one level if we're in flutter_app
-    final currentDir = Directory.current.path;
+    // Use Platform.script to find where the app is running from
+    // This works around macOS sandbox issues
+    final scriptPath = Platform.script.toFilePath();
 
-    if (currentDir.endsWith('flutter_app')) {
-      return Directory(currentDir).parent.path;
+    // In development:
+    // scriptPath will be something like: /Users/yerli/Developer/mehmetyerli/mp3yap/flutter_app/...
+    // We need to navigate up to project root
+
+    var current = File(scriptPath).parent;
+
+    // Navigate up until we find flutter_app directory
+    while (current.path != '/' && !current.path.endsWith('flutter_app')) {
+      current = current.parent;
     }
 
-    // Otherwise assume we're already in project root
-    return currentDir;
+    if (current.path.endsWith('flutter_app')) {
+      // Go up one more level to project root
+      return current.parent.path;
+    }
+
+    // Fallback: try to find based on existence of backend directory
+    current = File(scriptPath).parent;
+    for (var i = 0; i < 10; i++) {
+      final backendDir = Directory('${current.path}/backend');
+      if (await backendDir.exists()) {
+        return current.path;
+      }
+      if (current.path == '/') break;
+      current = current.parent;
+    }
+
+    throw Exception('Could not find project root');
   }
 
   /// Stop the backend process
@@ -117,7 +139,6 @@ class BackendService {
       }
 
       _process = null;
-      _port = null;
       print('Backend stopped');
     }
   }

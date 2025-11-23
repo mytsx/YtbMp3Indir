@@ -94,6 +94,9 @@ class DownloadService:
                 "message": "Starting download..."
             })
 
+            # Get the event loop for progress hook
+            loop = asyncio.get_event_loop()
+
             # Progress hook for yt-dlp
             def progress_hook(d):
                 if d['status'] == 'downloading':
@@ -117,24 +120,30 @@ class DownloadService:
                         download.speed = speed
                         download.eta = eta
 
-                        # Broadcast progress (async in sync context - fire and forget)
-                        asyncio.create_task(self.broadcast_progress(download.id, {
-                            "type": "progress",
-                            "progress": download.progress,
-                            "speed": speed,
-                            "eta": eta
-                        }))
+                        # Broadcast progress from executor thread to event loop
+                        asyncio.run_coroutine_threadsafe(
+                            self.broadcast_progress(download.id, {
+                                "type": "progress",
+                                "progress": download.progress,
+                                "speed": speed,
+                                "eta": eta
+                            }),
+                            loop
+                        )
 
                     except Exception as e:
                         logger.error(f"Error parsing progress: {e}")
 
                 elif d['status'] == 'finished':
                     download.status = "converting"
-                    asyncio.create_task(self.broadcast_progress(download.id, {
-                        "type": "status",
-                        "status": "converting",
-                        "message": "Converting to MP3..."
-                    }))
+                    asyncio.run_coroutine_threadsafe(
+                        self.broadcast_progress(download.id, {
+                            "type": "status",
+                            "status": "converting",
+                            "message": "Converting to MP3..."
+                        }),
+                        loop
+                    )
 
             # yt-dlp options
             ydl_opts = {

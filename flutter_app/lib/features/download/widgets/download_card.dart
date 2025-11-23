@@ -14,8 +14,15 @@ class DownloadCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch WebSocket progress updates
+    // Watch WebSocket progress updates to trigger rebuilds
     final progressStream = ref.watch(downloadProgressProvider(download.id));
+
+    // Get latest download state from provider (updated by WebSocket)
+    final downloads = ref.watch(downloadsProvider);
+    final latestDownload = downloads.firstWhere(
+      (d) => d.id == download.id,
+      orElse: () => download,
+    );
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -27,14 +34,14 @@ class DownloadCard extends ConsumerWidget {
             // Title row
             Row(
               children: [
-                _getStatusIcon(download.status),
+                _getStatusIcon(latestDownload.status),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        download.videoTitle ?? 'Fetching info...',
+                        latestDownload.videoTitle ?? 'Fetching info...',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -44,10 +51,10 @@ class DownloadCard extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _getStatusText(download.status),
+                        _getStatusText(latestDownload.status),
                         style: TextStyle(
                           fontSize: 13,
-                          color: _getStatusColor(download.status),
+                          color: _getStatusColor(latestDownload.status),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -57,18 +64,18 @@ class DownloadCard extends ConsumerWidget {
               ],
             ),
 
-            if (download.isActive) ...[
+            if (latestDownload.isActive) ...[
               const SizedBox(height: 16),
 
               // Progress bar
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
-                  value: download.progress / 100,
+                  value: latestDownload.progress / 100,
                   minHeight: 8,
                   backgroundColor: Colors.grey.shade200,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    _getProgressColor(download.status),
+                    _getProgressColor(latestDownload.status),
                   ),
                 ),
               ),
@@ -80,17 +87,17 @@ class DownloadCard extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '${download.progress}%',
+                    '${latestDownload.progress}%',
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  if (download.speed != null || download.eta != null)
+                  if (latestDownload.speed != null || latestDownload.eta != null)
                     Text(
                       [
-                        if (download.speed != null) download.speed!,
-                        if (download.eta != null) 'ETA: ${download.eta!}',
+                        if (latestDownload.speed != null) latestDownload.speed!,
+                        if (latestDownload.eta != null) 'ETA: ${latestDownload.eta!}',
                       ].join(' • '),
                       style: TextStyle(
                         fontSize: 13,
@@ -101,7 +108,7 @@ class DownloadCard extends ConsumerWidget {
               ),
             ],
 
-            if (download.isCompleted) ...[
+            if (latestDownload.isCompleted) ...[
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -109,7 +116,7 @@ class DownloadCard extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Saved to: ${download.filePath ?? 'Unknown'}',
+                      'Saved to: ${latestDownload.filePath ?? 'Unknown'}',
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey.shade700,
@@ -122,7 +129,7 @@ class DownloadCard extends ConsumerWidget {
               ),
             ],
 
-            if (download.isFailed) ...[
+            if (latestDownload.isFailed) ...[
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -136,7 +143,7 @@ class DownloadCard extends ConsumerWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        download.error ?? 'Unknown error',
+                        latestDownload.error ?? 'Unknown error',
                         style: const TextStyle(
                           fontSize: 13,
                           color: Colors.red,

@@ -53,7 +53,8 @@ class DownloadService:
     """Service for managing downloads"""
 
     def __init__(self, output_dir: str = "./music"):
-        self.output_dir = output_dir
+        # Convert to absolute path to ensure compatibility with AudioPlayer
+        self.output_dir = os.path.abspath(output_dir)
         self.active_downloads: Dict[str, Download] = {}
         self.websocket_manager = None  # Will be injected
         self.db_manager = get_database_manager()

@@ -1,0 +1,222 @@
+"""
+Download Service
+Handles YouTube downloads with yt-dlp and progress tracking
+"""
+import asyncio
+import os
+import uuid
+import logging
+from typing import Dict, Optional
+from datetime import datetime
+import yt_dlp
+
+logger = logging.getLogger(__name__)
+
+# Global download service instance
+_download_service = None
+
+
+class Download:
+    """Download tracking object"""
+
+    def __init__(self, download_id: str, url: str, quality: str = "192"):
+        self.id = download_id
+        self.url = url
+        self.quality = quality
+        self.status = "pending"  # pending, downloading, converting, completed, failed, cancelled
+        self.progress = 0  # 0-100
+        self.video_title = None
+        self.file_path = None
+        self.error = None
+        self.created_at = datetime.now()
+        self.speed = None
+        self.eta = None
+
+    def to_dict(self):
+        """Convert to dictionary"""
+        return {
+            "id": self.id,
+            "url": self.url,
+            "status": self.status,
+            "progress": self.progress,
+            "video_title": self.video_title,
+            "file_path": self.file_path,
+            "error": self.error,
+            "created_at": self.created_at.isoformat(),
+            "speed": self.speed,
+            "eta": self.eta,
+        }
+
+
+class DownloadService:
+    """Service for managing downloads"""
+
+    def __init__(self, output_dir: str = "./music"):
+        self.output_dir = output_dir
+        self.active_downloads: Dict[str, Download] = {}
+        self.websocket_manager = None  # Will be injected
+
+        # Ensure output directory exists
+        os.makedirs(self.output_dir, exist_ok=True)
+
+    def set_websocket_manager(self, manager):
+        """Inject WebSocket manager for progress updates"""
+        self.websocket_manager = manager
+
+    async def broadcast_progress(self, download_id: str, message: dict):
+        """Broadcast progress update via WebSocket"""
+        if self.websocket_manager:
+            await self.websocket_manager.broadcast(download_id, message)
+
+    async def start_download(self, url: str, quality: str = "192") -> Download:
+        """Start a new download"""
+        download_id = str(uuid.uuid4())
+        download = Download(download_id, url, quality)
+
+        # Store in active downloads
+        self.active_downloads[download_id] = download
+
+        # Start download in background
+        asyncio.create_task(self._download_worker(download))
+
+        logger.info(f"Started download {download_id} for {url}")
+        return download
+
+    async def _download_worker(self, download: Download):
+        """Background worker that performs the actual download"""
+        try:
+            download.status = "downloading"
+            await self.broadcast_progress(download.id, {
+                "type": "status",
+                "status": "downloading",
+                "message": "Starting download..."
+            })
+
+            # Progress hook for yt-dlp
+            def progress_hook(d):
+                if d['status'] == 'downloading':
+                    # Extract progress
+                    try:
+                        if 'downloaded_bytes' in d and 'total_bytes' in d:
+                            progress = int((d['downloaded_bytes'] / d['total_bytes']) * 100)
+                        elif '_percent_str' in d:
+                            # Parse percentage string like "50.0%"
+                            progress_str = d['_percent_str'].strip().rstrip('%')
+                            progress = int(float(progress_str))
+                        else:
+                            progress = download.progress  # Keep current
+
+                        download.progress = min(progress, 99)  # Cap at 99 until complete
+
+                        # Extract speed and ETA
+                        speed = d.get('_speed_str', 'N/A')
+                        eta = d.get('_eta_str', 'N/A')
+
+                        download.speed = speed
+                        download.eta = eta
+
+                        # Broadcast progress (async in sync context - fire and forget)
+                        asyncio.create_task(self.broadcast_progress(download.id, {
+                            "type": "progress",
+                            "progress": download.progress,
+                            "speed": speed,
+                            "eta": eta
+                        }))
+
+                    except Exception as e:
+                        logger.error(f"Error parsing progress: {e}")
+
+                elif d['status'] == 'finished':
+                    download.status = "converting"
+                    asyncio.create_task(self.broadcast_progress(download.id, {
+                        "type": "status",
+                        "status": "converting",
+                        "message": "Converting to MP3..."
+                    }))
+
+            # yt-dlp options
+            ydl_opts = {
+                'format': 'bestaudio/best',
+                'outtmpl': os.path.join(self.output_dir, '%(title)s [%(id)s].%(ext)s'),
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': download.quality,
+                }],
+                'progress_hooks': [progress_hook],
+                'quiet': True,
+                'no_warnings': True,
+            }
+
+            # Perform download
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                # Extract info first to get title
+                info = ydl.extract_info(download.url, download=False)
+                download.video_title = info.get('title', 'Unknown')
+
+                # Broadcast title
+                await self.broadcast_progress(download.id, {
+                    "type": "info",
+                    "video_title": download.video_title
+                })
+
+                # Download
+                await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: ydl.download([download.url])
+                )
+
+            # Download completed
+            download.status = "completed"
+            download.progress = 100
+
+            # Find the downloaded file
+            video_id = info.get('id', '')
+            expected_filename = f"{download.video_title} [{video_id}].mp3"
+            download.file_path = os.path.join(self.output_dir, expected_filename)
+
+            await self.broadcast_progress(download.id, {
+                "type": "completed",
+                "status": "completed",
+                "progress": 100,
+                "file_path": download.file_path,
+                "message": "Download completed!"
+            })
+
+            logger.info(f"Download {download.id} completed: {download.file_path}")
+
+        except Exception as e:
+            logger.exception(f"Download {download.id} failed: {e}")
+            download.status = "failed"
+            download.error = str(e)
+
+            await self.broadcast_progress(download.id, {
+                "type": "error",
+                "status": "failed",
+                "error": str(e),
+                "message": f"Download failed: {str(e)}"
+            })
+
+    def get_download(self, download_id: str) -> Optional[Download]:
+        """Get download by ID"""
+        return self.active_downloads.get(download_id)
+
+    def get_all_downloads(self):
+        """Get all active downloads"""
+        return list(self.active_downloads.values())
+
+    def cancel_download(self, download_id: str):
+        """Cancel a download"""
+        download = self.active_downloads.get(download_id)
+        if download:
+            download.status = "cancelled"
+            # TODO: Actually cancel yt-dlp process
+            logger.info(f"Download {download_id} cancelled")
+
+
+def get_download_service() -> DownloadService:
+    """Get or create global download service instance"""
+    global _download_service
+    if _download_service is None:
+        _download_service = DownloadService()
+    return _download_service

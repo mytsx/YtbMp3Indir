@@ -4,14 +4,14 @@ Handles download creation, management, and cancellation
 """
 from fastapi import APIRouter, HTTPException
 from typing import List
-from ..models import ApiResponse, ErrorDetail, DownloadRequest, Download
+from ..models import ApiResponse, ErrorDetail, DownloadRequest
+from services.download_service import get_download_service
 from datetime import datetime
-import uuid
 
 router = APIRouter()
 
-# In-memory storage for demo (will be replaced with database)
-active_downloads = {}
+# Get global download service
+download_service = get_download_service()
 
 
 @router.post("", response_model=ApiResponse)
@@ -39,27 +39,12 @@ async def create_download(request: DownloadRequest):
     }
     """
     try:
-        # Generate unique download ID
-        download_id = str(uuid.uuid4())
-
-        # Create download object
-        download = Download(
-            id=download_id,
-            url=request.url,
-            status="downloading",
-            progress=0,
-            created_at=datetime.now()
-        )
-
-        # Store in active downloads
-        active_downloads[download_id] = download
-
-        # TODO: Start actual download in background
-        # asyncio.create_task(download_worker(download_id, request.url, request.quality))
+        # Start download using service
+        download = await download_service.start_download(request.url, request.quality)
 
         return ApiResponse(
             success=True,
-            data=download.dict()
+            data=download.to_dict()
         )
     except Exception as e:
         return ApiResponse(
@@ -89,10 +74,10 @@ async def get_downloads():
     }
     """
     try:
-        downloads = list(active_downloads.values())
+        downloads = download_service.get_all_downloads()
         return ApiResponse(
             success=True,
-            data=[d.dict() for d in downloads]
+            data=[d.to_dict() for d in downloads]
         )
     except Exception as e:
         return ApiResponse(
@@ -120,16 +105,16 @@ async def get_download(download_id: str):
     }
     """
     try:
-        if download_id not in active_downloads:
+        download = download_service.get_download(download_id)
+        if not download:
             return ApiResponse(
                 success=False,
                 error=ErrorDetail(code="NOT_FOUND", message="Download not found")
             )
 
-        download = active_downloads[download_id]
         return ApiResponse(
             success=True,
-            data=download.dict()
+            data=download.to_dict()
         )
     except Exception as e:
         return ApiResponse(
@@ -151,17 +136,15 @@ async def cancel_download(download_id: str):
     }
     """
     try:
-        if download_id not in active_downloads:
+        download = download_service.get_download(download_id)
+        if not download:
             return ApiResponse(
                 success=False,
                 error=ErrorDetail(code="NOT_FOUND", message="Download not found")
             )
 
-        # TODO: Cancel actual download process
-        # Cancel yt-dlp process and clean up files
-
-        # Remove from active downloads
-        del active_downloads[download_id]
+        # Cancel download
+        download_service.cancel_download(download_id)
 
         return ApiResponse(
             success=True,

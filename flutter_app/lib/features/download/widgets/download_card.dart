@@ -1,0 +1,214 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/models/download.dart';
+import '../providers/download_provider.dart';
+
+/// Download card showing progress and status
+class DownloadCard extends ConsumerWidget {
+  final Download download;
+
+  const DownloadCard({
+    super.key,
+    required this.download,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch WebSocket progress updates
+    final progressStream = ref.watch(downloadProgressProvider(download.id));
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Title row
+            Row(
+              children: [
+                _getStatusIcon(download.status),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        download.videoTitle ?? 'Fetching info...',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _getStatusText(download.status),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: _getStatusColor(download.status),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            if (download.isActive) ...[
+              const SizedBox(height: 16),
+
+              // Progress bar
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: download.progress / 100,
+                  minHeight: 8,
+                  backgroundColor: Colors.grey.shade200,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    _getProgressColor(download.status),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              // Progress details
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${download.progress}%',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (download.speed != null || download.eta != null)
+                    Text(
+                      [
+                        if (download.speed != null) download.speed!,
+                        if (download.eta != null) 'ETA: ${download.eta!}',
+                      ].join(' • '),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+
+            if (download.isCompleted) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Saved to: ${download.filePath ?? 'Unknown'}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade700,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            if (download.isFailed) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error, color: Colors.red, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        download.error ?? 'Unknown error',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _getStatusIcon(String status) {
+    switch (status) {
+      case 'downloading':
+        return const CircularProgressIndicator(strokeWidth: 2);
+      case 'converting':
+        return const CircularProgressIndicator(strokeWidth: 2);
+      case 'completed':
+        return const Icon(Icons.check_circle, color: Colors.green, size: 32);
+      case 'failed':
+        return const Icon(Icons.error, color: Colors.red, size: 32);
+      case 'cancelled':
+        return const Icon(Icons.cancel, color: Colors.grey, size: 32);
+      default:
+        return const Icon(Icons.downloading, color: Colors.blue, size: 32);
+    }
+  }
+
+  String _getStatusText(String status) {
+    switch (status) {
+      case 'pending':
+        return 'Pending...';
+      case 'downloading':
+        return 'Downloading...';
+      case 'converting':
+        return 'Converting to MP3...';
+      case 'completed':
+        return 'Completed!';
+      case 'failed':
+        return 'Failed';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return status;
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'downloading':
+      case 'converting':
+        return Colors.blue;
+      case 'completed':
+        return Colors.green;
+      case 'failed':
+        return Colors.red;
+      case 'cancelled':
+        return Colors.grey;
+      default:
+        return Colors.orange;
+    }
+  }
+
+  Color _getProgressColor(String status) {
+    if (status == 'converting') {
+      return Colors.orange;
+    }
+    return Colors.blue;
+  }
+}

@@ -34,6 +34,17 @@ app.include_router(config.router, prefix="/api/config", tags=["config"])
 app.include_router(websocket_router)
 
 
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services on startup"""
+    from api.websocket import manager
+    from services.download_service import get_download_service
+
+    # Inject WebSocket manager into download service
+    download_service = get_download_service()
+    download_service.set_websocket_manager(manager)
+
+
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint"""

@@ -66,9 +66,11 @@ dist/
 # *.spec  # Spec files are now tracked for reproducible builds
 # Archive folder (old spec files and deprecated assets)
 archive/
+!archive/python_desktop.zip
 *.exe
 *.msi
 *.zip
+!archive/*.zip
 
 # Installer output
 installer_output/

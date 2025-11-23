@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -93,7 +94,7 @@ class HistoryCard extends ConsumerWidget {
                 children: [
                   // Play button (if file exists)
                   if (item.filePath != null)
-                    _buildPlayButton(ref, colorScheme),
+                    _buildPlayButton(context, ref, colorScheme),
                   const SizedBox(width: 8),
                   // Redownload button
                   TextButton.icon(
@@ -141,7 +142,7 @@ class HistoryCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildPlayButton(WidgetRef ref, ColorScheme colorScheme) {
+  Widget _buildPlayButton(BuildContext context, WidgetRef ref, ColorScheme colorScheme) {
     final player = ref.watch(audioPlayerProvider);
     final currentlyPlaying = ref.watch(currentlyPlayingProvider);
     final playerStateAsync = ref.watch(playerStateProvider);
@@ -165,10 +166,33 @@ class HistoryCard extends ConsumerWidget {
           // Resume
           await player.resume();
         } else {
-          // Play new file
+          // Play new file - ensure absolute path (TTS pattern)
+          String filePath = item.filePath!;
+
+          // Convert relative paths to absolute (for legacy database entries)
+          if (!filePath.startsWith('/')) {
+            // Relative path detected - make it absolute
+            final file = File(filePath);
+            filePath = file.absolute.path;
+            print('Converted relative path to absolute: $filePath');
+          }
+
+          // Verify file exists before playing
+          if (!await File(filePath).exists()) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('File not found: ${File(filePath).path}'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
+          }
+
           await player.stop();
-          await player.play(DeviceFileSource(item.filePath!));
-          ref.read(currentlyPlayingProvider.notifier).state = item.filePath;
+          await player.play(DeviceFileSource(filePath));
+          ref.read(currentlyPlayingProvider.notifier).state = filePath;
         }
       },
     );

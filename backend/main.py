@@ -1,14 +1,27 @@
 """
 FastAPI Backend Entry Point
-Starts server with random port and prints to stdout for Flutter discovery
+Starts server with dynamic port and writes to .backend_port file for Flutter discovery
 """
 import sys
+import os
 import socket
+import logging
+from pathlib import Path
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes import downloads, history, queue, config
 from api.websocket import websocket_router
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Base directory (project root)
+BASE_DIR = Path(__file__).parent
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -68,20 +81,57 @@ async def root():
     }
 
 
+def find_free_port(start_port=8000, max_attempts=10):
+    """
+    Find an available port starting from start_port (TTS pattern)
+    More robust than OS-random port selection
+    """
+    for port in range(start_port, start_port + max_attempts):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind(('0.0.0.0', port))
+            sock.close()
+            return port
+        except OSError:
+            continue
+    raise RuntimeError(f"Could not find free port in range {start_port}-{start_port + max_attempts - 1}")
+
+
+def write_port_file(port):
+    """
+    Write the selected port to .backend_port file so Flutter can read it (TTS pattern)
+    This is more reliable than parsing stdout
+    """
+    # Write to project root (one level up from backend/)
+    port_file = BASE_DIR.parent / ".backend_port"
+
+    with open(port_file, 'w') as f:
+        f.write(str(port))
+
+    logger.info(f"Port {port} written to {port_file}")
+
+
 def main():
     """
-    Start server with random port and print to stdout
-    Flutter will read stdout to discover the port
+    Start server with dynamic port using TTS-proven pattern
     """
-    # Let OS choose an available port
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(('127.0.0.1', 0))
-        port = s.getsockname()[1]
+    # Find free port (TTS pattern - more robust)
+    try:
+        port = find_free_port(8000, 10)
+        logger.info(f"Found free port: {port}")
+    except RuntimeError as e:
+        logger.error(f"Failed to find free port: {e}")
+        sys.exit(1)
 
-    # Print port to stdout for Flutter to read
-    # IMPORTANT: This line must be exactly in this format
+    # Write port to file for Flutter discovery (TTS pattern)
+    write_port_file(port)
+
+    # Also print to stdout for backward compatibility
     print(f"BACKEND_READY PORT={port}", flush=True)
     sys.stdout.flush()
+
+    logger.info(f"Starting MP3Yap Backend on port {port}")
 
     # Start uvicorn server
     uvicorn.run(

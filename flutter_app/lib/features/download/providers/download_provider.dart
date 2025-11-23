@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../../core/providers/providers.dart';
 import '../../../core/models/download.dart';
+import '../../history/providers/history_provider.dart';
 
 /// Current downloads list provider (state notifier)
 class DownloadsNotifier extends StateNotifier<List<Download>> {
@@ -108,6 +109,8 @@ final downloadProgressProvider =
               progress: 100,
               filePath: update.filePath,
             );
+            // Refresh history when download completes
+            ref.invalidate(historyProvider);
             break;
 
           case 'error':

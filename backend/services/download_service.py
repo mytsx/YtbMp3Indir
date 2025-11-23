@@ -1,11 +1,14 @@
 """
 Download Service
 Handles YouTube downloads with yt-dlp and progress tracking
+Thread-safe job queue pattern from TTS
 """
 import asyncio
 import os
 import uuid
 import logging
+import threading
+import queue
 from typing import Dict, Optional
 from datetime import datetime
 import yt_dlp
@@ -50,17 +53,66 @@ class Download:
 
 
 class DownloadService:
-    """Service for managing downloads"""
+    """Service for managing downloads with thread-safe job queue (TTS pattern)"""
 
-    def __init__(self, output_dir: str = "./music"):
+    def __init__(self, output_dir: str = "./music", max_workers: int = 3):
         # Convert to absolute path to ensure compatibility with AudioPlayer
         self.output_dir = os.path.abspath(output_dir)
         self.active_downloads: Dict[str, Download] = {}
         self.websocket_manager = None  # Will be injected
         self.db_manager = get_database_manager()
 
+        # Thread-safe job queue (TTS pattern)
+        self.job_queue = queue.Queue()
+        self.downloads_lock = threading.Lock()  # Protect active_downloads dict
+        self.shutdown_event = threading.Event()
+
+        # Worker threads for processing downloads
+        self.max_workers = max_workers
+        self.workers = []
+        self._start_workers()
+
         # Ensure output directory exists
         os.makedirs(self.output_dir, exist_ok=True)
+
+    def _start_workers(self):
+        """Start worker threads for processing download jobs (TTS pattern)"""
+        for i in range(self.max_workers):
+            worker = threading.Thread(
+                target=self._worker_loop,
+                name=f"DownloadWorker-{i}",
+                daemon=True
+            )
+            worker.start()
+            self.workers.append(worker)
+        logger.info(f"Started {self.max_workers} download worker threads")
+
+    def _worker_loop(self):
+        """Worker thread main loop - processes jobs from queue (TTS pattern)"""
+        while not self.shutdown_event.is_set():
+            try:
+                # Get job from queue with timeout to check shutdown periodically
+                download = self.job_queue.get(timeout=1)
+
+                # Process the download
+                asyncio.run(self._download_worker(download))
+
+                self.job_queue.task_done()
+            except queue.Empty:
+                continue  # Timeout - check shutdown and loop again
+            except Exception as e:
+                logger.exception(f"Worker thread error: {e}")
+
+    def shutdown(self):
+        """Graceful shutdown of worker threads (TTS pattern)"""
+        logger.info("Shutting down download service...")
+        self.shutdown_event.set()
+
+        # Wait for all workers to finish
+        for worker in self.workers:
+            worker.join(timeout=5)
+
+        logger.info("Download service shutdown complete")
 
     def set_websocket_manager(self, manager):
         """Inject WebSocket manager for progress updates"""
@@ -72,17 +124,18 @@ class DownloadService:
             await self.websocket_manager.broadcast(download_id, message)
 
     async def start_download(self, url: str, quality: str = "192") -> Download:
-        """Start a new download"""
+        """Start a new download - adds to thread-safe queue (TTS pattern)"""
         download_id = str(uuid.uuid4())
         download = Download(download_id, url, quality)
 
-        # Store in active downloads
-        self.active_downloads[download_id] = download
+        # Thread-safe: Store in active downloads with lock
+        with self.downloads_lock:
+            self.active_downloads[download_id] = download
 
-        # Start download in background
-        asyncio.create_task(self._download_worker(download))
+        # Add to job queue - worker threads will process it
+        self.job_queue.put(download)
 
-        logger.info(f"Started download {download_id} for {url}")
+        logger.info(f"Queued download {download_id} for {url} (queue size: {self.job_queue.qsize()})")
         return download
 
     async def _download_worker(self, download: Download):
@@ -233,20 +286,23 @@ class DownloadService:
             })
 
     def get_download(self, download_id: str) -> Optional[Download]:
-        """Get download by ID"""
-        return self.active_downloads.get(download_id)
+        """Get download by ID - thread-safe"""
+        with self.downloads_lock:
+            return self.active_downloads.get(download_id)
 
     def get_all_downloads(self):
-        """Get all active downloads"""
-        return list(self.active_downloads.values())
+        """Get all active downloads - thread-safe"""
+        with self.downloads_lock:
+            return list(self.active_downloads.values())
 
     def cancel_download(self, download_id: str):
-        """Cancel a download"""
-        download = self.active_downloads.get(download_id)
-        if download:
-            download.status = "cancelled"
-            # TODO: Actually cancel yt-dlp process
-            logger.info(f"Download {download_id} cancelled")
+        """Cancel a download - thread-safe"""
+        with self.downloads_lock:
+            download = self.active_downloads.get(download_id)
+            if download:
+                download.status = "cancelled"
+                # TODO: Actually cancel yt-dlp process
+                logger.info(f"Download {download_id} cancelled")
 
 
 def get_download_service() -> DownloadService:

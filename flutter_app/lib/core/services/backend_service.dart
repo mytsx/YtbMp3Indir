@@ -3,76 +3,76 @@ import 'dart:convert';
 import 'dart:io';
 
 /// Manages the Python backend process lifecycle
-/// Starts the backend with port=0 and discovers the port from stdout
+/// For development: Starts uvicorn on fixed port 8000
+/// For production: Will use bundled executable
 class BackendService {
   Process? _process;
-  int? _port;
+  final int _fixedPort = 8000; // Development fixed port
 
-  int? get port => _port;
-  bool get isRunning => _process != null && _port != null;
+  int get port => _fixedPort;
+  bool get isRunning => _process != null;
 
-  /// Start the backend process and discover port from stdout
+  /// Start the backend process
   Future<void> start() async {
     if (isRunning) {
-      print('Backend already running on port: $_port');
+      print('Backend already running on port: $_fixedPort');
       return;
     }
 
-    final backendPath = await _getBackendPath();
-    print('Starting backend: $backendPath');
+    print('Starting backend on port $_fixedPort...');
 
-    // Start backend process
-    _process = await Process.start(
-      backendPath,
-      [], // Backend will choose its own random port
-      runInShell: false,
-    );
-
-    // Listen to stdout for port discovery
-    final portCompleter = Completer<int>();
-
-    // Read stdout line by line
-    _process!.stdout
-        .transform(utf8.decoder)
-        .transform(LineSplitter())
-        .listen((line) {
-      print('[Backend stdout] $line');
-
-      // Parse "BACKEND_READY PORT=12345"
-      if (line.startsWith('BACKEND_READY PORT=')) {
-        final portStr = line.split('=')[1].trim();
-        final port = int.tryParse(portStr);
-        if (port != null && !portCompleter.isCompleted) {
-          print('✅ Backend port discovered: $port');
-          portCompleter.complete(port);
-        }
-      }
-    });
-
-    // Read stderr for error logging
-    _process!.stderr
-        .transform(utf8.decoder)
-        .transform(LineSplitter())
-        .listen((line) {
-      print('[Backend stderr] $line');
-    });
-
-    // Monitor process exit
-    _process!.exitCode.then((code) {
-      print('Backend process exited with code: $code');
-      _port = null;
-      _process = null;
-    });
-
-    // Wait for port (timeout: 10 seconds)
     try {
-      _port = await portCompleter.future.timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw Exception('Backend did not report port within 10 seconds');
-        },
+      // Get project root (assuming flutter_app is sibling to backend)
+      final projectRoot = await _getProjectRoot();
+      final backendDir = '$projectRoot/backend';
+
+      print('Backend directory: $backendDir');
+
+      // Check if backend directory exists
+      if (!await Directory(backendDir).exists()) {
+        throw Exception('Backend directory not found at: $backendDir');
+      }
+
+      // Start uvicorn with fixed port
+      _process = await Process.start(
+        'uvicorn',
+        ['main:app', '--port', '$_fixedPort'],
+        workingDirectory: backendDir,
+        runInShell: true,
       );
-      print('Backend successfully started on port: $_port');
+
+      // Read stdout for logging
+      _process!.stdout
+          .transform(utf8.decoder)
+          .transform(LineSplitter())
+          .listen((line) {
+        print('[Backend] $line');
+      });
+
+      // Read stderr for error logging
+      _process!.stderr
+          .transform(utf8.decoder)
+          .transform(LineSplitter())
+          .listen((line) {
+        print('[Backend Error] $line');
+      });
+
+      // Monitor process exit
+      _process!.exitCode.then((code) {
+        print('Backend process exited with code: $code');
+        _process = null;
+      });
+
+      // Wait a bit for backend to start
+      await Future.delayed(const Duration(seconds: 2));
+
+      // Verify backend is running
+      final healthy = await healthCheck();
+      if (healthy) {
+        print('✅ Backend successfully started on port: $_fixedPort');
+      } else {
+        print('⚠️ Backend started but health check failed');
+      }
     } catch (e) {
       print('Failed to start backend: $e');
       await stop();
@@ -80,27 +80,18 @@ class BackendService {
     }
   }
 
-  /// Get backend executable path (platform-specific)
-  Future<String> _getBackendPath() async {
-    // For development: Use Python script directly
-    if (Platform.environment.containsKey('FLUTTER_DEV')) {
-      // In development, run the Python script directly
-      // Make sure to set FLUTTER_DEV=1 environment variable
-      return 'python3';
-      // Note: You'll need to modify Process.start to pass ['main.py'] as arguments
+  /// Get project root directory (parent of flutter_app)
+  Future<String> _getProjectRoot() async {
+    // In development: flutter_app is in project root
+    // Get current working directory and go up one level if we're in flutter_app
+    final currentDir = Directory.current.path;
+
+    if (currentDir.endsWith('flutter_app')) {
+      return Directory(currentDir).parent.path;
     }
 
-    // For production: Use bundled binary
-    if (Platform.isMacOS) {
-      // In .app bundle: Contents/MacOS/mp3yap-backend
-      final execDir = File(Platform.resolvedExecutable).parent.path;
-      return '$execDir/mp3yap-backend';
-    } else if (Platform.isWindows) {
-      return 'mp3yap-backend.exe';
-    } else {
-      // Linux
-      return './mp3yap-backend';
-    }
+    // Otherwise assume we're already in project root
+    return currentDir;
   }
 
   /// Stop the backend process
@@ -133,19 +124,14 @@ class BackendService {
 
   /// Check if backend is healthy
   Future<bool> healthCheck() async {
-    if (!isRunning) return false;
-
     try {
       final httpClient = HttpClient();
-      final request = await httpClient.get('127.0.0.1', _port!, '/api/health');
+      final request = await httpClient.get('127.0.0.1', _fixedPort, '/api/config');
       final response = await request.close();
 
-      if (response.statusCode == 200) {
-        final body = await response.transform(utf8.decoder).join();
-        print('Health check response: $body');
-        return true;
-      }
-      return false;
+      final success = response.statusCode == 200;
+      await response.drain();
+      return success;
     } catch (e) {
       print('Health check failed: $e');
       return false;

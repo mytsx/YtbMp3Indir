@@ -1,13 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
+import '../services/backend_service.dart';
+
+/// Backend service provider - manages backend process
+final backendServiceProvider = Provider<BackendService>((ref) {
+  return BackendService();
+});
 
 /// Backend port provider
-/// NOTE: Backend should be started manually with: cd backend && python main.py
-/// This provider uses a fixed port for development
 final backendPortProvider = Provider<int>((ref) {
-  // Default port - backend will print actual port on startup
-  // For development: start backend manually and update this if needed
-  return 57673; // Update this based on backend output
+  final service = ref.watch(backendServiceProvider);
+  return service.port;
 });
 
 /// API client provider (depends on port)

@@ -3,11 +3,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'features/download/screens/download_screen.dart';
 import 'features/history/screens/history_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
+import 'core/providers/providers.dart';
 
-void main() {
+void main() async {
+  // Ensure Flutter is initialized
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Create provider container to start backend
+  final container = ProviderContainer();
+
+  // Start backend automatically
+  print('🚀 Starting backend...');
+  final backendService = container.read(backendServiceProvider);
+
+  try {
+    await backendService.start();
+    print('✅ Backend started successfully');
+  } catch (e) {
+    print('❌ Failed to start backend: $e');
+    print('⚠️ App will continue but may not work properly');
+  }
+
+  // Run the app
   runApp(
-    const ProviderScope(
-      child: MyApp(),
+    UncontrolledProviderScope(
+      container: container,
+      child: const MyApp(),
     ),
   );
 }
@@ -26,12 +47,6 @@ class MyApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
         useMaterial3: true,
-        cardTheme: const CardThemeData(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(12)),
-          ),
-        ),
       ),
       home: const MainNavigation(),
     );

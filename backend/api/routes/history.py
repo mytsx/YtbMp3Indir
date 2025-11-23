@@ -57,6 +57,69 @@ async def get_history(
         )
 
 
+@router.get("/search", response_model=ApiResponse)
+async def search_history(q: str = Query(..., min_length=1)):
+    """
+    Search download history by video title
+
+    Query params:
+    - q: Search query (required, min 1 character)
+
+    Response:
+    {
+        "success": true,
+        "data": [
+            {
+                "id": 1,
+                "video_title": "Matching Song Name",
+                ...
+            }
+        ],
+        "error": null
+    }
+    """
+    try:
+        results = await db_manager.search_history(q)
+        return ApiResponse(
+            success=True,
+            data=results
+        )
+    except Exception as e:
+        return ApiResponse(
+            success=False,
+            error=ErrorDetail(code="SEARCH_FAILED", message=str(e))
+        )
+
+
+@router.get("/stats", response_model=ApiResponse)
+async def get_statistics():
+    """
+    Get download statistics
+
+    Response:
+    {
+        "success": true,
+        "data": {
+            "total_downloads": 42,
+            "total_size": 125829120,
+            "total_duration": 7200
+        },
+        "error": null
+    }
+    """
+    try:
+        stats = await db_manager.get_statistics()
+        return ApiResponse(
+            success=True,
+            data=stats
+        )
+    except Exception as e:
+        return ApiResponse(
+            success=False,
+            error=ErrorDetail(code="STATS_FAILED", message=str(e))
+        )
+
+
 @router.get("/{history_id}", response_model=ApiResponse)
 async def get_history_item(history_id: int):
     """
@@ -164,67 +227,4 @@ async def delete_history_item(history_id: int):
         return ApiResponse(
             success=False,
             error=ErrorDetail(code="DELETE_FAILED", message=str(e))
-        )
-
-
-@router.get("/search", response_model=ApiResponse)
-async def search_history(q: str = Query(..., min_length=1)):
-    """
-    Search download history by video title
-
-    Query params:
-    - q: Search query (required, min 1 character)
-
-    Response:
-    {
-        "success": true,
-        "data": [
-            {
-                "id": 1,
-                "video_title": "Matching Song Name",
-                ...
-            }
-        ],
-        "error": null
-    }
-    """
-    try:
-        results = await db_manager.search_history(q)
-        return ApiResponse(
-            success=True,
-            data=results
-        )
-    except Exception as e:
-        return ApiResponse(
-            success=False,
-            error=ErrorDetail(code="SEARCH_FAILED", message=str(e))
-        )
-
-
-@router.get("/stats", response_model=ApiResponse)
-async def get_statistics():
-    """
-    Get download statistics
-
-    Response:
-    {
-        "success": true,
-        "data": {
-            "total_downloads": 42,
-            "total_size": 125829120,
-            "total_duration": 7200
-        },
-        "error": null
-    }
-    """
-    try:
-        stats = await db_manager.get_statistics()
-        return ApiResponse(
-            success=True,
-            data=stats
-        )
-    except Exception as e:
-        return ApiResponse(
-            success=False,
-            error=ErrorDetail(code="STATS_FAILED", message=str(e))
         )

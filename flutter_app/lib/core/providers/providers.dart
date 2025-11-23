@@ -7,7 +7,7 @@ import '../api/api_client.dart';
 final backendPortProvider = Provider<int>((ref) {
   // Default port - backend will print actual port on startup
   // For development: start backend manually and update this if needed
-  return 62221; // Update this based on backend output
+  return 57673; // Update this based on backend output
 });
 
 /// API client provider (depends on port)

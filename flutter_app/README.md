@@ -61,12 +61,14 @@ lib/
 
 ### Prerequisites
 
-1. **Backend must be running:**
+1. **Start backend manually:**
    ```bash
    cd backend
    pip install -r requirements.txt
-   python3 main.py
+   python main.py
    ```
+
+   Note the port from output (e.g., `BACKEND_READY PORT=62221`)
 
 2. **Install Flutter dependencies:**
    ```bash
@@ -74,17 +76,26 @@ lib/
    flutter pub get
    ```
 
+3. **Update port in providers (if needed):**
+   - Open `lib/core/providers/providers.dart`
+   - Update `backendPortProvider` with the actual port
+
 ### Development
 
+**macOS:**
 ```bash
-flutter run
+flutter run -d macos
+```
+
+**Web (Chrome):**
+```bash
+flutter run -d chrome
 ```
 
 The app will:
-1. Start backend process automatically
-2. Discover port from stdout
-3. Configure API client
-4. Connect WebSocket for progress
+1. Connect to backend on configured port
+2. Configure API client
+3. Connect WebSocket for progress
 
 ## How It Works
 

@@ -14,8 +14,15 @@ class BackendService {
 
   /// Start the backend process
   Future<void> start() async {
+    // First check if backend is already running (user started it manually)
+    print('Checking if backend is already running on port $_fixedPort...');
+    if (await healthCheck()) {
+      print('✅ Backend already running on port $_fixedPort (externally started)');
+      return;
+    }
+
     if (isRunning) {
-      print('Backend already running on port: $_fixedPort');
+      print('Backend process already managed by this service');
       return;
     }
 
@@ -82,38 +89,46 @@ class BackendService {
 
   /// Get project root directory (parent of flutter_app)
   Future<String> _getProjectRoot() async {
-    // Use Platform.script to find where the app is running from
-    // This works around macOS sandbox issues
-    final scriptPath = Platform.script.toFilePath();
-
-    // In development:
-    // scriptPath will be something like: /Users/yerli/Developer/mehmetyerli/mp3yap/flutter_app/...
-    // We need to navigate up to project root
-
-    var current = File(scriptPath).parent;
-
-    // Navigate up until we find flutter_app directory
-    while (current.path != '/' && !current.path.endsWith('flutter_app')) {
-      current = current.parent;
+    // Check if PROJECT_ROOT is set (for development)
+    final envProjectRoot = Platform.environment['PROJECT_ROOT'];
+    if (envProjectRoot != null && envProjectRoot.isNotEmpty) {
+      final dir = Directory(envProjectRoot);
+      if (await dir.exists()) {
+        return envProjectRoot;
+      }
     }
 
-    if (current.path.endsWith('flutter_app')) {
-      // Go up one more level to project root
-      return current.parent.path;
-    }
+    // Try to get from resolved executable path
+    // This works when running from flutter run command
+    final resolvedPath = Platform.resolvedExecutable;
+    var current = File(resolvedPath).parent;
 
-    // Fallback: try to find based on existence of backend directory
-    current = File(scriptPath).parent;
+    // Navigate up to find backend directory (max 10 levels)
     for (var i = 0; i < 10; i++) {
       final backendDir = Directory('${current.path}/backend');
       if (await backendDir.exists()) {
         return current.path;
       }
-      if (current.path == '/') break;
+      if (current.path == '/' || current.path == current.parent.path) break;
       current = current.parent;
     }
 
-    throw Exception('Could not find project root');
+    // Fallback: Assume we're in flutter_app and go one level up
+    // This works when running from IDE or flutter run
+    try {
+      final flutterAppPath = Platform.script.path;
+      if (flutterAppPath.contains('flutter_app')) {
+        final parts = flutterAppPath.split('flutter_app');
+        if (parts.isNotEmpty) {
+          final projectRoot = parts[0].replaceAll(RegExp(r'/+$'), '');
+          return projectRoot;
+        }
+      }
+    } catch (e) {
+      // Ignore errors from Platform.script in sandbox
+    }
+
+    throw Exception('Could not find project root. Set PROJECT_ROOT environment variable.');
   }
 
   /// Stop the backend process

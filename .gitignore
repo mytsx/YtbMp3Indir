@@ -85,3 +85,4 @@ portable_package/
 # Translation database (generated from migrations)
 data/translations.db
 .backend_port
+.backend_pid

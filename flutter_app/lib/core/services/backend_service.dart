@@ -110,6 +110,11 @@ class BackendService {
         _port = null;
       });
 
+      // Write PID to file for native cleanup on window close
+      final pidFile = File('$projectRoot/.backend_pid');
+      await pidFile.writeAsString(_process!.pid.toString());
+      print('Backend PID ${_process!.pid} written to .backend_pid');
+
       // READ dynamic port from .backend_port file (TTS pattern - 30s timeout)
       final portRead = await _readBackendPort(projectRoot);
       if (!portRead) {
@@ -223,6 +228,17 @@ class BackendService {
 
       _process = null;
       print('Backend stopped');
+
+      // Clean up PID file
+      try {
+        final projectRoot = await _getProjectRoot();
+        final pidFile = File('$projectRoot/.backend_pid');
+        if (await pidFile.exists()) {
+          await pidFile.delete();
+        }
+      } catch (e) {
+        // Ignore cleanup errors
+      }
     }
   }
 

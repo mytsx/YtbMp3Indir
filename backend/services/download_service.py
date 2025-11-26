@@ -156,8 +156,12 @@ class DownloadService:
                 if d['status'] == 'downloading':
                     # Extract progress
                     try:
-                        if 'downloaded_bytes' in d and 'total_bytes' in d:
-                            progress = int((d['downloaded_bytes'] / d['total_bytes']) * 100)
+                        downloaded = d.get('downloaded_bytes', 0)
+                        # Try total_bytes first, then estimate
+                        total = d.get('total_bytes') or d.get('total_bytes_estimate') or 0
+
+                        if downloaded and total:
+                            progress = int((downloaded / total) * 100)
                         elif '_percent_str' in d:
                             # Parse percentage string like "50.0%"
                             progress_str = d['_percent_str'].strip().rstrip('%')
@@ -167,8 +171,18 @@ class DownloadService:
 
                         download.progress = min(progress, 99)  # Cap at 99 until complete
 
-                        # Extract speed and ETA
-                        speed = d.get('_speed_str', 'N/A')
+                        # Extract and format speed (ensure 2 decimal places)
+                        speed_raw = d.get('speed')  # Bytes per second
+                        if speed_raw and isinstance(speed_raw, (int, float)):
+                            if speed_raw >= 1024 * 1024:
+                                speed = f"{speed_raw / (1024 * 1024):.2f} MB/s"
+                            elif speed_raw >= 1024:
+                                speed = f"{speed_raw / 1024:.2f} KB/s"
+                            else:
+                                speed = f"{speed_raw:.0f} B/s"
+                        else:
+                            speed = d.get('_speed_str', 'N/A')
+
                         eta = d.get('_eta_str', 'N/A')
 
                         download.speed = speed
@@ -235,10 +249,24 @@ class DownloadService:
             download.status = "completed"
             download.progress = 100
 
-            # Find the downloaded file
+            # Find the downloaded file using yt-dlp's sanitized filename
             video_id = info.get('id', '')
-            expected_filename = f"{download.video_title} [{video_id}].mp3"
-            download.file_path = os.path.join(self.output_dir, expected_filename)
+
+            # Use yt-dlp's prepare_filename to get the actual sanitized filename
+            info['ext'] = 'mp3'  # Set extension for prepare_filename
+            prepared_path = ydl.prepare_filename(info)
+            # The extension might be different, ensure it's .mp3
+            base_path = os.path.splitext(prepared_path)[0]
+            download.file_path = base_path + '.mp3'
+
+            # If file doesn't exist, try to find it by video ID pattern
+            if not os.path.exists(download.file_path):
+                import glob
+                pattern = os.path.join(self.output_dir, f'*[{video_id}].mp3')
+                matches = glob.glob(pattern)
+                if matches:
+                    download.file_path = matches[0]
+                    logger.info(f"Found file by pattern: {download.file_path}")
 
             # Get file size
             file_size = None

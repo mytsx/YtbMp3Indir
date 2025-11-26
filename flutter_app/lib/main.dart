@@ -1,40 +1,116 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'features/download/screens/download_screen.dart';
 import 'features/history/screens/history_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
 import 'core/providers/providers.dart';
+import 'core/services/backend_service.dart';
+
+// Global reference to stop backend on app exit
+late final ProviderContainer _container;
+late final BackendService _backendService;
+bool _isShuttingDown = false;
+
+Future<void> _shutdownBackend() async {
+  if (_isShuttingDown) return;
+  _isShuttingDown = true;
+
+  print('🛑 Shutting down backend...');
+  try {
+    await _backendService.stop();
+    _container.dispose();
+    print('✅ Backend stopped successfully');
+  } catch (e) {
+    print('❌ Error stopping backend: $e');
+  }
+}
 
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
 
   // Create provider container to start backend
-  final container = ProviderContainer();
+  _container = ProviderContainer();
 
   // Start backend automatically
   print('🚀 Starting backend...');
-  final backendService = container.read(backendServiceProvider);
+  _backendService = _container.read(backendServiceProvider);
 
   try {
-    await backendService.start();
+    await _backendService.start();
     print('✅ Backend started successfully');
   } catch (e) {
     print('❌ Failed to start backend: $e');
     print('⚠️ App will continue but may not work properly');
   }
 
+  // Handle process signals for graceful shutdown (desktop)
+  if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
+    // Handle SIGINT (Ctrl+C)
+    ProcessSignal.sigint.watch().listen((_) async {
+      print('Received SIGINT');
+      await _shutdownBackend();
+      exit(0);
+    });
+
+    // Handle SIGTERM (kill command)
+    if (!Platform.isWindows) {
+      ProcessSignal.sigterm.watch().listen((_) async {
+        print('Received SIGTERM');
+        await _shutdownBackend();
+        exit(0);
+      });
+    }
+  }
+
   // Run the app
   runApp(
     UncontrolledProviderScope(
-      container: container,
+      container: _container,
       child: const MyApp(),
     ),
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    // Stop backend when app is disposed
+    _stopBackend();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    print('App lifecycle state: $state');
+
+    // Stop backend when app is detached (closed)
+    if (state == AppLifecycleState.detached) {
+      _stopBackend();
+    }
+  }
+
+  void _stopBackend() {
+    _shutdownBackend();
+  }
 
   @override
   Widget build(BuildContext context) {

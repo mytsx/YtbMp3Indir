@@ -94,6 +94,10 @@ final downloadProgressProvider =
           case 'status':
             updated = download.copyWith(
               status: update.status ?? download.status,
+              progress: update.progress ?? download.progress,
+              speed: update.speed ?? download.speed,
+              eta: update.eta ?? download.eta,
+              videoTitle: update.videoTitle ?? download.videoTitle,
             );
             break;
 

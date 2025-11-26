@@ -79,6 +79,22 @@ async def websocket_endpoint(websocket: WebSocket, download_id: str):
     """
     await manager.connect(download_id, websocket)
     try:
+        # Send current download state when connecting
+        from services.download_service import get_download_service
+        service = get_download_service()
+        download = service.get_download(download_id)
+        if download:
+            # Send current state to newly connected client
+            await websocket.send_json({
+                "type": "status",
+                "status": download.status,
+                "progress": download.progress,
+                "speed": download.speed,
+                "eta": download.eta,
+                "video_title": download.video_title,
+            })
+            logger.info(f"Sent current state to WebSocket: {download.status}, {download.progress}%")
+
         while True:
             # Keep connection alive
             # Client can send ping/pong messages

@@ -10,8 +10,10 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# Python lib folders (not Flutter's lib/)
+/lib/
 lib64/
+!flutter_app/lib/
 parts/
 sdist/
 var/

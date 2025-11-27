@@ -234,6 +234,44 @@ class ApiClient {
   }
 
   // ==========================================================================
+  // Conversions
+  // ==========================================================================
+
+  Future<Map<String, dynamic>> startConversion(
+    String filePath, {
+    String quality = '192',
+  }) {
+    return _handleResponse(
+      _dio.post('/api/conversions', data: {
+        'file_path': filePath,
+        'quality': quality,
+      }),
+      (data) => data as Map<String, dynamic>,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getConversions() {
+    return _handleResponse(
+      _dio.get('/api/conversions'),
+      (data) => (data as List).cast<Map<String, dynamic>>(),
+    );
+  }
+
+  Future<Map<String, dynamic>> getConversion(String id) {
+    return _handleResponse(
+      _dio.get('/api/conversions/$id'),
+      (data) => data as Map<String, dynamic>,
+    );
+  }
+
+  Future<void> cancelConversion(String id) {
+    return _handleResponse(
+      _dio.delete('/api/conversions/$id'),
+      (_) => null,
+    );
+  }
+
+  // ==========================================================================
   // Config
   // ==========================================================================
 

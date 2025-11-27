@@ -10,7 +10,7 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import downloads, history, queue, config
+from api.routes import downloads, history, queue, config, conversions
 from api.websocket import websocket_router
 
 # Setup logging
@@ -44,6 +44,7 @@ app.include_router(downloads.router, prefix="/api/downloads", tags=["downloads"]
 app.include_router(history.router, prefix="/api/history", tags=["history"])
 app.include_router(queue.router, prefix="/api/queue", tags=["queue"])
 app.include_router(config.router, prefix="/api/config", tags=["config"])
+app.include_router(conversions.router, prefix="/api/conversions", tags=["conversions"])
 app.include_router(websocket_router)
 
 
@@ -52,10 +53,14 @@ async def startup_event():
     """Initialize services on startup"""
     from api.websocket import manager
     from services.download_service import get_download_service
+    from services.conversion_service import get_conversion_service
 
-    # Inject WebSocket manager into download service
+    # Inject WebSocket manager into services
     download_service = get_download_service()
     download_service.set_websocket_manager(manager)
+
+    conversion_service = get_conversion_service()
+    conversion_service.set_websocket_manager(manager)
 
 
 @app.get("/api/health")

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'features/download/screens/download_screen.dart';
+import 'features/convert/screens/convert_screen.dart';
 import 'features/history/screens/history_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
 import 'core/providers/providers.dart';
@@ -142,6 +143,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
   final List<Widget> _screens = const [
     DownloadScreen(),
+    ConvertScreen(),
     HistoryScreen(),
     SettingsScreen(),
   ];
@@ -165,6 +167,11 @@ class _MainNavigationState extends State<MainNavigation> {
             icon: Icon(Icons.download_outlined),
             selectedIcon: Icon(Icons.download),
             label: 'Download',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.transform_outlined),
+            selectedIcon: Icon(Icons.transform),
+            label: 'Convert',
           ),
           NavigationDestination(
             icon: Icon(Icons.history_outlined),

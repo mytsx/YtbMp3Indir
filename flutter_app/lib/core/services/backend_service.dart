@@ -197,8 +197,8 @@ class BackendService {
     final resolvedPath = Platform.resolvedExecutable;
     var current = File(resolvedPath).parent;
 
-    // Navigate up to find backend directory (max 10 levels)
-    for (var i = 0; i < 10; i++) {
+    // Navigate up to find backend directory (max 15 levels for deep app bundles)
+    for (var i = 0; i < 15; i++) {
       final backendDir = Directory('${current.path}/backend');
       if (await backendDir.exists()) {
         return current.path;
@@ -220,6 +220,17 @@ class BackendService {
       }
     } catch (e) {
       // Ignore errors from Platform.script in sandbox
+    }
+
+    // Fallback: Check current working directory
+    final cwd = Directory.current.path;
+    if (await Directory('$cwd/backend').exists()) {
+      return cwd;
+    }
+    // Check parent of cwd (if running from flutter_app)
+    final cwdParent = Directory.current.parent.path;
+    if (await Directory('$cwdParent/backend').exists()) {
+      return cwdParent;
     }
 
     throw Exception('Could not find project root. Set PROJECT_ROOT environment variable.');

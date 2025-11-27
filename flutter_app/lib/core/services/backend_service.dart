@@ -34,6 +34,8 @@ class BackendService {
         // Test if backend is actually responsive
         if (await healthCheck()) {
           print('✅ Backend already running and healthy on port: $_port');
+          // Find and save PID of existing backend for cleanup on exit
+          await _findAndSavePid(projectRoot, _port!);
           return;
         } else {
           print('Port file exists but backend not responsive, will restart...');
@@ -158,6 +160,25 @@ class BackendService {
 
     print('⚠️ Timeout: .backend_port file not found after 30 seconds');
     return false;
+  }
+
+  /// Find PID of process using port and save to file
+  Future<void> _findAndSavePid(String projectRoot, int port) async {
+    try {
+      // Use lsof to find PID of process listening on port
+      final result = await Process.run('lsof', ['-i', ':$port', '-t']);
+      if (result.exitCode == 0) {
+        final pidString = result.stdout.toString().trim().split('\n').first;
+        final pid = int.tryParse(pidString);
+        if (pid != null) {
+          final pidFile = File('$projectRoot/.backend_pid');
+          await pidFile.writeAsString(pid.toString());
+          print('Found existing backend PID: $pid, saved to .backend_pid');
+        }
+      }
+    } catch (e) {
+      print('Could not find backend PID: $e');
+    }
   }
 
   /// Get project root directory (parent of flutter_app)

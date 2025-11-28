@@ -38,3 +38,8 @@ PyQt5 uygulamasından Flutter'a geçiş sırasında yapılacak/yapılan işler.
 - Eski PyQt5 kodu: `python_desktop/` klasöründe
 - Flutter kodu: `flutter_app/` klasöründe
 - Backend: `backend/` klasöründe (FastAPI)
+
+
+# Eklenebilecek özellikler
+
+- Convertte sadece mp3'e değil farklı formatlarada çevirebilme özelliğide olsun

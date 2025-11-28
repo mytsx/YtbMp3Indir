@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -54,17 +55,17 @@ class NotificationService {
   Future<void> playCompletionSound() async {
     try {
       await _ensureInitialized();
-
-      // Use a simple system-like notification sound from a reliable source
-      // This is a short, pleasant notification sound
       await _player.play(
-        UrlSource(
-          'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
-        ),
+        AssetSource('sounds/completion.wav'),
         volume: 0.5,
       );
-    } catch (_) {
-      // Silently fail if sound can't be played
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to play completion sound',
+        error: e,
+        stackTrace: stackTrace,
+        name: 'NotificationService',
+      );
     }
   }
 
@@ -72,15 +73,17 @@ class NotificationService {
   Future<void> playErrorSound() async {
     try {
       await _ensureInitialized();
-
       await _player.play(
-        UrlSource(
-          'https://assets.mixkit.co/active_storage/sfx/2955/2955-preview.mp3',
-        ),
+        AssetSource('sounds/error.wav'),
         volume: 0.4,
       );
-    } catch (_) {
-      // Silently fail if sound can't be played
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to play error sound',
+        error: e,
+        stackTrace: stackTrace,
+        name: 'NotificationService',
+      );
     }
   }
 

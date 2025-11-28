@@ -168,10 +168,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
         useMaterial3: true,
       ),
       home: _showSplash
-          ? SplashScreen(
-              statusMessage: _splashStatus,
-              onFinished: () => setState(() => _showSplash = false),
-            )
+          ? SplashScreen(statusMessage: _splashStatus)
           : const MainNavigation(),
     );
   }

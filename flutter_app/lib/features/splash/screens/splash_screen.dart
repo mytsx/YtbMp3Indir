@@ -3,12 +3,10 @@ import 'package:flutter/material.dart';
 
 /// Animated splash screen with grid animation
 class SplashScreen extends StatefulWidget {
-  final VoidCallback onFinished;
   final String statusMessage;
 
   const SplashScreen({
     super.key,
-    required this.onFinished,
     this.statusMessage = 'Loading...',
   });
 

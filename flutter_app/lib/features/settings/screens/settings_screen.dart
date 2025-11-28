@@ -153,53 +153,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  static const _retentionOptions = {
+    0: 'Forever',
+    7: '7 days',
+    30: '30 days',
+    90: '90 days',
+  };
+
   void _showRetentionDialog() {
     showDialog(
       context: context,
       builder: (context) => SimpleDialog(
         title: const Text('History Retention'),
-        children: [
-          RadioListTile<int>(
-            title: const Text('Forever'),
-            subtitle: const Text('Keep all history'),
-            value: 0,
+        children: _retentionOptions.entries.map((entry) {
+          final days = entry.key;
+          final label = entry.value;
+          return RadioListTile<int>(
+            title: Text(label),
+            subtitle: Text(days == 0
+                ? 'Keep all history'
+                : 'Delete history older than $days days'),
+            value: days,
             groupValue: _historyRetentionDays,
             onChanged: (value) {
               Navigator.pop(context);
               _updateHistoryRetention(value!);
             },
-          ),
-          RadioListTile<int>(
-            title: const Text('7 days'),
-            subtitle: const Text('Delete history older than 7 days'),
-            value: 7,
-            groupValue: _historyRetentionDays,
-            onChanged: (value) {
-              Navigator.pop(context);
-              _updateHistoryRetention(value!);
-            },
-          ),
-          RadioListTile<int>(
-            title: const Text('30 days'),
-            subtitle: const Text('Delete history older than 30 days'),
-            value: 30,
-            groupValue: _historyRetentionDays,
-            onChanged: (value) {
-              Navigator.pop(context);
-              _updateHistoryRetention(value!);
-            },
-          ),
-          RadioListTile<int>(
-            title: const Text('90 days'),
-            subtitle: const Text('Delete history older than 90 days'),
-            value: 90,
-            groupValue: _historyRetentionDays,
-            onChanged: (value) {
-              Navigator.pop(context);
-              _updateHistoryRetention(value!);
-            },
-          ),
-        ],
+          );
+        }).toList(),
       ),
     );
   }

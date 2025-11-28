@@ -77,9 +77,14 @@ final downloadProgressProvider =
 
         // Update download in list
         final downloads = ref.read(downloadsProvider);
-        final download = downloads.firstWhere((d) => d.id == downloadId);
+        final downloadIndex = downloads.indexWhere((d) => d.id == downloadId);
 
-        // Create updated download based on progress update
+        // Handle case where download is not found (may have been removed)
+        if (downloadIndex == -1) {
+          return update;
+        }
+
+        final download = downloads[downloadIndex];
         Download updated = download;
 
         switch (update.type) {

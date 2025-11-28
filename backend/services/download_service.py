@@ -343,5 +343,9 @@ def get_download_service() -> DownloadService:
     """Get or create global download service instance"""
     global _download_service
     if _download_service is None:
-        _download_service = DownloadService()
+        # Load output_dir from config
+        from config_manager import get_config_manager
+        config = get_config_manager()
+        output_dir = config.get('output_dir', './music')
+        _download_service = DownloadService(output_dir=output_dir)
     return _download_service

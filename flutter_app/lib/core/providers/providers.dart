@@ -2,7 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
 import '../services/backend_service.dart';
+import '../services/settings_service.dart';
+import '../services/notification_service.dart';
 export '../services/notification_service.dart';
+
+/// Settings service provider (singleton)
+final settingsServiceProvider = Provider<SettingsService>((ref) {
+  return SettingsService();
+});
 
 /// Backend service provider - manages backend process
 final backendServiceProvider = Provider<BackendService>((ref) {
@@ -21,19 +28,35 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   return ApiClient(port);
 });
 
-/// Theme mode provider
+/// Theme mode provider with persistence
 class ThemeModeNotifier extends StateNotifier<ThemeMode> {
-  ThemeModeNotifier() : super(ThemeMode.system);
+  final SettingsService _settingsService;
+
+  ThemeModeNotifier(this._settingsService) : super(ThemeMode.system) {
+    // Load saved theme mode
+    state = _settingsService.getThemeMode();
+  }
 
   void setThemeMode(ThemeMode mode) {
     state = mode;
+    _settingsService.setThemeMode(mode);
   }
 
   void toggleTheme() {
-    state = state == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+    final newMode = state == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+    setThemeMode(newMode);
   }
 }
 
 final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((ref) {
-  return ThemeModeNotifier();
+  final settingsService = ref.watch(settingsServiceProvider);
+  return ThemeModeNotifier(settingsService);
+});
+
+/// Notification settings provider with persistence
+final notificationSettingsProvider =
+    StateNotifierProvider<NotificationSettingsNotifier, NotificationSettings>(
+        (ref) {
+  final settingsService = ref.watch(settingsServiceProvider);
+  return NotificationSettingsNotifier(settingsService);
 });

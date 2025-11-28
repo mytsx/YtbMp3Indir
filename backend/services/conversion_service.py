@@ -318,5 +318,9 @@ def get_conversion_service() -> ConversionService:
     """Get or create global conversion service instance"""
     global _conversion_service
     if _conversion_service is None:
-        _conversion_service = ConversionService()
+        # Load output_dir from config
+        from config_manager import get_config_manager
+        config = get_config_manager()
+        output_dir = config.get('output_dir', './music')
+        _conversion_service = ConversionService(output_dir=output_dir)
     return _conversion_service

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../../../core/models/history_item.dart';
@@ -283,28 +284,46 @@ class HistoryCard extends ConsumerWidget {
           ),
           Expanded(
             child: hasUrl
-                ? InkWell(
-                    onTap: () => _openUrl(context, url),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            text,
-                            style: TextStyle(
-                              color: theme.colorScheme.primary,
-                              decoration: TextDecoration.underline,
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Open link button
+                      InkWell(
+                        onTap: () => _openUrl(context, url),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              text,
+                              style: TextStyle(
+                                color: theme.colorScheme.primary,
+                                decoration: TextDecoration.underline,
+                              ),
                             ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.open_in_new,
+                              size: 14,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Copy button
+                      InkWell(
+                        onTap: () => _copyToClipboard(context, url),
+                        borderRadius: BorderRadius.circular(4),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(
+                            Icons.copy,
+                            size: 16,
+                            color: theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.open_in_new,
-                          size: 14,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   )
                 : Text(
                     text,
@@ -312,6 +331,16 @@ class HistoryCard extends ConsumerWidget {
                   ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _copyToClipboard(BuildContext context, String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('URL kopyalandı'),
+        duration: Duration(seconds: 1),
       ),
     );
   }

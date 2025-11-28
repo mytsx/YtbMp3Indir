@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/history_item.dart';
 import '../../../core/utils/platform_utils.dart';
 import '../providers/history_provider.dart';
@@ -319,19 +318,7 @@ class HistoryCard extends ConsumerWidget {
 
   Future<void> _openUrl(BuildContext context, String url) async {
     try {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Could not open URL: $url'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
+      await openUrl(url);
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

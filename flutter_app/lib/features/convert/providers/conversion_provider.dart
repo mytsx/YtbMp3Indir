@@ -102,6 +102,11 @@ final conversionProgressProvider =
           progress: 100,
           outputPath: update.outputPath,
         );
+        // Play notification sound if enabled
+        final notificationSettings = ref.read(notificationSettingsProvider);
+        if (notificationSettings.soundEnabled) {
+          ref.read(notificationServiceProvider).playCompletionSound();
+        }
         break;
 
       case 'error':

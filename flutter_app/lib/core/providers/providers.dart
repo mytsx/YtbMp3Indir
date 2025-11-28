@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
 import '../services/backend_service.dart';
+export '../services/notification_service.dart';
 
 /// Backend service provider - manages backend process
 final backendServiceProvider = Provider<BackendService>((ref) {

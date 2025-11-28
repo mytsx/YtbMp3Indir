@@ -246,6 +246,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const Divider(),
 
+          // Notifications Section
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'Notifications',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          SwitchListTile(
+            title: const Text('Notification sound'),
+            subtitle: const Text('Play a sound when download completes'),
+            secondary: const Icon(Icons.notifications_outlined),
+            value: ref.watch(notificationSettingsProvider).soundEnabled,
+            onChanged: (value) {
+              ref.read(notificationSettingsProvider.notifier).setSoundEnabled(value);
+              // Test the sound when enabling
+              if (value) {
+                ref.read(notificationServiceProvider).playCompletionSound();
+              }
+            },
+          ),
+
+          const Divider(),
+
           // Other Settings
           Padding(
             padding: const EdgeInsets.all(16),

@@ -20,7 +20,7 @@ PyQt5 uygulamasından Flutter'a geçiş sırasında yapılacak/yapılan işler.
 
 ### UI/UX Özellikleri
 
-- [ ] Notification sound toggle - Bildirim sesi açma/kapama
+- [x] Notification sound toggle - Bildirim sesi açma/kapama
 - [ ] History retention settings - Geçmiş saklama süresi ayarı
 
 ### Teknik İyileştirmeler

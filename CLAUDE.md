@@ -4,139 +4,139 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-YouTube MP3 İndirici is a modern PyQt5-based desktop application for downloading YouTube videos and converting them to MP3 format. The application features a modular architecture with SQLite database persistence, advanced queue management, and comprehensive download history tracking.
+MP3Yap is a YouTube MP3 downloader application with a modern Flutter desktop frontend and FastAPI Python backend. The project migrated from a PyQt5 desktop app to this Flutter + FastAPI architecture for better UI/UX and cross-platform support.
 
 ## Commands
 
 ### Running the Application
+
+**Backend (FastAPI):**
 ```bash
-python mp3yap_gui.py
+cd backend
+../.venv/bin/python main.py
+# Or if venv is active:
+python main.py
 ```
+Backend writes port to `.backend_port` file for Flutter auto-discovery.
+
+**Frontend (Flutter):**
+```bash
+cd flutter_app
+flutter run -d macos  # or -d windows, -d linux
+```
+Flutter auto-starts backend if not already running (using venv python).
+
+**Full Stack (recommended):**
+Start Flutter app - it will automatically detect or start the backend.
 
 ### Installing Dependencies
+
+**Backend:**
 ```bash
-pip install -r requirements.txt
+python -m venv .venv
+source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+pip install -r backend/requirements.txt
 ```
 
-### Type Checking (Optional)
-Type checking is configured via `pyrightconfig.json` but many type issues are suppressed for compatibility.
+**Frontend:**
+```bash
+cd flutter_app
+flutter pub get
+```
 
 ## Architecture Overview
 
-The application follows a modular PyQt5 architecture organized into distinct packages:
+```
+Flutter Frontend (Dart + Riverpod)
+        ↕ REST API + WebSocket
+FastAPI Backend (Python)
+        ↕
+yt-dlp + FFmpeg + SQLite
+```
 
-### Core Components
+### Backend (`backend/`)
 
-1. **mp3yap_gui.py**: Application entry point with splash screen initialization
-   - Handles application lifecycle and module loading
-   - Manages startup sequence with animated splash screen
-   - Performs database initialization and FFmpeg setup
+| Path | Purpose |
+|------|---------|
+| `main.py` | FastAPI entry point with dynamic port discovery (TTS pattern) |
+| `api/routes/` | REST endpoints: downloads, history, queue, config |
+| `api/websocket.py` | Real-time download progress via WebSocket |
+| `services/download_service.py` | Thread-safe job queue with worker pool (3 concurrent) |
+| `database/` | SQLite operations for history and queue |
 
-2. **ui/ package**: User interface components
-   - `main_window.py`: Main application window with tabbed interface
-   - `splash_screen.py`: Animated startup screen with random color patterns
-   - `history_widget.py`: Download history management with statistics
-   - `queue_widget.py`: Download queue with priority and position management
-   - `settings_dialog.py`: Configuration management interface
+**Key Patterns:**
+- Dynamic port discovery via `.backend_port` file
+- Thread-safe download queue with `threading.Lock` and `queue.Queue`
+- WebSocket for real-time progress updates
+- Absolute file paths for cross-platform compatibility
 
-3. **core/ package**: Business logic
-   - `downloader.py`: YouTube download engine using yt-dlp with FFmpeg integration
+### Frontend (`flutter_app/lib/`)
 
-4. **database/ package**: Data persistence
-   - `manager.py`: SQLite database operations with soft delete support
+| Path | Purpose |
+|------|---------|
+| `main.dart` | App entry, backend auto-start, navigation |
+| `core/services/backend_service.dart` | Backend lifecycle management, health checks |
+| `core/providers/` | Riverpod providers for state management |
+| `features/download/` | Download screen, providers, widgets |
+| `features/history/` | History list with audio playback |
+| `features/player/` | Audio player state management |
+| `features/settings/` | App configuration |
 
-5. **utils/ package**: Utilities
-   - `config.py`: JSON-based configuration management
+**Key Patterns:**
+- Riverpod for state management
+- Auto-detect existing backend before starting new process
+- venv python detection for backend startup
+- Provider invalidation for reactive UI updates
 
-### Key Architectural Patterns
+### macOS Configuration (`flutter_app/macos/`)
 
-**Signal/Slot Communication**: Thread-safe communication between downloader and UI using PyQt5's signal system:
-- `DownloadSignals` class manages: progress updates, completion notifications, error reporting, status updates
-
-**Thread Management**: Downloads execute in separate threads to maintain UI responsiveness:
-- Main thread handles UI updates
-- Worker threads handle yt-dlp operations
-- Proper cancellation support with cleanup of partial files
-
-**Database Design**: SQLite with soft delete pattern:
-- `download_history` table: Complete download records with metadata
-- `download_queue` table: Queued downloads with priority/position
-- `is_deleted` field enables recovery of "deleted" records
-- Automatic database migration support
-
-**Modular UI Architecture**: Tab-based interface with specialized widgets:
-- Download tab: URL input, real-time validation, playlist detection
-- History tab: Search, statistics, re-download capabilities  
-- Queue tab: Priority management, drag-and-drop reordering
-
-## Technical Implementation Details
-
-### Download Engine
-- **yt-dlp Integration**: Configurable quality settings (192kbps MP3 default)
-- **FFmpeg Handling**: Static FFmpeg auto-installation with system fallback
-- **Playlist Support**: Automatic detection with video count preview
-- **Duplicate Prevention**: Video ID tracking prevents redundant database entries
-- **Progress Tracking**: Real-time progress hooks with cancellation support
-
-### URL Processing Pipeline
-1. Regex-based YouTube URL validation
-2. Database lookup for existing downloads
-3. yt-dlp metadata extraction for playlists
-4. Real-time status bar updates with color coding
-5. Automatic URL clearing post-download
-
-### Database Operations
-- **Soft Delete**: All delete operations use `is_deleted` flag
-- **Migration System**: Automatic schema updates via `_add_is_deleted_columns`
-- **Query Filtering**: All selects include `is_deleted = 0` condition
-- **Statistics**: Real-time calculation of download metrics
-
-### Configuration Management
-- JSON-based settings in `config.json`
-- Persistent across application restarts
-- Controls output directory, auto-open behavior, quality settings
-
-## Development Notes
-
-### Threading Considerations
-- UI operations must stay on main thread
-- Database operations are thread-safe via connection-per-operation pattern
-- Download cancellation requires proper cleanup of yt-dlp instances and partial files
-
-### Error Handling Strategy
-- Progress hooks catch cancellation via `is_running` flag
-- yt-dlp errors are captured and displayed in status messages
-- Database errors are logged but don't crash the application
-- FFmpeg availability is checked with graceful degradation
-
-### URL Validation Pipeline
-- Regex validation for YouTube URL patterns
-- Database exact-match lookup (not partial matching)
-- yt-dlp metadata extraction for playlist information
-- Debounced input processing (500ms delay) for performance
-
-### File Management
-- Downloads saved to configurable `music/` directory
-- Automatic cleanup of `.part` and `.ytdl` files on cancellation
-- Sanitized filename generation for cross-platform compatibility
+| File | Configuration |
+|------|---------------|
+| `Runner/MainFlutterWindow.swift` | Window size: min 800x700, initial 1000x750 |
 
 ## Database Schema
 
 ### download_history
-- Core fields: `id`, `video_title`, `file_name`, `file_path`, `url`
-- Metadata: `format`, `file_size`, `duration`, `channel_name`
-- Tracking: `downloaded_at`, `status`, `is_deleted`
+```sql
+id, video_title, file_name, file_path, url, format,
+file_size, duration, channel_name, downloaded_at, status, is_deleted
+```
 
-### download_queue  
-- Management: `id`, `url`, `video_title`, `priority`, `position`
-- State: `status`, `added_at`, `started_at`, `completed_at`, `is_deleted`
-- Error tracking: `error_message`
+### download_queue
+```sql
+id, url, video_title, priority, position, status,
+added_at, started_at, completed_at, error_message, is_deleted
+```
 
-## Important Implementation Patterns
+## Development Notes
 
-When modifying download functionality, always:
-1. Update both progress hooks and database save methods
-2. Ensure proper thread safety using signals
-3. Handle cancellation gracefully with file cleanup
-4. Maintain soft delete patterns for data operations
-5. Test playlist detection with various YouTube URL formats
+### Backend Auto-Start Flow
+1. Flutter checks for `.backend_port` file
+2. If found, health check existing backend
+3. If not responsive, delete port file and start new process
+4. Use venv python (`.venv/bin/python`) if available, fallback to `python3`
+5. Wait up to 30s for port file, 90s for health check
+
+### Thread Safety
+- Backend uses worker pool (3 threads) with job queue
+- `downloads_lock` protects active downloads dict
+- WebSocket updates sent from worker threads
+
+### File Paths
+- Backend converts all paths to absolute: `os.path.abspath(output_dir)`
+- Flutter validates file existence before audio playback
+- Legacy relative paths converted to absolute on-the-fly
+
+### Soft Delete Pattern
+- All delete operations set `is_deleted = 1` instead of removing records
+- Queries filter with `WHERE is_deleted = 0`
+- Enables potential recovery of "deleted" items
+
+## Legacy Code
+
+The original PyQt5 desktop application is archived in:
+- `python_desktop/` - Full PyQt5 source code
+- `archive/python_desktop.zip` - Backup archive
+
+Root `requirements.txt` contains PyQt5 dependencies for the legacy app.
+Backend dependencies are in `backend/requirements.txt`.

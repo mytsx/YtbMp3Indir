@@ -10,8 +10,10 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# Python lib folders (not Flutter's lib/)
+/lib/
 lib64/
+!flutter_app/lib/
 parts/
 sdist/
 var/
@@ -66,9 +68,11 @@ dist/
 # *.spec  # Spec files are now tracked for reproducible builds
 # Archive folder (old spec files and deprecated assets)
 archive/
+!archive/python_desktop.zip
 *.exe
 *.msi
 *.zip
+!archive/*.zip
 
 # Installer output
 installer_output/
@@ -79,3 +83,8 @@ portable_package/
 
 # NSIS files
 *.nsi
+
+# Translation database (generated from migrations)
+data/translations.db
+.backend_port
+.backend_pid

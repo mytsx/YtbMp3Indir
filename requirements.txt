@@ -3,3 +3,11 @@ yt-dlp==2025.7.21
 static-ffmpeg==2.13
 requests>=2.25.0
 packaging>=20.0
+
+# Testing dependencies
+pytest>=7.0.0
+pytest-mock>=3.10.0
+
+# Development dependencies
+pyinstaller==6.3.0
+pillow==10.2.0

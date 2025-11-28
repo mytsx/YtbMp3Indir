@@ -8,16 +8,16 @@ import os
 import re
 import tempfile
 import shutil
-from ..models import ApiResponse, ErrorDetail
+from ..models import ApiResponse, ErrorDetail, AudioQuality, DEFAULT_QUALITY
 from services.conversion_service import get_conversion_service
-from pydantic import BaseModel, validator
+from pydantic import BaseModel
 
 router = APIRouter()
 
 # Get global conversion service
 conversion_service = get_conversion_service()
 
-# Allowed quality values
+# Allowed quality values (for validation in upload endpoint)
 ALLOWED_QUALITIES = {"128", "192", "256", "320"}
 
 # Allowed file extensions
@@ -44,13 +44,7 @@ def sanitize_filename(filename: str) -> str:
 class ConversionRequest(BaseModel):
     """Request model for starting a conversion"""
     file_path: str
-    quality: str = "320"
-
-    @validator('quality')
-    def validate_quality(cls, v):
-        if v not in ALLOWED_QUALITIES:
-            raise ValueError(f'Quality must be one of: {", ".join(ALLOWED_QUALITIES)}')
-        return v
+    quality: AudioQuality = DEFAULT_QUALITY
 
 
 @router.post("", response_model=ApiResponse)
@@ -100,7 +94,7 @@ async def create_conversion(request: ConversionRequest):
 @router.post("/upload", response_model=ApiResponse)
 async def upload_and_convert(
     file: UploadFile = File(...),
-    quality: str = Form(default="320")
+    quality: AudioQuality = Form(default=DEFAULT_QUALITY)
 ):
     """
     Upload a file and convert it to MP3

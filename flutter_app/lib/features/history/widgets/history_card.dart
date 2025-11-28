@@ -3,22 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../../../core/models/history_item.dart';
+import '../../../core/utils/platform_utils.dart';
 import '../providers/history_provider.dart';
 import '../../player/audio_player_provider.dart';
-
-/// Open file location in system file manager
-Future<void> _openInFolder(String filePath) async {
-  final file = File(filePath);
-  final directory = file.parent.path;
-
-  if (Platform.isMacOS) {
-    await Process.run('open', ['-R', filePath]);
-  } else if (Platform.isWindows) {
-    await Process.run('explorer', ['/select,', filePath]);
-  } else if (Platform.isLinux) {
-    await Process.run('xdg-open', [directory]);
-  }
-}
 
 /// Card widget displaying a single history item
 class HistoryCard extends ConsumerWidget {
@@ -271,7 +258,7 @@ class HistoryCard extends ConsumerWidget {
     if (item.filePath == null) return;
 
     try {
-      await _openInFolder(item.filePath!);
+      await openInFolder(item.filePath!);
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

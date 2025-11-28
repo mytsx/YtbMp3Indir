@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../../core/constants.dart';
 import '../../../core/providers/providers.dart';
 import '../../../core/models/conversion.dart';
 import '../providers/conversion_provider.dart';
@@ -70,10 +71,10 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
     });
 
     try {
-      // Call API to start conversion (always use max quality 320)
+      // Call API to start conversion (always use max quality)
       final result = await apiClient.startConversion(
         _selectedFilePath!,
-        quality: '320',
+        quality: kDefaultQuality,
       );
 
       // Parse response to Conversion model

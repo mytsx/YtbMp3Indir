@@ -2,8 +2,12 @@
 Pydantic Models for API Requests and Responses
 """
 from pydantic import BaseModel, Field
-from typing import Any, Optional
+from typing import Any, Optional, Literal
 from datetime import datetime
+
+# Allowed audio quality values (kbps)
+AudioQuality = Literal["128", "192", "256", "320"]
+DEFAULT_QUALITY: AudioQuality = "320"
 
 
 # ============================================================================
@@ -33,7 +37,7 @@ class ApiResponse(BaseModel):
 class DownloadRequest(BaseModel):
     """Request model for starting a download"""
     url: str = Field(..., description="YouTube video URL")
-    quality: str = Field(default="320", description="Audio quality in kbps")
+    quality: AudioQuality = Field(default=DEFAULT_QUALITY, description="Audio quality in kbps")
 
 
 class Download(BaseModel):
@@ -97,7 +101,7 @@ class QueueItemUpdate(BaseModel):
 class AppConfig(BaseModel):
     """Application configuration"""
     output_dir: str
-    quality: str = "320"
+    quality: AudioQuality = DEFAULT_QUALITY
     auto_open: bool = True
     language: str = "tr"
     history_retention_days: int = 0  # 0 means forever, otherwise delete after N days

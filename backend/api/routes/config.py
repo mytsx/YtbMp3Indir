@@ -89,8 +89,8 @@ async def update_config(updates: ConfigUpdate):
             download_service.set_output_dir(update_data['output_dir'])
             conversion_service.set_output_dir(update_data['output_dir'])
 
-        # Cleanup old history if retention days changed
-        if 'history_retention_days' in update_data:
+        # Cleanup old history if retention days changed to a new value
+        if 'history_retention_days' in update_data and update_data['history_retention_days'] != current_config.history_retention_days:
             retention_days = update_data['history_retention_days']
             if retention_days > 0:
                 db_manager = get_database_manager()

@@ -20,7 +20,6 @@ class _SplashScreenState extends State<SplashScreen>
   late List<List<Color>> boxColors;
   late List<List<double>> boxOpacities;
   late AnimationController _waveController;
-  late AnimationController _fadeController;
   final Random _random = Random();
 
   int waveCenterX = 0;
@@ -38,12 +37,6 @@ class _SplashScreenState extends State<SplashScreen>
     boxOpacities = List.generate(
       gridSize,
       (_) => List.generate(gridSize, (_) => 0.0),
-    );
-
-    // Fade in animation for boxes
-    _fadeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
     );
 
     // Wave animation
@@ -129,7 +122,6 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void dispose() {
     _waveController.dispose();
-    _fadeController.dispose();
     super.dispose();
   }
 

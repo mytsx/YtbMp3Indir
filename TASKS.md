@@ -39,7 +39,12 @@ PyQt5 uygulamasından Flutter'a geçiş sırasında yapılacak/yapılan işler.
 - Flutter kodu: `flutter_app/` klasöründe
 - Backend: `backend/` klasöründe (FastAPI)
 
+# diğer yapılması gerekenler
+
+- seçeneklerde kaliteler mak olmalı neden 192 ki? 320 olsun işte
+
 
 # Eklenebilecek özellikler
 
-- Convertte sadece mp3'e değil farklı formatlarada çevirebilme özelliğide olsun
+- Convert'te sadece mp3'e değil farklı formatlara da çevirebilme özelliği de olsun
+- arayüz çok klasik duruyor daha modernize olmalı animasyonlu bottom navigasyon çok sıradan

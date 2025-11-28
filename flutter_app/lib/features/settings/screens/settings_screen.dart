@@ -139,18 +139,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   String _getRetentionLabel(int days) {
-    switch (days) {
-      case 0:
-        return 'Forever';
-      case 7:
-        return '7 days';
-      case 30:
-        return '30 days';
-      case 90:
-        return '90 days';
-      default:
-        return '$days days';
-    }
+    return _retentionOptions[days] ?? '$days days';
   }
 
   static const _retentionOptions = {
@@ -177,7 +166,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             groupValue: _historyRetentionDays,
             onChanged: (value) {
               Navigator.pop(context);
-              _updateHistoryRetention(value!);
+              if (value != null) _updateHistoryRetention(value);
             },
           );
         }).toList(),

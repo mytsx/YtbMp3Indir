@@ -127,6 +127,11 @@ final downloadProgressProvider =
               status: 'failed',
               error: update.error,
             );
+            // Play error notification sound if enabled
+            final errorNotificationSettings = ref.read(notificationSettingsProvider);
+            if (errorNotificationSettings.soundEnabled) {
+              ref.read(notificationServiceProvider).playErrorSound();
+            }
             break;
         }
 

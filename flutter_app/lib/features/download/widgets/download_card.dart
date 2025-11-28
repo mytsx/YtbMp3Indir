@@ -19,7 +19,7 @@ class DownloadCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Watch WebSocket progress updates to trigger rebuilds
-    final progressStream = ref.watch(downloadProgressProvider(download.id));
+    ref.watch(downloadProgressProvider(download.id));
 
     // Get latest download state from provider (updated by WebSocket)
     final downloads = ref.watch(downloadsProvider);
@@ -28,6 +28,62 @@ class DownloadCard extends ConsumerWidget {
       orElse: () => download,
     );
 
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    // Completed state - HistoryCard style layout
+    if (latestDownload.isCompleted) {
+      return Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              // Left side: Title
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.music_note,
+                      color: colorScheme.primary,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        latestDownload.videoTitle ?? 'Download completed',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Right side: Action buttons
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (latestDownload.filePath != null)
+                    _buildPlayButton(context, ref, latestDownload, colorScheme),
+                  if (latestDownload.filePath != null)
+                    IconButton(
+                      onPressed: () => _showInFolder(context, latestDownload.filePath!),
+                      icon: const Icon(Icons.folder_open, size: 20),
+                      tooltip: 'Klasörde Göster',
+                      visualDensity: VisualDensity.compact,
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Active/Failed state - progress card
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -110,11 +166,6 @@ class DownloadCard extends ConsumerWidget {
                     ),
                 ],
               ),
-            ],
-
-            if (latestDownload.isCompleted) ...[
-              const SizedBox(height: 12),
-              _buildCompletedActions(context, ref, latestDownload),
             ],
 
             if (latestDownload.isFailed) ...[
@@ -205,50 +256,6 @@ class DownloadCard extends ConsumerWidget {
       return Colors.orange;
     }
     return Colors.blue;
-  }
-
-  /// Build completed actions row with play and folder buttons
-  Widget _buildCompletedActions(BuildContext context, WidgetRef ref, Download download) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.green.shade50,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.check_circle, color: Colors.green, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              download.videoTitle ?? 'Download completed',
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey.shade700,
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          // Play button
-          if (download.filePath != null)
-            _buildPlayButton(context, ref, download, colorScheme),
-          // Show in folder button
-          if (download.filePath != null)
-            IconButton(
-              onPressed: () => _showInFolder(context, download.filePath!),
-              icon: const Icon(Icons.folder_open, size: 20),
-              tooltip: 'Klasörde Göster',
-              visualDensity: VisualDensity.compact,
-              color: colorScheme.primary,
-            ),
-        ],
-      ),
-    );
   }
 
   Widget _buildPlayButton(BuildContext context, WidgetRef ref, Download download, ColorScheme colorScheme) {

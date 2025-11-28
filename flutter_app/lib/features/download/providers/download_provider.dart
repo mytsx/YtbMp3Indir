@@ -115,6 +115,11 @@ final downloadProgressProvider =
             );
             // Refresh history when download completes
             ref.invalidate(historyProvider);
+            // Play notification sound if enabled
+            final notificationSettings = ref.read(notificationSettingsProvider);
+            if (notificationSettings.soundEnabled) {
+              ref.read(notificationServiceProvider).playCompletionSound();
+            }
             break;
 
           case 'error':
@@ -122,6 +127,11 @@ final downloadProgressProvider =
               status: 'failed',
               error: update.error,
             );
+            // Play error notification sound if enabled
+            final errorNotificationSettings = ref.read(notificationSettingsProvider);
+            if (errorNotificationSettings.soundEnabled) {
+              ref.read(notificationServiceProvider).playErrorSound();
+            }
             break;
         }
 

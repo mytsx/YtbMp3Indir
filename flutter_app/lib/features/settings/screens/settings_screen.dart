@@ -15,6 +15,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String _quality = '192';
   String _outputDir = '';
   bool _autoOpen = true;
+  int _historyRetentionDays = 0; // 0 = forever
   bool _isLoading = false;
 
   @override
@@ -34,6 +35,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _quality = response['quality'] ?? '192';
         _outputDir = response['output_dir'] ?? '';
         _autoOpen = response['auto_open'] ?? true;
+        _historyRetentionDays = response['history_retention_days'] ?? 0;
       });
     } catch (e) {
       // Ignore errors during load
@@ -96,6 +98,80 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _updateHistoryRetention(int days) async {
+    setState(() {
+      _historyRetentionDays = days;
+      _isLoading = true;
+    });
+
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      if (apiClient == null) return;
+
+      await apiClient.updateConfig({
+        'history_retention_days': days,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(days == 0
+                ? 'History will be kept forever'
+                : 'History older than $days days will be deleted'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  String _getRetentionLabel(int days) {
+    return _retentionOptions[days] ?? '$days days';
+  }
+
+  static const _retentionOptions = {
+    0: 'Forever',
+    7: '7 days',
+    30: '30 days',
+    90: '90 days',
+  };
+
+  void _showRetentionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('History Retention'),
+        children: _retentionOptions.entries.map((entry) {
+          final days = entry.key;
+          final label = entry.value;
+          return RadioListTile<int>(
+            title: Text(label),
+            subtitle: Text(days == 0
+                ? 'Keep all history'
+                : 'Delete history older than $days days'),
+            value: days,
+            groupValue: _historyRetentionDays,
+            onChanged: (value) {
+              Navigator.pop(context);
+              if (value != null) _updateHistoryRetention(value);
+            },
+          );
+        }).toList(),
+      ),
+    );
   }
 
   @override
@@ -193,6 +269,101 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: _selectDownloadFolder,
+          ),
+
+          const Divider(),
+
+          // Appearance Section
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'Appearance',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                const Icon(Icons.palette_outlined),
+                const SizedBox(width: 16),
+                const Expanded(
+                  child: Text('Theme'),
+                ),
+                SegmentedButton<ThemeMode>(
+                  segments: const [
+                    ButtonSegment<ThemeMode>(
+                      value: ThemeMode.system,
+                      icon: Icon(Icons.settings_suggest),
+                      label: Text('System'),
+                    ),
+                    ButtonSegment<ThemeMode>(
+                      value: ThemeMode.light,
+                      icon: Icon(Icons.light_mode),
+                      label: Text('Light'),
+                    ),
+                    ButtonSegment<ThemeMode>(
+                      value: ThemeMode.dark,
+                      icon: Icon(Icons.dark_mode),
+                      label: Text('Dark'),
+                    ),
+                  ],
+                  selected: {ref.watch(themeModeProvider)},
+                  onSelectionChanged: (selected) {
+                    ref.read(themeModeProvider.notifier).setThemeMode(selected.first);
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          const Divider(),
+
+          // Notifications Section
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'Notifications',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          SwitchListTile(
+            title: const Text('Notification sound'),
+            subtitle: const Text('Play a sound when download completes'),
+            secondary: const Icon(Icons.notifications_outlined),
+            value: ref.watch(notificationSettingsProvider).soundEnabled,
+            onChanged: (value) {
+              ref.read(notificationSettingsProvider.notifier).setSoundEnabled(value);
+              // Test the sound when enabling
+              if (value) {
+                ref.read(notificationServiceProvider).playCompletionSound();
+              }
+            },
+          ),
+
+          const Divider(),
+
+          // Data Management Section
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'Data Management',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.history_outlined),
+            title: const Text('History retention'),
+            subtitle: Text('Keep history for: ${_getRetentionLabel(_historyRetentionDays)}'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showRetentionDialog(),
           ),
 
           const Divider(),

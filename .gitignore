@@ -46,6 +46,7 @@ music/
 *.opus
 *.ogg
 *.wav
+!flutter_app/assets/sounds/*.wav
 config.json
 
 # Logs

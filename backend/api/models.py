@@ -100,6 +100,7 @@ class AppConfig(BaseModel):
     quality: str = "192"
     auto_open: bool = True
     language: str = "tr"
+    history_retention_days: int = 0  # 0 means forever, otherwise delete after N days
 
 
 class ConfigUpdate(BaseModel):
@@ -108,6 +109,7 @@ class ConfigUpdate(BaseModel):
     quality: Optional[str] = None
     auto_open: Optional[bool] = None
     language: Optional[str] = None
+    history_retention_days: Optional[int] = None
 
 
 # ============================================================================

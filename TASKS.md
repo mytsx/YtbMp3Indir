@@ -13,15 +13,15 @@ PyQt5 uygulamasından Flutter'a geçiş sırasında yapılacak/yapılan işler.
 - [x] Download folder selection (İndirme klasörü seçimi)
 - [x] Backend auto-start (Backend otomatik başlatma)
 - [x] Backend shutdown on app close (Uygulama kapanınca backend durdurma)
+- [x] Theme Support (Light/Dark) - Tema desteği
+- [x] Splash Screen - Açılış ekranı
 
 ## Devam Eden / Planlanan Özellikler
 
 ### UI/UX Özellikleri
 
-- [ ] Theme Support (Light/Dark) - Tema desteği
-- [ ] Splash Screen - Açılış ekranı
-- [ ] Notification sound toggle - Bildirim sesi açma/kapama
-- [ ] History retention settings - Geçmiş saklama süresi ayarı
+- [x] Notification sound toggle - Bildirim sesi açma/kapama
+- [x] History retention settings - Geçmiş saklama süresi ayarı
 
 ### Teknik İyileştirmeler
 
@@ -38,3 +38,13 @@ PyQt5 uygulamasından Flutter'a geçiş sırasında yapılacak/yapılan işler.
 - Eski PyQt5 kodu: `python_desktop/` klasöründe
 - Flutter kodu: `flutter_app/` klasöründe
 - Backend: `backend/` klasöründe (FastAPI)
+
+# diğer yapılması gerekenler
+
+- seçeneklerde kaliteler mak olmalı neden 192 ki? 320 olsun işte
+
+
+# Eklenebilecek özellikler
+
+- Convert'te sadece mp3'e değil farklı formatlara da çevirebilme özelliği de olsun
+- arayüz çok klasik duruyor daha modernize olmalı animasyonlu bottom navigasyon çok sıradan

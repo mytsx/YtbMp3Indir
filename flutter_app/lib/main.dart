@@ -26,10 +26,16 @@ Future<void> _shutdownBackend() async {
   print('🛑 Shutting down backend...');
   try {
     await _backendService.stop();
-    _container.dispose();
     print('✅ Backend stopped successfully');
   } catch (e) {
     print('❌ Error stopping backend: $e');
+  }
+
+  // Dispose container after backend is stopped
+  try {
+    _container.dispose();
+  } catch (e) {
+    print('Warning: Error disposing container: $e');
   }
 }
 

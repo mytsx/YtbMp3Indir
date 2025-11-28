@@ -16,8 +16,9 @@ from database.manager import get_database_manager
 
 logger = logging.getLogger(__name__)
 
-# Global download service instance
+# Global download service instance with thread-safe initialization
 _download_service = None
+_download_service_lock = threading.Lock()
 
 
 class Download:
@@ -340,12 +341,15 @@ class DownloadService:
 
 
 def get_download_service() -> DownloadService:
-    """Get or create global download service instance"""
+    """Get or create global download service instance (thread-safe)"""
     global _download_service
     if _download_service is None:
-        # Load output_dir from config
-        from config_manager import get_config_manager
-        config = get_config_manager()
-        output_dir = config.get('output_dir', './music')
-        _download_service = DownloadService(output_dir=output_dir)
+        with _download_service_lock:
+            # Double-checked locking pattern
+            if _download_service is None:
+                # Load output_dir from config
+                from config_manager import get_config_manager
+                config = get_config_manager()
+                output_dir = config.get('output_dir', './music')
+                _download_service = DownloadService(output_dir=output_dir)
     return _download_service

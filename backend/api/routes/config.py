@@ -91,12 +91,21 @@ async def update_config(updates: ConfigUpdate):
                 db_manager = get_database_manager()
                 await db_manager.cleanup_old_history(new_retention)
 
-        # Save all updates to config file
+        # Save all updates to config file (raises IOError on failure)
         config_manager.update(update_data)
 
         return ApiResponse(
             success=True,
             data=config_manager.get_all()
+        )
+    except IOError as e:
+        # Config file write failed - settings not persisted
+        return ApiResponse(
+            success=False,
+            error=ErrorDetail(
+                code="CONFIG_WRITE_FAILED",
+                message=f"Failed to save configuration: {str(e)}"
+            )
         )
     except Exception as e:
         return ApiResponse(

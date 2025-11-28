@@ -1,10 +1,12 @@
 """
 Config Manager
 Handles loading and saving application configuration to JSON file
+Thread-safe implementation with proper error handling
 """
 import json
 import os
 import logging
+import threading
 from typing import Dict, Any
 from pathlib import Path
 
@@ -19,16 +21,17 @@ DEFAULT_CONFIG = {
     "history_retention_days": 0,  # 0 = keep forever
 }
 
-# Config file path (next to the database)
-CONFIG_FILE = "config.json"
+# Config file path anchored to this file's directory (backend/)
+CONFIG_FILE = Path(__file__).parent / "config.json"
 
 
 class ConfigManager:
-    """Manages application configuration persistence"""
+    """Manages application configuration persistence (thread-safe)"""
 
-    def __init__(self, config_path: str = CONFIG_FILE):
+    def __init__(self, config_path: Path = CONFIG_FILE):
         self.config_path = config_path
         self._config: Dict[str, Any] = {}
+        self._lock = threading.Lock()
         self._load()
 
     def _load(self) -> None:
@@ -47,48 +50,62 @@ class ConfigManager:
             logger.info("No config file found. Using defaults.")
             self._config = DEFAULT_CONFIG.copy()
             # Save defaults to create the file
-            self._save()
+            self._save_internal()
 
-    def _save(self) -> None:
-        """Save configuration to JSON file"""
+    def _save_internal(self) -> None:
+        """Internal save without lock (caller must hold lock or be in __init__)"""
         try:
             with open(self.config_path, 'w', encoding='utf-8') as f:
                 json.dump(self._config, f, indent=2, ensure_ascii=False)
             logger.info(f"Configuration saved to {self.config_path}")
         except IOError as e:
             logger.error(f"Failed to save config: {e}")
+            raise  # Re-raise so caller knows save failed
+
+    def _save(self) -> None:
+        """Save configuration to JSON file (must be called with lock held)"""
+        self._save_internal()
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get a configuration value"""
-        return self._config.get(key, default)
+        with self._lock:
+            return self._config.get(key, default)
 
     def get_all(self) -> Dict[str, Any]:
         """Get all configuration values"""
-        return self._config.copy()
+        with self._lock:
+            return self._config.copy()
 
     def set(self, key: str, value: Any) -> None:
-        """Set a configuration value and save"""
-        self._config[key] = value
-        self._save()
+        """Set a configuration value and save (raises IOError on failure)"""
+        with self._lock:
+            self._config[key] = value
+            self._save()
 
     def update(self, updates: Dict[str, Any]) -> None:
-        """Update multiple configuration values and save"""
-        self._config.update(updates)
-        self._save()
+        """Update multiple configuration values and save (raises IOError on failure)"""
+        with self._lock:
+            self._config.update(updates)
+            self._save()
 
     def reset(self) -> None:
-        """Reset to default configuration"""
-        self._config = DEFAULT_CONFIG.copy()
-        self._save()
+        """Reset to default configuration (raises IOError on failure)"""
+        with self._lock:
+            self._config = DEFAULT_CONFIG.copy()
+            self._save()
 
 
-# Global config manager instance
+# Global config manager instance with thread-safe initialization
 _config_manager = None
+_config_manager_lock = threading.Lock()
 
 
 def get_config_manager() -> ConfigManager:
-    """Get or create global config manager instance"""
+    """Get or create global config manager instance (thread-safe)"""
     global _config_manager
     if _config_manager is None:
-        _config_manager = ConfigManager()
+        with _config_manager_lock:
+            # Double-checked locking pattern
+            if _config_manager is None:
+                _config_manager = ConfigManager()
     return _config_manager

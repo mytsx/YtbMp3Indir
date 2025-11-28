@@ -15,6 +15,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String _quality = '192';
   String _outputDir = '';
   bool _autoOpen = true;
+  int _historyRetentionDays = 0; // 0 = forever
   bool _isLoading = false;
 
   @override
@@ -34,6 +35,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _quality = response['quality'] ?? '192';
         _outputDir = response['output_dir'] ?? '';
         _autoOpen = response['auto_open'] ?? true;
+        _historyRetentionDays = response['history_retention_days'] ?? 0;
       });
     } catch (e) {
       // Ignore errors during load
@@ -96,6 +98,110 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _updateHistoryRetention(int days) async {
+    setState(() {
+      _historyRetentionDays = days;
+      _isLoading = true;
+    });
+
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      if (apiClient == null) return;
+
+      await apiClient.updateConfig({
+        'history_retention_days': days,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(days == 0
+                ? 'History will be kept forever'
+                : 'History older than $days days will be deleted'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  String _getRetentionLabel(int days) {
+    switch (days) {
+      case 0:
+        return 'Forever';
+      case 7:
+        return '7 days';
+      case 30:
+        return '30 days';
+      case 90:
+        return '90 days';
+      default:
+        return '$days days';
+    }
+  }
+
+  void _showRetentionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('History Retention'),
+        children: [
+          RadioListTile<int>(
+            title: const Text('Forever'),
+            subtitle: const Text('Keep all history'),
+            value: 0,
+            groupValue: _historyRetentionDays,
+            onChanged: (value) {
+              Navigator.pop(context);
+              _updateHistoryRetention(value!);
+            },
+          ),
+          RadioListTile<int>(
+            title: const Text('7 days'),
+            subtitle: const Text('Delete history older than 7 days'),
+            value: 7,
+            groupValue: _historyRetentionDays,
+            onChanged: (value) {
+              Navigator.pop(context);
+              _updateHistoryRetention(value!);
+            },
+          ),
+          RadioListTile<int>(
+            title: const Text('30 days'),
+            subtitle: const Text('Delete history older than 30 days'),
+            value: 30,
+            groupValue: _historyRetentionDays,
+            onChanged: (value) {
+              Navigator.pop(context);
+              _updateHistoryRetention(value!);
+            },
+          ),
+          RadioListTile<int>(
+            title: const Text('90 days'),
+            subtitle: const Text('Delete history older than 90 days'),
+            value: 90,
+            groupValue: _historyRetentionDays,
+            onChanged: (value) {
+              Navigator.pop(context);
+              _updateHistoryRetention(value!);
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -268,6 +374,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ref.read(notificationServiceProvider).playCompletionSound();
               }
             },
+          ),
+
+          const Divider(),
+
+          // Data Management Section
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'Data Management',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.history_outlined),
+            title: const Text('History retention'),
+            subtitle: Text('Keep history for: ${_getRetentionLabel(_historyRetentionDays)}'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showRetentionDialog(),
           ),
 
           const Divider(),

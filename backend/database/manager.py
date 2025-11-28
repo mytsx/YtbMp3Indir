@@ -116,7 +116,7 @@ class DatabaseManager:
                 video_info.get('video_id'),
             ))
             conn.commit()
-            return cursor.lastrowid
+            return cursor.lastrowid or 0
 
     async def add_download(self, video_info: Dict) -> int:
         """Add download to history (async)"""
@@ -235,6 +235,30 @@ class DatabaseManager:
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(_executor, self._search_history_sync, query)
 
+    def _cleanup_old_history_sync(self, retention_days: int) -> int:
+        """Delete history items older than retention_days (sync)"""
+        if retention_days <= 0:
+            return 0  # 0 or negative means keep forever
+
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE download_history
+                SET is_deleted = 1
+                WHERE is_deleted = 0
+                AND datetime(downloaded_at) < datetime('now', '-' || ? || ' days')
+            ''', (retention_days,))
+            conn.commit()
+            deleted_count = cursor.rowcount
+            if deleted_count > 0:
+                logger.info(f"Cleaned up {deleted_count} history items older than {retention_days} days")
+            return deleted_count
+
+    async def cleanup_old_history(self, retention_days: int) -> int:
+        """Delete history items older than retention_days (async)"""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(_executor, self._cleanup_old_history_sync, retention_days)
+
     # ==========================================================================
     # Queue Management
     # ==========================================================================
@@ -276,7 +300,7 @@ class DatabaseManager:
             ''', (url, priority, position))
 
             conn.commit()
-            return cursor.lastrowid
+            return cursor.lastrowid or 0
 
     async def add_to_queue(self, url: str, priority: int = 0) -> int:
         """Add item to queue (async)"""

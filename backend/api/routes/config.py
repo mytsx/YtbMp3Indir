@@ -6,6 +6,7 @@ from fastapi import APIRouter
 from ..models import ApiResponse, ErrorDetail, AppConfig, ConfigUpdate
 from services.download_service import get_download_service
 from services.conversion_service import get_conversion_service
+from database.manager import get_database_manager
 
 router = APIRouter()
 
@@ -14,7 +15,8 @@ current_config = AppConfig(
     output_dir="/Users/yerli/Music",
     quality="192",
     auto_open=True,
-    language="tr"
+    language="tr",
+    history_retention_days=0  # 0 = keep forever
 )
 
 
@@ -86,6 +88,13 @@ async def update_config(updates: ConfigUpdate):
             conversion_service = get_conversion_service()
             download_service.set_output_dir(update_data['output_dir'])
             conversion_service.set_output_dir(update_data['output_dir'])
+
+        # Cleanup old history if retention days changed
+        if 'history_retention_days' in update_data:
+            retention_days = update_data['history_retention_days']
+            if retention_days > 0:
+                db_manager = get_database_manager()
+                await db_manager.cleanup_old_history(retention_days)
 
         # TODO: Save to config.json file
 

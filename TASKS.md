@@ -25,13 +25,12 @@ PyQt5 uygulamasından Flutter'a geçiş sırasında yapılacak/yapılan işler.
 
 ### Teknik İyileştirmeler
 
-- [ ] Config persistence (JSON dosyasına kaydetme)
+- [x] Config persistence (JSON dosyasına kaydetme)
 - [ ] i18n (Çoklu dil desteği TR/EN) - En son yapılacak
 
 ## Bilinen Sorunlar / TODO
 
 - [ ] macOS App Sandbox entitlements (file picker için gerekebilir)
-- [ ] Config değişiklikleri bellekte, restart'ta kaybolur
 
 ## Notlar
 

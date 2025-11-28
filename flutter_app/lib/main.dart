@@ -10,10 +10,12 @@ import 'features/settings/screens/settings_screen.dart';
 import 'features/splash/screens/splash_screen.dart';
 import 'core/providers/providers.dart';
 import 'core/services/backend_service.dart';
+import 'core/services/settings_service.dart';
 
 // Global reference to stop backend on app exit
 late final ProviderContainer _container;
 late final BackendService _backendService;
+late final SettingsService _settingsService;
 bool _isShuttingDown = false;
 bool _backendStarted = false;
 
@@ -51,8 +53,16 @@ void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Create provider container
-  _container = ProviderContainer();
+  // Initialize settings service (SharedPreferences)
+  _settingsService = SettingsService();
+  await _settingsService.init();
+
+  // Create provider container with pre-initialized settings service
+  _container = ProviderContainer(
+    overrides: [
+      settingsServiceProvider.overrideWithValue(_settingsService),
+    ],
+  );
 
   // Handle process signals for graceful shutdown (desktop)
   if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {

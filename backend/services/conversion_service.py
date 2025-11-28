@@ -16,8 +16,9 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-# Global conversion service instance
+# Global conversion service instance with thread-safe initialization
 _conversion_service = None
+_conversion_service_lock = threading.Lock()
 
 
 class Conversion:
@@ -315,8 +316,15 @@ class ConversionService:
 
 
 def get_conversion_service() -> ConversionService:
-    """Get or create global conversion service instance"""
+    """Get or create global conversion service instance (thread-safe)"""
     global _conversion_service
     if _conversion_service is None:
-        _conversion_service = ConversionService()
+        with _conversion_service_lock:
+            # Double-checked locking pattern
+            if _conversion_service is None:
+                # Load output_dir from config
+                from config_manager import get_config_manager
+                config = get_config_manager()
+                output_dir = config.get('output_dir', './music')
+                _conversion_service = ConversionService(output_dir=output_dir)
     return _conversion_service

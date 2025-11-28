@@ -4,11 +4,15 @@ PODS:
   - FlutterMacOS (1.0.0)
   - objective_c (0.0.1):
     - FlutterMacOS
+  - shared_preferences_foundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
 
 DEPENDENCIES:
   - audioplayers_darwin (from `Flutter/ephemeral/.symlinks/plugins/audioplayers_darwin/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
   - objective_c (from `Flutter/ephemeral/.symlinks/plugins/objective_c/macos`)
+  - shared_preferences_foundation (from `Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin`)
 
 EXTERNAL SOURCES:
   audioplayers_darwin:
@@ -17,11 +21,14 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral
   objective_c:
     :path: Flutter/ephemeral/.symlinks/plugins/objective_c/macos
+  shared_preferences_foundation:
+    :path: Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin
 
 SPEC CHECKSUMS:
   audioplayers_darwin: dcad41de4fbd0099cb3749f7ab3b0cb8f70b810c
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
   objective_c: e5f8194456e8fc943e034d1af00510a1bc29c067
+  shared_preferences_foundation: 5086985c1d43c5ba4d5e69a4e8083a389e2909e6
 
 PODFILE CHECKSUM: 54d867c82ac51cbd61b565781b9fada492027009
 

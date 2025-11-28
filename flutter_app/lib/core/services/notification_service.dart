@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'settings_service.dart';
 
 /// Notification settings state
 class NotificationSettings {
@@ -19,25 +20,27 @@ class NotificationSettings {
   }
 }
 
-/// Notification settings notifier
+/// Notification settings notifier with persistence
 class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
-  NotificationSettingsNotifier() : super(const NotificationSettings());
+  final SettingsService _settingsService;
+
+  NotificationSettingsNotifier(this._settingsService)
+      : super(const NotificationSettings()) {
+    // Load saved setting
+    state = NotificationSettings(
+      soundEnabled: _settingsService.getNotificationSoundEnabled(),
+    );
+  }
 
   void setSoundEnabled(bool enabled) {
     state = state.copyWith(soundEnabled: enabled);
+    _settingsService.setNotificationSoundEnabled(enabled);
   }
 
   void toggleSound() {
-    state = state.copyWith(soundEnabled: !state.soundEnabled);
+    setSoundEnabled(!state.soundEnabled);
   }
 }
-
-/// Notification settings provider
-final notificationSettingsProvider =
-    StateNotifierProvider<NotificationSettingsNotifier, NotificationSettings>(
-        (ref) {
-  return NotificationSettingsNotifier();
-});
 
 /// Notification service for playing sounds
 class NotificationService {

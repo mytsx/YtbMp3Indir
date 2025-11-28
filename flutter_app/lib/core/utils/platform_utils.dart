@@ -14,5 +14,7 @@ Future<void> openInFolder(String filePath) async {
     await Process.run('explorer', ['/select,', filePath]);
   } else if (Platform.isLinux) {
     await Process.run('xdg-open', [directory]);
+  } else {
+    throw UnsupportedError('openInFolder is not supported on this platform.');
   }
 }

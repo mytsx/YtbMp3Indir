@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../../../core/models/history_item.dart';
+import '../../../core/utils/platform_utils.dart';
 import '../providers/history_provider.dart';
 import '../../player/audio_player_provider.dart';
 
@@ -26,79 +27,83 @@ class HistoryCard extends ConsumerWidget {
         onTap: () => _showDetailsDialog(context, ref),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
             children: [
-              // Title and status
-              Row(
-                children: [
-                  Icon(
-                    Icons.music_note,
-                    color: colorScheme.primary,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      item.videoTitle,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              // Left side: Title and metadata
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title row
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.music_note,
+                          color: colorScheme.primary,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            item.videoTitle,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 6),
+                    // Metadata row
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 4,
+                      children: [
+                        _buildMetadata(
+                          icon: Icons.access_time,
+                          text: item.formattedDate,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        _buildMetadata(
+                          icon: Icons.timer,
+                          text: item.formattedDuration,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        _buildMetadata(
+                          icon: Icons.storage,
+                          text: item.formattedSize,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-
-              const SizedBox(height: 8),
-
-              // Metadata row
-              Wrap(
-                spacing: 12,
-                runSpacing: 6,
-                children: [
-                  _buildMetadata(
-                    icon: Icons.access_time,
-                    text: item.formattedDate,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  _buildMetadata(
-                    icon: Icons.timer,
-                    text: item.formattedDuration,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  _buildMetadata(
-                    icon: Icons.storage,
-                    text: item.formattedSize,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 8),
-
-              // Action buttons
+              // Right side: Action buttons
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   // Play button (if file exists)
                   if (item.filePath != null)
                     _buildPlayButton(context, ref, colorScheme),
-                  const SizedBox(width: 4),
-                  // Redownload button
-                  IconButton(
-                    onPressed: () => _redownload(context, ref),
-                    icon: const Icon(Icons.download, size: 20),
-                    tooltip: 'Redownload',
-                  ),
+                  // Show in folder button (if file exists)
+                  if (item.filePath != null)
+                    IconButton(
+                      onPressed: () => _showInFolder(context),
+                      icon: const Icon(Icons.folder_open, size: 20),
+                      tooltip: 'Klasörde Göster',
+                      visualDensity: VisualDensity.compact,
+                    ),
                   // Delete button
                   IconButton(
                     onPressed: () => _confirmDelete(context, ref),
                     icon: const Icon(Icons.delete_outline, size: 20),
-                    tooltip: 'Delete',
+                    tooltip: 'Sil',
                     color: colorScheme.error,
+                    visualDensity: VisualDensity.compact,
                   ),
                 ],
               ),
@@ -249,29 +254,16 @@ class HistoryCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _redownload(BuildContext context, WidgetRef ref) async {
+  Future<void> _showInFolder(BuildContext context) async {
+    if (item.filePath == null) return;
+
     try {
-      // Show loading indicator
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Starting redownload...')),
-      );
-
-      // Start redownload
-      await ref.read(redownloadProvider(item.id).future);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Redownload started: ${item.videoTitle}'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
+      await openInFolder(item.filePath!);
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to redownload: $e'),
+            content: Text('Klasör açılamadı: $e'),
             backgroundColor: Colors.red,
           ),
         );

@@ -13,6 +13,7 @@ import subprocess
 import re
 from typing import Dict, Optional
 from datetime import datetime
+from api.models import AudioQuality, DEFAULT_QUALITY
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ _conversion_service_lock = threading.Lock()
 class Conversion:
     """Conversion tracking object"""
 
-    def __init__(self, conversion_id: str, input_path: str, quality: str = "192"):
+    def __init__(self, conversion_id: str, input_path: str, quality: AudioQuality = DEFAULT_QUALITY):
         self.id = conversion_id
         self.input_path = input_path
         self.quality = quality
@@ -121,7 +122,7 @@ class ConversionService:
         if self.websocket_manager:
             await self.websocket_manager.broadcast(conversion_id, message)
 
-    async def start_conversion(self, input_path: str, quality: str = "192") -> Conversion:
+    async def start_conversion(self, input_path: str, quality: AudioQuality = DEFAULT_QUALITY) -> Conversion:
         """Start a new conversion"""
         # Validate input file exists
         if not os.path.exists(input_path):

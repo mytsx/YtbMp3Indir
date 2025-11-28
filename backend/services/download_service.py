@@ -13,6 +13,7 @@ from typing import Dict, Optional
 from datetime import datetime
 import yt_dlp
 from database.manager import get_database_manager
+from api.models import AudioQuality, DEFAULT_QUALITY
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ _download_service_lock = threading.Lock()
 class Download:
     """Download tracking object"""
 
-    def __init__(self, download_id: str, url: str, quality: str = "192"):
+    def __init__(self, download_id: str, url: str, quality: AudioQuality = DEFAULT_QUALITY):
         self.id = download_id
         self.url = url
         self.quality = quality
@@ -130,7 +131,7 @@ class DownloadService:
         if self.websocket_manager:
             await self.websocket_manager.broadcast(download_id, message)
 
-    async def start_download(self, url: str, quality: str = "192") -> Download:
+    async def start_download(self, url: str, quality: AudioQuality = DEFAULT_QUALITY) -> Download:
         """Start a new download - adds to thread-safe queue (TTS pattern)"""
         download_id = str(uuid.uuid4())
         download = Download(download_id, url, quality)

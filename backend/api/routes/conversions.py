@@ -3,22 +3,19 @@ Conversions API Routes
 Handles local file conversion to MP3
 """
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
-from typing import Optional, Literal
+from typing import Optional
 import os
 import re
 import tempfile
 import shutil
-from ..models import ApiResponse, ErrorDetail
+from ..models import ApiResponse, ErrorDetail, AudioQuality, DEFAULT_QUALITY
 from services.conversion_service import get_conversion_service
-from pydantic import BaseModel, validator
+from pydantic import BaseModel
 
 router = APIRouter()
 
 # Get global conversion service
 conversion_service = get_conversion_service()
-
-# Allowed quality values
-ALLOWED_QUALITIES = {"128", "192", "256", "320"}
 
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {
@@ -44,13 +41,7 @@ def sanitize_filename(filename: str) -> str:
 class ConversionRequest(BaseModel):
     """Request model for starting a conversion"""
     file_path: str
-    quality: str = "192"
-
-    @validator('quality')
-    def validate_quality(cls, v):
-        if v not in ALLOWED_QUALITIES:
-            raise ValueError(f'Quality must be one of: {", ".join(ALLOWED_QUALITIES)}')
-        return v
+    quality: AudioQuality = DEFAULT_QUALITY
 
 
 @router.post("", response_model=ApiResponse)
@@ -61,7 +52,7 @@ async def create_conversion(request: ConversionRequest):
     Request:
     {
         "file_path": "/path/to/video.mp4",
-        "quality": "192"
+        "quality": "320"
     }
     """
     try:
@@ -100,24 +91,15 @@ async def create_conversion(request: ConversionRequest):
 @router.post("/upload", response_model=ApiResponse)
 async def upload_and_convert(
     file: UploadFile = File(...),
-    quality: str = Form(default="192")
+    quality: AudioQuality = Form(default=DEFAULT_QUALITY)
 ):
     """
     Upload a file and convert it to MP3
 
     This endpoint accepts file uploads for conversion.
+    Note: Quality is validated by FastAPI using AudioQuality Literal type.
     """
     try:
-        # Validate quality
-        if quality not in ALLOWED_QUALITIES:
-            return ApiResponse(
-                success=False,
-                error=ErrorDetail(
-                    code="INVALID_QUALITY",
-                    message=f"Quality must be one of: {', '.join(ALLOWED_QUALITIES)}"
-                )
-            )
-
         # Validate file extension
         if not is_valid_media_file(file.filename):
             return ApiResponse(

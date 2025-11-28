@@ -110,13 +110,6 @@ class HistoryCard extends ConsumerWidget {
                       tooltip: 'Klasörde Göster',
                       visualDensity: VisualDensity.compact,
                     ),
-                  // Redownload button
-                  IconButton(
-                    onPressed: () => _redownload(context, ref),
-                    icon: const Icon(Icons.download, size: 20),
-                    tooltip: 'Tekrar İndir',
-                    visualDensity: VisualDensity.compact,
-                  ),
                   // Delete button
                   IconButton(
                     onPressed: () => _confirmDelete(context, ref),
@@ -284,36 +277,6 @@ class HistoryCard extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Klasör açılamadı: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _redownload(BuildContext context, WidgetRef ref) async {
-    try {
-      // Show loading indicator
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Starting redownload...')),
-      );
-
-      // Start redownload
-      await ref.read(redownloadProvider(item.id).future);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Redownload started: ${item.videoTitle}'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to redownload: $e'),
             backgroundColor: Colors.red,
           ),
         );

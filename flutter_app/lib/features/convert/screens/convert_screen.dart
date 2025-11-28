@@ -19,9 +19,6 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
   String? _selectedFileName;
   bool _isConverting = false;
   String? _errorMessage;
-  String _selectedQuality = '192';
-
-  final List<String> _qualityOptions = ['128', '192', '256', '320'];
 
   Future<void> _pickFile() async {
     try {
@@ -73,10 +70,10 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
     });
 
     try {
-      // Call API to start conversion
+      // Call API to start conversion (always use max quality 320)
       final result = await apiClient.startConversion(
         _selectedFilePath!,
-        quality: _selectedQuality,
+        quality: '320',
       );
 
       // Parse response to Conversion model
@@ -202,38 +199,6 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
                         ),
                       ),
                     ],
-
-                    const SizedBox(height: 16),
-
-                    // Quality selector
-                    Row(
-                      children: [
-                        const Text(
-                          'Quality:',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: SegmentedButton<String>(
-                            segments: _qualityOptions
-                                .map((q) => ButtonSegment<String>(
-                                      value: q,
-                                      label: Text('$q kbps'),
-                                    ))
-                                .toList(),
-                            selected: {_selectedQuality},
-                            onSelectionChanged: (selected) {
-                              setState(() {
-                                _selectedQuality = selected.first;
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
 
                     if (_errorMessage != null) ...[
                       const SizedBox(height: 12),

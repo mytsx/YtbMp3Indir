@@ -4,6 +4,8 @@ Handles application configuration management
 """
 from fastapi import APIRouter
 from ..models import ApiResponse, ErrorDetail, AppConfig, ConfigUpdate
+from services.download_service import get_download_service
+from services.conversion_service import get_conversion_service
 
 router = APIRouter()
 
@@ -77,6 +79,13 @@ async def update_config(updates: ConfigUpdate):
         update_data = updates.dict(exclude_unset=True)
         for key, value in update_data.items():
             setattr(current_config, key, value)
+
+        # Update services with new output_dir if changed
+        if 'output_dir' in update_data:
+            download_service = get_download_service()
+            conversion_service = get_conversion_service()
+            download_service.set_output_dir(update_data['output_dir'])
+            conversion_service.set_output_dir(update_data['output_dir'])
 
         # TODO: Save to config.json file
 

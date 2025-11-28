@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../../core/providers/providers.dart';
 
 /// Settings screen for application configuration
@@ -12,6 +13,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String _quality = '192';
+  String _outputDir = '';
   bool _autoOpen = true;
   bool _isLoading = false;
 
@@ -30,10 +32,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       setState(() {
         _quality = response['quality'] ?? '192';
+        _outputDir = response['output_dir'] ?? '';
         _autoOpen = response['auto_open'] ?? true;
       });
     } catch (e) {
       // Ignore errors during load
+    }
+  }
+
+  Future<void> _selectDownloadFolder() async {
+    try {
+      final result = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: 'Select Download Folder',
+        initialDirectory: _outputDir.isNotEmpty ? _outputDir : null,
+      );
+
+      if (result != null) {
+        setState(() => _outputDir = result);
+        await _saveConfig();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to select folder: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -46,6 +72,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       await apiClient.updateConfig({
         'quality': _quality,
+        'output_dir': _outputDir,
         'auto_open': _autoOpen,
       });
 
@@ -139,6 +166,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               setState(() => _quality = value!);
               _saveConfig();
             },
+          ),
+
+          const Divider(),
+
+          // Download Location Section
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'Download Location',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.folder_outlined),
+            title: const Text('Download Folder'),
+            subtitle: Text(
+              _outputDir.isNotEmpty ? _outputDir : 'Not set',
+              style: TextStyle(
+                color: _outputDir.isNotEmpty ? null : Colors.grey,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _selectDownloadFolder,
           ),
 
           const Divider(),

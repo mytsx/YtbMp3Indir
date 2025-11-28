@@ -75,6 +75,12 @@ class DownloadService:
         # Ensure output directory exists
         os.makedirs(self.output_dir, exist_ok=True)
 
+    def set_output_dir(self, output_dir: str):
+        """Update output directory for downloads"""
+        self.output_dir = os.path.abspath(output_dir)
+        os.makedirs(self.output_dir, exist_ok=True)
+        logger.info(f"Download output directory set to: {self.output_dir}")
+
     def _start_workers(self):
         """Start worker threads for processing download jobs (TTS pattern)"""
         for i in range(self.max_workers):

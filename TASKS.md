@@ -13,13 +13,13 @@ PyQt5 uygulamasından Flutter'a geçiş sırasında yapılacak/yapılan işler.
 - [x] Download folder selection (İndirme klasörü seçimi)
 - [x] Backend auto-start (Backend otomatik başlatma)
 - [x] Backend shutdown on app close (Uygulama kapanınca backend durdurma)
+- [x] Theme Support (Light/Dark) - Tema desteği
+- [x] Splash Screen - Açılış ekranı
 
 ## Devam Eden / Planlanan Özellikler
 
 ### UI/UX Özellikleri
 
-- [ ] Theme Support (Light/Dark) - Tema desteği
-- [ ] Splash Screen - Açılış ekranı
 - [ ] Notification sound toggle - Bildirim sesi açma/kapama
 - [ ] History retention settings - Geçmiş saklama süresi ayarı
 

@@ -7,6 +7,7 @@ import 'features/download/screens/download_screen.dart';
 import 'features/convert/screens/convert_screen.dart';
 import 'features/history/screens/history_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
+import 'features/splash/screens/splash_screen.dart';
 import 'core/providers/providers.dart';
 import 'core/services/backend_service.dart';
 
@@ -14,6 +15,7 @@ import 'core/services/backend_service.dart';
 late final ProviderContainer _container;
 late final BackendService _backendService;
 bool _isShuttingDown = false;
+bool _backendStarted = false;
 
 Future<void> _shutdownBackend() async {
   if (_isShuttingDown) return;
@@ -29,24 +31,28 @@ Future<void> _shutdownBackend() async {
   }
 }
 
-void main() async {
-  // Ensure Flutter is initialized
-  WidgetsFlutterBinding.ensureInitialized();
+Future<void> _startBackend() async {
+  if (_backendStarted) return;
 
-  // Create provider container to start backend
-  _container = ProviderContainer();
-
-  // Start backend automatically
   print('🚀 Starting backend...');
   _backendService = _container.read(backendServiceProvider);
 
   try {
     await _backendService.start();
+    _backendStarted = true;
     print('✅ Backend started successfully');
   } catch (e) {
     print('❌ Failed to start backend: $e');
     print('⚠️ App will continue but may not work properly');
   }
+}
+
+void main() async {
+  // Ensure Flutter is initialized
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Create provider container
+  _container = ProviderContainer();
 
   // Handle process signals for graceful shutdown (desktop)
   if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
@@ -67,7 +73,7 @@ void main() async {
     }
   }
 
-  // Run the app
+  // Run the app (backend will be started from splash screen)
   runApp(
     UncontrolledProviderScope(
       container: _container,
@@ -76,18 +82,44 @@ void main() async {
   );
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  ConsumerState<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
+  bool _showSplash = true;
+  String _splashStatus = 'Starting...';
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    // Start backend
+    setState(() => _splashStatus = 'Starting backend...');
+    await _startBackend();
+
+    // Small delay to show the animation
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    // Hide splash screen
+    if (mounted) {
+      setState(() {
+        _splashStatus = 'Ready!';
+      });
+
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      if (mounted) {
+        setState(() => _showSplash = false);
+      }
+    }
   }
 
   @override
@@ -115,9 +147,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp(
       title: 'MP3 Yap',
       debugShowCheckedModeBanner: false,
+      themeMode: themeMode,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.deepPurple,
@@ -125,7 +160,19 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         ),
         useMaterial3: true,
       ),
-      home: const MainNavigation(),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      home: _showSplash
+          ? SplashScreen(
+              statusMessage: _splashStatus,
+              onFinished: () => setState(() => _showSplash = false),
+            )
+          : const MainNavigation(),
     );
   }
 }

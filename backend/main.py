@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes import downloads, history, queue, config, conversions
 from api.websocket import websocket_router
+from utils.watchdog import start_watchdog
 
 # Setup logging
 logging.basicConfig(
@@ -38,6 +39,10 @@ async def lifespan(app: FastAPI):
     """
     # === STARTUP ===
     logger.info("🚀 Starting MP3Yap Backend...")
+
+    # Start parent process watchdog (stdin EOF detection)
+    # This ensures backend auto-exits if Flutter crashes
+    start_watchdog()
 
     from api.websocket import manager
     from services.download_service import get_download_service

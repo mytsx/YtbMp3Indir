@@ -71,14 +71,21 @@ async def update_config(updates: ConfigUpdate):
     try:
         config_manager = get_config_manager()
 
-        # Get current values for comparison
+        # Get current values for comparison (before any changes)
         current_retention = config_manager.get('history_retention_days', 0)
+        current_output_dir = config_manager.get('output_dir')
 
         # Update fields that are provided
         update_data = updates.dict(exclude_unset=True)
 
+        # PERSIST FIRST - Save to config file (raises IOError on failure)
+        # This ensures no side effects occur if persist fails
+        config_manager.update(update_data)
+
+        # THEN APPLY SIDE EFFECTS (only after successful persist)
+
         # Update services with new output_dir if changed
-        if 'output_dir' in update_data:
+        if 'output_dir' in update_data and update_data['output_dir'] != current_output_dir:
             download_service = get_download_service()
             conversion_service = get_conversion_service()
             download_service.set_output_dir(update_data['output_dir'])
@@ -90,9 +97,6 @@ async def update_config(updates: ConfigUpdate):
             if new_retention != current_retention and new_retention > 0:
                 db_manager = get_database_manager()
                 await db_manager.cleanup_old_history(new_retention)
-
-        # Save all updates to config file (raises IOError on failure)
-        config_manager.update(update_data)
 
         return ApiResponse(
             success=True,

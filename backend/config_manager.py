@@ -50,10 +50,10 @@ class ConfigManager:
             logger.info("No config file found. Using defaults.")
             self._config = DEFAULT_CONFIG.copy()
             # Save defaults to create the file
-            self._save_internal()
+            self._save()
 
-    def _save_internal(self) -> None:
-        """Internal save without lock (caller must hold lock or be in __init__)"""
+    def _save(self) -> None:
+        """Save configuration to JSON file (must be called with lock held)"""
         try:
             with open(self.config_path, 'w', encoding='utf-8') as f:
                 json.dump(self._config, f, indent=2, ensure_ascii=False)
@@ -61,10 +61,6 @@ class ConfigManager:
         except IOError as e:
             logger.error(f"Failed to save config: {e}")
             raise  # Re-raise so caller knows save failed
-
-    def _save(self) -> None:
-        """Save configuration to JSON file (must be called with lock held)"""
-        self._save_internal()
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get a configuration value"""

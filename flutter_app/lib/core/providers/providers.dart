@@ -8,7 +8,10 @@ export '../services/notification_service.dart';
 
 /// Settings service provider (singleton)
 final settingsServiceProvider = Provider<SettingsService>((ref) {
-  return SettingsService();
+  // This provider must be overridden in the ProviderScope/ProviderContainer.
+  // It is initialized in main.dart before the app starts.
+  throw UnimplementedError(
+      'settingsServiceProvider must be overridden. Initialize in main.dart');
 });
 
 /// Backend service provider - manages backend process

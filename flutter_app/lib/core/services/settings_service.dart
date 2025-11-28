@@ -6,20 +6,11 @@ class SettingsService {
   static const String _themeModeKey = 'theme_mode';
   static const String _notificationSoundKey = 'notification_sound';
 
-  SharedPreferences? _prefsInstance;
-
-  /// Get SharedPreferences instance (throws if not initialized)
-  SharedPreferences get _prefs {
-    if (_prefsInstance == null) {
-      throw StateError(
-          'SettingsService has not been initialized. Call init() before use.');
-    }
-    return _prefsInstance!;
-  }
+  late final SharedPreferences _prefs;
 
   /// Initialize the service (must be called before using)
   Future<void> init() async {
-    _prefsInstance = await SharedPreferences.getInstance();
+    _prefs = await SharedPreferences.getInstance();
   }
 
   /// Get saved theme mode

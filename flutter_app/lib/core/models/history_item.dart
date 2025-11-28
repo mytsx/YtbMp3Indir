@@ -9,6 +9,7 @@ class HistoryItem {
   final int? fileSize;
   final int? duration;
   final String? channelName;
+  final String? channelUrl;
   final String? videoId;
   final DateTime downloadedAt;
   final String status;
@@ -23,6 +24,7 @@ class HistoryItem {
     this.fileSize,
     this.duration,
     this.channelName,
+    this.channelUrl,
     this.videoId,
     required this.downloadedAt,
     required this.status,
@@ -39,6 +41,7 @@ class HistoryItem {
       fileSize: json['file_size'] as int?,
       duration: json['duration'] as int?,
       channelName: json['channel_name'] as String?,
+      channelUrl: json['channel_url'] as String?,
       videoId: json['video_id'] as String?,
       downloadedAt: DateTime.parse(json['downloaded_at'] as String),
       status: json['status'] as String? ?? 'completed',
@@ -56,6 +59,7 @@ class HistoryItem {
       'file_size': fileSize,
       'duration': duration,
       'channel_name': channelName,
+      'channel_url': channelUrl,
       'video_id': videoId,
       'downloaded_at': downloadedAt.toIso8601String(),
       'status': status,

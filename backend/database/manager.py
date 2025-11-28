@@ -40,6 +40,7 @@ class DatabaseManager:
                     file_size INTEGER,
                     duration INTEGER,
                     channel_name TEXT,
+                    channel_url TEXT,
                     video_id TEXT,
                     downloaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     status TEXT DEFAULT 'completed',
@@ -92,6 +93,13 @@ class DatabaseManager:
                 ON download_history(is_deleted)
             ''')
 
+            # Migration: Add channel_url column if it doesn't exist
+            cursor.execute("PRAGMA table_info(download_history)")
+            columns = [col[1] for col in cursor.fetchall()]
+            if 'channel_url' not in columns:
+                cursor.execute('ALTER TABLE download_history ADD COLUMN channel_url TEXT')
+                logger.info("Migration: Added channel_url column")
+
             conn.commit()
             logger.info(f"Database initialized: {self.db_path}")
 
@@ -102,8 +110,8 @@ class DatabaseManager:
             cursor.execute('''
                 INSERT INTO download_history
                 (video_title, file_name, file_path, format, url,
-                 file_size, duration, channel_name, video_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 file_size, duration, channel_name, channel_url, video_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 video_info.get('title', 'Unknown'),
                 video_info.get('file_name', ''),
@@ -113,6 +121,7 @@ class DatabaseManager:
                 video_info.get('file_size'),
                 video_info.get('duration'),
                 video_info.get('channel_name'),
+                video_info.get('channel_url'),
                 video_info.get('video_id'),
             ))
             conn.commit()

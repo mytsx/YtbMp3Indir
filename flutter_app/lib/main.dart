@@ -203,8 +203,8 @@ class _MainNavigationState extends State<MainNavigation> {
 
   final List<Widget> _screens = const [
     DownloadScreen(),
-    ConvertScreen(),
     HistoryScreen(),
+    ConvertScreen(),
     SettingsScreen(),
   ];
 
@@ -229,14 +229,14 @@ class _MainNavigationState extends State<MainNavigation> {
             label: 'Download',
           ),
           NavigationDestination(
-            icon: Icon(Icons.transform_outlined),
-            selectedIcon: Icon(Icons.transform),
-            label: 'Convert',
-          ),
-          NavigationDestination(
             icon: Icon(Icons.history_outlined),
             selectedIcon: Icon(Icons.history),
             label: 'History',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.transform_outlined),
+            selectedIcon: Icon(Icons.transform),
+            label: 'Convert',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),

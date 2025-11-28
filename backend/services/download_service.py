@@ -292,6 +292,7 @@ class DownloadService:
                     'file_size': file_size,
                     'duration': info.get('duration'),
                     'channel_name': info.get('uploader'),
+                    'channel_url': info.get('channel_url') or info.get('uploader_url'),
                     'video_id': video_id,
                 }
                 await self.db_manager.add_download(video_info)

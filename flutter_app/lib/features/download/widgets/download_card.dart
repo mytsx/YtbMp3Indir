@@ -1,7 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../../../core/models/download.dart';
+import '../../../core/utils/platform_utils.dart';
 import '../providers/download_provider.dart';
+import '../../player/audio_player_provider.dart';
 
 /// Download card showing progress and status
 class DownloadCard extends ConsumerWidget {
@@ -110,23 +114,7 @@ class DownloadCard extends ConsumerWidget {
 
             if (latestDownload.isCompleted) ...[
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.green, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Saved to: ${latestDownload.filePath ?? 'Unknown'}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade700,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
+              _buildCompletedActions(context, ref, latestDownload),
             ],
 
             if (latestDownload.isFailed) ...[
@@ -217,5 +205,113 @@ class DownloadCard extends ConsumerWidget {
       return Colors.orange;
     }
     return Colors.blue;
+  }
+
+  /// Build completed actions row with play and folder buttons
+  Widget _buildCompletedActions(BuildContext context, WidgetRef ref, Download download) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle, color: Colors.green, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              download.videoTitle ?? 'Download completed',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade700,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          // Play button
+          if (download.filePath != null)
+            _buildPlayButton(context, ref, download, colorScheme),
+          // Show in folder button
+          if (download.filePath != null)
+            IconButton(
+              onPressed: () => _showInFolder(context, download.filePath!),
+              icon: const Icon(Icons.folder_open, size: 20),
+              tooltip: 'Klasörde Göster',
+              visualDensity: VisualDensity.compact,
+              color: colorScheme.primary,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlayButton(BuildContext context, WidgetRef ref, Download download, ColorScheme colorScheme) {
+    final player = ref.watch(audioPlayerProvider);
+    final currentlyPlaying = ref.watch(currentlyPlayingProvider);
+    final playerStateAsync = ref.watch(playerStateProvider);
+
+    final isThisPlaying = currentlyPlaying == download.filePath;
+    final isPlaying = playerStateAsync.value == PlayerState.playing && isThisPlaying;
+
+    return IconButton(
+      icon: Icon(
+        isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+        size: 28,
+      ),
+      color: colorScheme.primary,
+      onPressed: () async {
+        if (download.filePath == null) return;
+
+        if (isThisPlaying && isPlaying) {
+          await player.pause();
+        } else if (isThisPlaying) {
+          await player.resume();
+        } else {
+          String filePath = download.filePath!;
+
+          if (!filePath.startsWith('/')) {
+            final file = File(filePath);
+            filePath = file.absolute.path;
+          }
+
+          if (!await File(filePath).exists()) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('File not found: $filePath'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
+          }
+
+          await player.stop();
+          await player.play(DeviceFileSource(filePath));
+          ref.read(currentlyPlayingProvider.notifier).state = filePath;
+        }
+      },
+    );
+  }
+
+  Future<void> _showInFolder(BuildContext context, String filePath) async {
+    try {
+      await openInFolder(filePath);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Klasör açılamadı: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

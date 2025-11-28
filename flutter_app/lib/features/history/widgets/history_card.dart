@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/history_item.dart';
 import '../../../core/utils/platform_utils.dart';
 import '../providers/history_provider.dart';
@@ -203,7 +204,18 @@ class HistoryCard extends ConsumerWidget {
             children: [
               _buildDetailRow('Title', item.videoTitle),
               if (item.channelName != null)
-                _buildDetailRow('Channel', item.channelName!),
+                _buildLinkRow(
+                  context,
+                  'Channel',
+                  item.channelName!,
+                  item.channelUrl,
+                ),
+              _buildLinkRow(
+                context,
+                'YouTube',
+                'Open Video',
+                item.url,
+              ),
               _buildDetailRow('File Name', item.fileName),
               if (item.filePath != null)
                 _buildDetailRow('File Path', item.filePath!),
@@ -211,8 +223,6 @@ class HistoryCard extends ConsumerWidget {
               _buildDetailRow('Size', item.formattedSize),
               _buildDetailRow('Duration', item.formattedDuration),
               _buildDetailRow('Downloaded', item.formattedDate),
-              if (item.videoId != null)
-                _buildDetailRow('Video ID', item.videoId!),
             ],
           ),
         ),
@@ -252,6 +262,86 @@ class HistoryCard extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildLinkRow(BuildContext context, String label, String text, String? url) {
+    final hasUrl = url != null && url.isNotEmpty;
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: hasUrl
+                ? InkWell(
+                    onTap: () => _openUrl(context, url),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            text,
+                            style: TextStyle(
+                              color: theme.colorScheme.primary,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.open_in_new,
+                          size: 14,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ],
+                    ),
+                  )
+                : Text(
+                    text,
+                    style: const TextStyle(color: Colors.black87),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openUrl(BuildContext context, String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Could not open URL: $url'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error opening URL: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _showInFolder(BuildContext context) async {

@@ -40,7 +40,7 @@ PyQt5 uygulamasından Flutter'a geçiş sırasında yapılacak/yapılan işler.
 
 # diğer yapılması gerekenler
 
-- seçeneklerde kaliteler mak olmalı neden 192 ki? 320 olsun işte
+- [x] seçeneklerde kaliteler mak olmalı neden 192 ki? 320 olsun işte
 
 
 # Eklenebilecek özellikler

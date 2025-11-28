@@ -22,7 +22,7 @@ async def get_config():
         "success": true,
         "data": {
             "output_dir": "/Users/yerli/Music",
-            "quality": "192",
+            "quality": "320",
             "auto_open": true,
             "language": "tr",
             "history_retention_days": 0

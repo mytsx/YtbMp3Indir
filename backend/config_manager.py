@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 # Default configuration values
 DEFAULT_CONFIG = {
     "output_dir": str(Path.home() / "Music"),
-    "quality": "192",
+    "quality": "320",
     "auto_open": True,
     "language": "tr",
     "history_retention_days": 0,  # 0 = keep forever

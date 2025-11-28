@@ -24,7 +24,7 @@ _conversion_service_lock = threading.Lock()
 class Conversion:
     """Conversion tracking object"""
 
-    def __init__(self, conversion_id: str, input_path: str, quality: str = "192"):
+    def __init__(self, conversion_id: str, input_path: str, quality: str = "320"):
         self.id = conversion_id
         self.input_path = input_path
         self.quality = quality
@@ -121,7 +121,7 @@ class ConversionService:
         if self.websocket_manager:
             await self.websocket_manager.broadcast(conversion_id, message)
 
-    async def start_conversion(self, input_path: str, quality: str = "192") -> Conversion:
+    async def start_conversion(self, input_path: str, quality: str = "320") -> Conversion:
         """Start a new conversion"""
         # Validate input file exists
         if not os.path.exists(input_path):

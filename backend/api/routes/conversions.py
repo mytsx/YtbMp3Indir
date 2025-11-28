@@ -44,7 +44,7 @@ def sanitize_filename(filename: str) -> str:
 class ConversionRequest(BaseModel):
     """Request model for starting a conversion"""
     file_path: str
-    quality: str = "192"
+    quality: str = "320"
 
     @validator('quality')
     def validate_quality(cls, v):
@@ -61,7 +61,7 @@ async def create_conversion(request: ConversionRequest):
     Request:
     {
         "file_path": "/path/to/video.mp4",
-        "quality": "192"
+        "quality": "320"
     }
     """
     try:
@@ -100,7 +100,7 @@ async def create_conversion(request: ConversionRequest):
 @router.post("/upload", response_model=ApiResponse)
 async def upload_and_convert(
     file: UploadFile = File(...),
-    quality: str = Form(default="192")
+    quality: str = Form(default="320")
 ):
     """
     Upload a file and convert it to MP3

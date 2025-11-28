@@ -33,7 +33,7 @@ class ApiResponse(BaseModel):
 class DownloadRequest(BaseModel):
     """Request model for starting a download"""
     url: str = Field(..., description="YouTube video URL")
-    quality: str = Field(default="192", description="Audio quality in kbps")
+    quality: str = Field(default="320", description="Audio quality in kbps")
 
 
 class Download(BaseModel):
@@ -97,7 +97,7 @@ class QueueItemUpdate(BaseModel):
 class AppConfig(BaseModel):
     """Application configuration"""
     output_dir: str
-    quality: str = "192"
+    quality: str = "320"
     auto_open: bool = True
     language: str = "tr"
     history_retention_days: int = 0  # 0 means forever, otherwise delete after N days

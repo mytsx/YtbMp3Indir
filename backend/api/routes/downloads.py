@@ -22,7 +22,7 @@ async def create_download(request: DownloadRequest):
     Request:
     {
         "url": "https://youtube.com/watch?v=...",
-        "quality": "192"
+        "quality": "320"
     }
 
     Response:

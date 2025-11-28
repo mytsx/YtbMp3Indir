@@ -72,7 +72,7 @@ class DownloadCard extends ConsumerWidget {
                     IconButton(
                       onPressed: () => _showInFolder(context, latestDownload.filePath!),
                       icon: const Icon(Icons.folder_open, size: 20),
-                      tooltip: 'Klasörde Göster',
+                      tooltip: 'Show in Folder',
                       visualDensity: VisualDensity.compact,
                     ),
                 ],
@@ -314,7 +314,7 @@ class DownloadCard extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Klasör açılamadı: $e'),
+            content: Text('Could not open folder: $e'),
             backgroundColor: Colors.red,
           ),
         );

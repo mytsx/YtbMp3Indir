@@ -95,14 +95,14 @@ class HistoryCard extends ConsumerWidget {
                     IconButton(
                       onPressed: () => _showInFolder(context),
                       icon: const Icon(Icons.folder_open, size: 20),
-                      tooltip: 'Klasörde Göster',
+                      tooltip: 'Show in Folder',
                       visualDensity: VisualDensity.compact,
                     ),
                   // Delete button
                   IconButton(
                     onPressed: () => _confirmDelete(context, ref),
                     icon: const Icon(Icons.delete_outline, size: 20),
-                    tooltip: 'Sil',
+                    tooltip: 'Delete',
                     color: colorScheme.error,
                     visualDensity: VisualDensity.compact,
                   ),
@@ -339,7 +339,7 @@ class HistoryCard extends ConsumerWidget {
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('URL kopyalandı'),
+        content: Text('URL copied'),
         duration: Duration(seconds: 1),
       ),
     );
@@ -369,7 +369,7 @@ class HistoryCard extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Klasör açılamadı: $e'),
+            content: Text('Could not open folder: $e'),
             backgroundColor: Colors.red,
           ),
         );

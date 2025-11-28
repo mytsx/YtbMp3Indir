@@ -9,14 +9,11 @@ import uuid
 import logging
 import threading
 import queue
-from typing import Dict, Optional, Literal
+from typing import Dict, Optional
 from datetime import datetime
 import yt_dlp
 from database.manager import get_database_manager
-
-# Audio quality type
-AudioQuality = Literal["128", "192", "256", "320"]
-DEFAULT_QUALITY: AudioQuality = "320"
+from api.models import AudioQuality, DEFAULT_QUALITY
 
 logger = logging.getLogger(__name__)
 

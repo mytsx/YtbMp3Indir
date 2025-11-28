@@ -11,12 +11,9 @@ import threading
 import queue
 import subprocess
 import re
-from typing import Dict, Optional, Literal
+from typing import Dict, Optional
 from datetime import datetime
-
-# Audio quality type
-AudioQuality = Literal["128", "192", "256", "320"]
-DEFAULT_QUALITY: AudioQuality = "320"
+from api.models import AudioQuality, DEFAULT_QUALITY
 
 logger = logging.getLogger(__name__)
 

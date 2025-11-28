@@ -3,7 +3,7 @@ Conversions API Routes
 Handles local file conversion to MP3
 """
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
-from typing import Optional, Literal
+from typing import Optional
 import os
 import re
 import tempfile
@@ -16,9 +16,6 @@ router = APIRouter()
 
 # Get global conversion service
 conversion_service = get_conversion_service()
-
-# Allowed quality values (for validation in upload endpoint)
-ALLOWED_QUALITIES = {"128", "192", "256", "320"}
 
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {
@@ -100,18 +97,9 @@ async def upload_and_convert(
     Upload a file and convert it to MP3
 
     This endpoint accepts file uploads for conversion.
+    Note: Quality is validated by FastAPI using AudioQuality Literal type.
     """
     try:
-        # Validate quality
-        if quality not in ALLOWED_QUALITIES:
-            return ApiResponse(
-                success=False,
-                error=ErrorDetail(
-                    code="INVALID_QUALITY",
-                    message=f"Quality must be one of: {', '.join(ALLOWED_QUALITIES)}"
-                )
-            )
-
         # Validate file extension
         if not is_valid_media_file(file.filename):
             return ApiResponse(

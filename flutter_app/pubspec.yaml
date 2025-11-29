@@ -26,6 +26,9 @@ dependencies:
   # Drag and Drop (Desktop)
   desktop_drop: ^0.4.4
 
+  # Dashed Border
+  dotted_border: ^2.1.0
+
   # Local Storage
   shared_preferences: ^2.2.2
 

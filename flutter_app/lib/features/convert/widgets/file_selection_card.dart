@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:desktop_drop/desktop_drop.dart';
+import 'package:dotted_border/dotted_border.dart';
 
 class FileSelectionCard extends StatefulWidget {
   final String? selectedFilePath;
@@ -73,25 +74,28 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
                   }
                 }
               },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-                decoration: BoxDecoration(
-                  color: _isDragging
-                      ? colorScheme.primaryContainer.withValues(alpha: 0.3)
-                      : colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
+              child: DottedBorder(
+                borderType: BorderType.RRect,
+                radius: const Radius.circular(12),
+                dashPattern: const [8, 4],
+                strokeWidth: _isDragging ? 2 : 1.5,
+                color: _isDragging
+                    ? colorScheme.primary
+                    : widget.selectedFilePath != null
+                        ? Colors.green
+                        : colorScheme.outline.withValues(alpha: 0.6),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+                  decoration: BoxDecoration(
                     color: _isDragging
-                        ? colorScheme.primary
+                        ? colorScheme.primaryContainer.withValues(alpha: 0.3)
                         : widget.selectedFilePath != null
-                            ? Colors.green
-                            : colorScheme.outline.withValues(alpha: 0.5),
-                    width: _isDragging ? 2 : 1,
-                    strokeAlign: BorderSide.strokeAlignInside,
+                            ? Colors.green.withValues(alpha: 0.05)
+                            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ),
-                child: Column(
+                  child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
@@ -165,6 +169,7 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
                       ),
                     ],
                   ],
+                ),
                 ),
               ),
             ),

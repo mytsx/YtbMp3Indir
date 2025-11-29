@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../../core/models/download.dart';
 import '../../../core/utils/platform_utils.dart';
 import '../../../shared/widgets/media_item_card.dart';
@@ -30,7 +31,7 @@ class DownloadCard extends ConsumerWidget {
     // Completed state - HistoryCard style layout
     if (latestDownload.isCompleted) {
       return MediaItemCard(
-        title: latestDownload.videoTitle ?? 'Download completed',
+        title: latestDownload.videoTitle ?? 'card.download_completed'.tr(),
         actions: [
           if (latestDownload.filePath != null)
             PlayButton(filePath: latestDownload.filePath!),
@@ -38,7 +39,7 @@ class DownloadCard extends ConsumerWidget {
             IconButton(
               onPressed: () => _showInFolder(context, latestDownload.filePath!),
               icon: const Icon(Icons.folder_open, size: 20),
-              tooltip: 'Show in Folder',
+              tooltip: 'card.show_in_folder'.tr(),
               visualDensity: VisualDensity.compact,
             ),
         ],
@@ -63,7 +64,8 @@ class DownloadCard extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        latestDownload.videoTitle ?? 'Fetching info...',
+                        latestDownload.videoTitle ??
+                            'status.fetching_info'.tr(),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -115,11 +117,13 @@ class DownloadCard extends ConsumerWidget {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  if (latestDownload.speed != null || latestDownload.eta != null)
+                  if (latestDownload.speed != null ||
+                      latestDownload.eta != null)
                     Text(
                       [
                         if (latestDownload.speed != null) latestDownload.speed!,
-                        if (latestDownload.eta != null) 'ETA: ${latestDownload.eta!}',
+                        if (latestDownload.eta != null)
+                          'ETA: ${latestDownload.eta!}',
                       ].join(' • '),
                       style: TextStyle(
                         fontSize: 13,
@@ -144,7 +148,7 @@ class DownloadCard extends ConsumerWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        latestDownload.error ?? 'Unknown error',
+                        latestDownload.error ?? 'status.unknown_error'.tr(),
                         style: const TextStyle(
                           fontSize: 13,
                           color: Colors.red,
@@ -181,17 +185,17 @@ class DownloadCard extends ConsumerWidget {
   String _getStatusText(String status) {
     switch (status) {
       case 'pending':
-        return 'Pending...';
+        return 'status.pending'.tr();
       case 'downloading':
-        return 'Downloading...';
+        return 'status.downloading'.tr();
       case 'converting':
-        return 'Converting to MP3...';
+        return 'status.converting'.tr();
       case 'completed':
-        return 'Completed!';
+        return 'status.completed'.tr();
       case 'failed':
-        return 'Failed';
+        return 'status.failed'.tr();
       case 'cancelled':
-        return 'Cancelled';
+        return 'status.cancelled'.tr();
       default:
         return status;
     }
@@ -227,7 +231,8 @@ class DownloadCard extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not open folder: $e'),
+            content:
+                Text('messages.folder_open_error'.tr(args: [e.toString()])),
             backgroundColor: Colors.red,
           ),
         );

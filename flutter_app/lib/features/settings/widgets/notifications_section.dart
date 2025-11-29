@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../../core/providers/providers.dart';
 
 class NotificationsSection extends ConsumerWidget {
@@ -16,15 +17,15 @@ class NotificationsSection extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
-            'Notifications',
+            'settings.notifications.title'.tr(),
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
         ),
         SwitchListTile(
-          title: const Text('Notification sound'),
-          subtitle: const Text('Play a sound when download completes'),
+          title: Text('settings.notifications.sound'.tr()),
+          subtitle: Text('settings.notifications.sound_subtitle'.tr()),
           secondary: const Icon(Icons.notifications_outlined),
           value: settings.soundEnabled,
           onChanged: (value) {

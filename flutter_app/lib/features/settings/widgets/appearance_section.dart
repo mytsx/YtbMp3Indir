@@ -68,23 +68,23 @@ class AppearanceSection extends ConsumerWidget {
             children: [
               const Icon(Icons.style_outlined),
               const SizedBox(width: 16),
-              const Expanded(
-                child: Text('Style'),
+              Expanded(
+                child: Text('settings.appearance.style.label'.tr()),
               ),
               DropdownButton<String>(
                 value: ref.watch(themeStyleProvider),
-                items: const [
+                items: [
                   DropdownMenuItem(
                     value: 'cyberpunk',
-                    child: Text('Cyberpunk'),
+                    child: Text('settings.appearance.style.cyberpunk'.tr()),
                   ),
                   DropdownMenuItem(
                     value: 'neopop',
-                    child: Text('NeoPop'),
+                    child: Text('settings.appearance.style.neopop'.tr()),
                   ),
                   DropdownMenuItem(
                     value: 'classic',
-                    child: Text('Classic'),
+                    child: Text('settings.appearance.style.classic'.tr()),
                   ),
                 ],
                 onChanged: (value) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class UrlInputCard extends StatelessWidget {
   final TextEditingController controller;
@@ -26,8 +27,8 @@ class UrlInputCard extends StatelessWidget {
             TextField(
               controller: controller,
               decoration: InputDecoration(
-                labelText: 'YouTube URL',
-                hintText: 'https://youtube.com/watch?v=...',
+                labelText: 'download.input_label'.tr(),
+                hintText: 'download.input_hint'.tr(),
                 prefixIcon: const Icon(Icons.link),
                 errorText: errorMessage,
               ),
@@ -47,7 +48,9 @@ class UrlInputCard extends StatelessWidget {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.download),
-              label: Text(isDownloading ? 'Starting...' : 'Start Download'),
+              label: Text(isDownloading
+                  ? 'download.btn_starting'.tr()
+                  : 'download.btn_start'.tr()),
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 textStyle: const TextStyle(fontSize: 16),
@@ -57,7 +60,7 @@ class UrlInputCard extends StatelessWidget {
             // Tips
             const SizedBox(height: 12),
             Text(
-              'Tip: You can download individual videos or entire playlists',
+              'download.tip'.tr(),
               style: TextStyle(
                 fontSize: 13,
                 color: Colors.grey.shade600,

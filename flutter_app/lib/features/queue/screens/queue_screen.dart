@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 
 /// Simple Queue Screen placeholder
@@ -10,12 +11,12 @@ class QueueScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Download Queue'),
+        title: Text('queue.title'.tr()),
       ),
-      body: const EmptyStateWidget(
+      body: EmptyStateWidget(
         icon: Icons.queue_music,
-        title: 'Queue Management',
-        subtitle: 'Downloads start immediately',
+        title: 'queue.empty_title'.tr(),
+        subtitle: 'queue.empty_subtitle'.tr(),
       ),
     );
   }

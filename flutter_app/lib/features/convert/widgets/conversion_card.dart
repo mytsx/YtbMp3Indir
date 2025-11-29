@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../../core/models/conversion.dart';
 import '../../../core/utils/platform_utils.dart';
 import '../../../shared/widgets/media_item_card.dart';
@@ -37,9 +38,10 @@ class ConversionCard extends ConsumerWidget {
           if (latestConversion.outputPath != null) ...[
             PlayButton(filePath: latestConversion.outputPath!),
             IconButton(
-              onPressed: () => _showInFolder(context, latestConversion.outputPath!),
+              onPressed: () =>
+                  _showInFolder(context, latestConversion.outputPath!),
               icon: const Icon(Icons.folder_open, size: 20),
-              tooltip: 'Show in Folder',
+              tooltip: 'card.show_in_folder'.tr(),
               visualDensity: VisualDensity.compact,
             ),
           ],
@@ -84,12 +86,13 @@ class ConversionCard extends ConsumerWidget {
                   value: latestConversion.progress / 100,
                   minHeight: 6,
                   backgroundColor: Colors.grey.shade200,
-                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.orange),
+                  valueColor:
+                      const AlwaysStoppedAnimation<Color>(Colors.orange),
                 ),
               ),
               const SizedBox(height: 6),
               Text(
-                '${latestConversion.progress}% - Converting...',
+                '${latestConversion.progress}% - ${'card.converting_progress'.tr()}',
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
               ),
             ],
@@ -98,7 +101,7 @@ class ConversionCard extends ConsumerWidget {
             if (latestConversion.isFailed) ...[
               const SizedBox(height: 8),
               Text(
-                latestConversion.error ?? 'Conversion failed',
+                latestConversion.error ?? 'messages.conversion_failed'.tr(),
                 style: const TextStyle(fontSize: 12, color: Colors.red),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -116,7 +119,8 @@ class ConversionCard extends ConsumerWidget {
         return const SizedBox(
           width: 20,
           height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange),
+          child:
+              CircularProgressIndicator(strokeWidth: 2, color: Colors.orange),
         );
       case 'failed':
         return const Icon(Icons.error, color: Colors.red, size: 20);
@@ -134,7 +138,8 @@ class ConversionCard extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not open folder: $e'),
+            content:
+                Text('messages.folder_open_error'.tr(args: [e.toString()])),
             backgroundColor: Colors.red,
           ),
         );

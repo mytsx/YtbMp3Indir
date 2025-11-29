@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:dotted_border/dotted_border.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../../core/theme/cyberpunk_colors.dart';
 import '../../../core/providers/providers.dart';
 
@@ -94,7 +95,7 @@ class _FileSelectionCardState extends ConsumerState<FileSelectionCard> {
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: const Text('Unsupported file format'),
+                      content: Text('convert.error_unsupported'.tr()),
                       backgroundColor: errorColor,
                     ),
                   );
@@ -147,9 +148,9 @@ class _FileSelectionCardState extends ConsumerState<FileSelectionCard> {
                     const SizedBox(height: 12),
                     Text(
                       _isDragging
-                          ? 'Drop file here'
+                          ? 'convert.drop_here'.tr()
                           : widget.selectedFileName ??
-                              'Drag and drop your file here',
+                              'convert.drag_drop_hint'.tr(),
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: _isDragging
                             ? primaryAccent
@@ -163,13 +164,13 @@ class _FileSelectionCardState extends ConsumerState<FileSelectionCard> {
                     if (widget.selectedFilePath == null && !_isDragging) ...[
                       const SizedBox(height: 8),
                       Text(
-                        'or',
+                        'convert.or'.tr(),
                         style: TextStyle(color: mutedColor),
                       ),
                       const SizedBox(height: 8),
                       OutlinedButton(
                         onPressed: widget.onPickFile,
-                        child: const Text('Browse Files'),
+                        child: Text('convert.browse_files'.tr()),
                       ),
                     ],
                     if (widget.selectedFilePath != null) ...[
@@ -191,13 +192,13 @@ class _FileSelectionCardState extends ConsumerState<FileSelectionCard> {
                           TextButton.icon(
                             onPressed: widget.onClearFile,
                             icon: const Icon(Icons.close, size: 18),
-                            label: const Text('Clear'),
+                            label: Text('convert.clear'.tr()),
                           ),
                           const SizedBox(width: 16),
                           TextButton.icon(
                             onPressed: widget.onPickFile,
                             icon: const Icon(Icons.folder_open, size: 18),
-                            label: const Text('Change'),
+                            label: Text('convert.change'.tr()),
                           ),
                         ],
                       ),
@@ -238,8 +239,9 @@ class _FileSelectionCardState extends ConsumerState<FileSelectionCard> {
                           ),
                         )
                       : const Icon(Icons.transform),
-                  label:
-                      Text(widget.isConverting ? 'Converting...' : 'Convert'),
+                  label: Text(widget.isConverting
+                      ? 'convert.btn_converting'.tr()
+                      : 'convert.btn_convert'.tr()),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     textStyle: const TextStyle(fontSize: 16),
@@ -288,7 +290,7 @@ class _FileSelectionCardState extends ConsumerState<FileSelectionCard> {
           // Supported formats
           const SizedBox(height: 12),
           Text(
-            'Input: MP4, MKV, AVI, MOV, WAV, FLAC, AAC, M4A, and more',
+            'convert.supported_formats'.tr(),
             style: TextStyle(
               fontSize: 12,
               color: mutedColor,

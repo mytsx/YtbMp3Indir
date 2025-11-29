@@ -9,7 +9,6 @@ import 'features/convert/screens/convert_screen.dart';
 import 'features/history/screens/history_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
 import 'features/splash/screens/splash_screen.dart';
-import 'features/onboarding/screens/language_selection_screen.dart';
 import 'shared/widgets/animated_nav_bar.dart';
 import 'shared/widgets/glassmorphic_card.dart';
 import 'shared/widgets/neo_pop_background.dart';
@@ -243,17 +242,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       // Disable theme animation to prevent TextStyle.lerp errors
       // when switching between theme styles with different inherit values
       themeAnimationDuration: Duration.zero,
-      home: _isFirstRun
-          ? LanguageSelectionScreen(
-              onContinue: () {
-                setState(() {
-                  _isFirstRun = false;
-                });
-              },
-            )
-          : (_showSplash
-              ? SplashScreen(message: _splashMessage)
-              : const MainNavigation()),
+      home: _showSplash
+          ? SplashScreen(message: _splashMessage)
+          : const MainNavigation(),
     );
   }
 }
@@ -276,28 +267,28 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
     SettingsScreen(),
   ];
 
-  static const _navItems = [
-    NavItem(
-      icon: Icons.download_outlined,
-      selectedIcon: Icons.download,
-      label: 'Download',
-    ),
-    NavItem(
-      icon: Icons.history_outlined,
-      selectedIcon: Icons.history,
-      label: 'History',
-    ),
-    NavItem(
-      icon: Icons.transform_outlined,
-      selectedIcon: Icons.transform,
-      label: 'Convert',
-    ),
-    NavItem(
-      icon: Icons.settings_outlined,
-      selectedIcon: Icons.settings,
-      label: 'Settings',
-    ),
-  ];
+  List<NavItem> get _navItems => [
+        NavItem(
+          icon: Icons.download_outlined,
+          selectedIcon: Icons.download,
+          label: 'nav.download'.tr(),
+        ),
+        NavItem(
+          icon: Icons.history_outlined,
+          selectedIcon: Icons.history,
+          label: 'nav.history'.tr(),
+        ),
+        NavItem(
+          icon: Icons.transform_outlined,
+          selectedIcon: Icons.transform,
+          label: 'nav.convert'.tr(),
+        ),
+        NavItem(
+          icon: Icons.settings_outlined,
+          selectedIcon: Icons.settings,
+          label: 'nav.settings'.tr(),
+        ),
+      ];
 
   @override
   Widget build(BuildContext context) {

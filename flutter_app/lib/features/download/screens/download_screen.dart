@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../../core/theme/cyberpunk_colors.dart';
 import '../../../core/providers/providers.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
@@ -31,7 +32,7 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
 
     if (url.isEmpty) {
       setState(() {
-        _errorMessage = 'Please enter a YouTube URL';
+        _errorMessage = 'download.error_empty_url'.tr();
       });
       return;
     }
@@ -39,7 +40,7 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
     // Basic URL validation
     if (!url.contains('youtube.com') && !url.contains('youtu.be')) {
       setState(() {
-        _errorMessage = 'Please enter a valid YouTube URL';
+        _errorMessage = 'download.error_invalid_url'.tr();
       });
       return;
     }
@@ -59,22 +60,22 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
       // Show success snackbar
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Download started!'),
+          SnackBar(
+            content: Text('download.snackbar_started'.tr()),
             backgroundColor: CyberpunkColors.matrixGreen,
           ),
         );
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Failed to start download: $e';
+        _errorMessage = 'download.snackbar_error'.tr(args: [e.toString()]);
       });
 
       // Show error snackbar
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('download.snackbar_error'.tr(args: [e.toString()])),
             backgroundColor: CyberpunkColors.neonPinkGlow,
           ),
         );
@@ -117,7 +118,7 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
             Row(
               children: [
                 Text(
-                  'Downloads',
+                  'download.title'.tr(),
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -135,7 +136,8 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
                     borderRadius: BorderRadius.circular(12),
                     border: isCyberpunk
                         ? Border.all(
-                            color: CyberpunkColors.neonCyan.withValues(alpha: 0.5),
+                            color:
+                                CyberpunkColors.neonCyan.withValues(alpha: 0.5),
                             width: 1,
                           )
                         : null,
@@ -159,10 +161,10 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
             // Downloads list
             Expanded(
               child: downloads.isEmpty
-                  ? const EmptyStateWidget(
+                  ? EmptyStateWidget(
                       icon: Icons.download_outlined,
-                      title: 'No downloads yet',
-                      subtitle: 'Enter a YouTube URL above to get started',
+                      title: 'download.empty_list'.tr(),
+                      subtitle: 'download.empty_subtitle'.tr(),
                       iconSize: 48,
                     )
                   : ListView.builder(

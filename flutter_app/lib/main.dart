@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'features/download/screens/download_screen.dart';
 import 'features/convert/screens/convert_screen.dart';
@@ -105,8 +106,9 @@ class MyApp extends ConsumerStatefulWidget {
 }
 
 class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
+  static const _windowChannel = MethodChannel('mp3yap/window');
   bool _showSplash = true;
-  String _splashStatus = 'Starting...';
+  String _splashMessage = 'Starting backend service...';
 
   @override
   void initState() {
@@ -117,23 +119,24 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
 
   Future<void> _initializeApp() async {
     // Start backend
-    setState(() => _splashStatus = 'Starting backend...');
+    if (mounted) setState(() => _splashMessage = 'Starting backend service...');
     await _startBackend();
 
     // Small delay to show the animation
-    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) setState(() => _splashMessage = 'Initializing application...');
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    if (mounted) setState(() => _splashMessage = 'Ready!');
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    // Make window opaque before hiding splash
+    if (Platform.isMacOS) {
+      await _windowChannel.invokeMethod('setOpaque', true);
+    }
 
     // Hide splash screen
     if (mounted) {
-      setState(() {
-        _splashStatus = 'Ready!';
-      });
-
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      if (mounted) {
-        setState(() => _showSplash = false);
-      }
+      setState(() => _showSplash = false);
     }
   }
 
@@ -183,7 +186,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
         useMaterial3: true,
       ),
       home: _showSplash
-          ? SplashScreen(statusMessage: _splashStatus)
+          ? SplashScreen(message: _splashMessage)
           : const MainNavigation(),
     );
   }

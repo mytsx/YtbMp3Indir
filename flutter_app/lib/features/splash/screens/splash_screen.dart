@@ -3,11 +3,10 @@ import 'package:flutter/material.dart';
 
 /// Animated splash screen with grid animation
 class SplashScreen extends StatefulWidget {
-  final String statusMessage;
-
+  final String message;
   const SplashScreen({
     super.key,
-    this.statusMessage = 'Loading...',
+    this.message = 'Initializing...',
   });
 
   @override
@@ -32,7 +31,8 @@ class _SplashScreenState extends State<SplashScreen>
     // Initialize grid colors and opacities
     boxColors = List.generate(
       gridSize,
-      (_) => List.generate(gridSize, (_) => Colors.black.withValues(alpha:0.3)),
+      (_) =>
+          List.generate(gridSize, (_) => Colors.black.withValues(alpha: 0.3)),
     );
     boxOpacities = List.generate(
       gridSize,
@@ -112,7 +112,7 @@ class _SplashScreenState extends State<SplashScreen>
             );
           } else {
             // Outside wave - dark
-            boxColors[row][col] = Colors.black.withValues(alpha:0.3);
+            boxColors[row][col] = Colors.black.withValues(alpha: 0.3);
           }
         }
       }
@@ -127,19 +127,18 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Scaffold(
-      backgroundColor: isDark ? Colors.grey[900] : Colors.grey[100],
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Animated grid
-            Container(
-              padding: const EdgeInsets.all(16),
-              child: Column(
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: double.infinity,
+        height: double.infinity,
+        color: Colors.transparent,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Column(
+                mainAxisSize: MainAxisSize.min,
                 children: List.generate(gridSize, (row) {
                   return Row(
                     mainAxisSize: MainAxisSize.min,
@@ -162,53 +161,29 @@ class _SplashScreenState extends State<SplashScreen>
                   );
                 }),
               ),
-            ),
-
-            const SizedBox(height: 32),
-
-            // App title
-            Text(
-              'MP3 Yap',
-              style: theme.textTheme.headlineLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : Colors.black87,
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Status message
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.black.withValues(alpha:0.5)
-                    : Colors.black.withValues(alpha:0.7),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white.withValues(alpha:0.8),
-                    ),
+              const SizedBox(height: 32),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: Text(
+                  widget.message,
+                  key: ValueKey(widget.message),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.5,
+                    shadows: [
+                      Shadow(
+                        blurRadius: 4,
+                        color: Colors.black54,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.statusMessage,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

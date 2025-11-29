@@ -30,7 +30,7 @@ PyQt5 uygulamasından Flutter'a geçiş sırasında yapılacak/yapılan işler.
 
 ## Bilinen Sorunlar / TODO
 
-- [ ] macOS App Sandbox entitlements (file picker için gerekebilir)
+- [x] macOS App Sandbox entitlements (sandbox disabled for Python process spawning)
 
 ## Notlar
 

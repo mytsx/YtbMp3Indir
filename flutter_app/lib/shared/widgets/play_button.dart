@@ -24,7 +24,8 @@ class PlayButton extends ConsumerWidget {
     final theme = Theme.of(context);
 
     final isThisPlaying = currentlyPlaying == filePath;
-    final isPlaying = playerStateAsync.value == PlayerState.playing && isThisPlaying;
+    final isPlaying =
+        playerStateAsync.value == PlayerState.playing && isThisPlaying;
 
     return IconButton(
       icon: Icon(
@@ -64,7 +65,7 @@ class PlayButton extends ConsumerWidget {
 
           await player.stop();
           await player.play(DeviceFileSource(absolutePath));
-          ref.read(currentlyPlayingProvider.notifier).state = absolutePath;
+          ref.read(currentlyPlayingProvider.notifier).set(absolutePath);
         }
       },
     );

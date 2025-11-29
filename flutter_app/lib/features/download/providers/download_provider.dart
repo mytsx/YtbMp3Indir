@@ -6,8 +6,11 @@ import '../../../core/models/download.dart';
 import '../../history/providers/history_provider.dart';
 
 /// Current downloads list provider (state notifier)
-class DownloadsNotifier extends StateNotifier<List<Download>> {
-  DownloadsNotifier() : super([]);
+class DownloadsNotifier extends Notifier<List<Download>> {
+  @override
+  List<Download> build() {
+    return [];
+  }
 
   void addDownload(Download download) {
     state = [...state, download];
@@ -30,9 +33,7 @@ class DownloadsNotifier extends StateNotifier<List<Download>> {
 }
 
 final downloadsProvider =
-    StateNotifierProvider<DownloadsNotifier, List<Download>>((ref) {
-  return DownloadsNotifier();
-});
+    NotifierProvider<DownloadsNotifier, List<Download>>(DownloadsNotifier.new);
 
 /// Start download provider (callable)
 final startDownloadProvider =
@@ -66,78 +67,79 @@ final downloadProgressProvider =
   });
 
   // Map WebSocket messages to ProgressUpdate
-      return channel.stream.map((data) {
-        final json = jsonDecode(data as String) as Map<String, dynamic>;
-        final update = ProgressUpdate.fromJson(json);
+  return channel.stream.map((data) {
+    final json = jsonDecode(data as String) as Map<String, dynamic>;
+    final update = ProgressUpdate.fromJson(json);
 
-        // Update download in list
-        final downloads = ref.read(downloadsProvider);
-        final downloadIndex = downloads.indexWhere((d) => d.id == downloadId);
+    // Update download in list
+    final downloads = ref.read(downloadsProvider);
+    final downloadIndex = downloads.indexWhere((d) => d.id == downloadId);
 
-        // Handle case where download is not found (may have been removed)
-        if (downloadIndex == -1) {
-          return update;
+    // Handle case where download is not found (may have been removed)
+    if (downloadIndex == -1) {
+      return update;
+    }
+
+    final download = downloads[downloadIndex];
+    Download updated = download;
+
+    switch (update.type) {
+      case 'progress':
+        updated = download.copyWith(
+          progress: update.progress,
+          speed: update.speed,
+          eta: update.eta,
+        );
+        break;
+
+      case 'status':
+        updated = download.copyWith(
+          status: update.status ?? download.status,
+          progress: update.progress ?? download.progress,
+          speed: update.speed ?? download.speed,
+          eta: update.eta ?? download.eta,
+          videoTitle: update.videoTitle ?? download.videoTitle,
+        );
+        break;
+
+      case 'info':
+        updated = download.copyWith(
+          videoTitle: update.videoTitle ?? download.videoTitle,
+        );
+        break;
+
+      case 'completed':
+        updated = download.copyWith(
+          status: 'completed',
+          progress: 100,
+          filePath: update.filePath,
+        );
+        // Refresh history when download completes
+        ref.invalidate(historyProvider);
+        // Play notification sound if enabled
+        final notificationSettings = ref.read(notificationSettingsProvider);
+        if (notificationSettings.soundEnabled) {
+          ref.read(notificationServiceProvider).playCompletionSound();
         }
+        break;
 
-        final download = downloads[downloadIndex];
-        Download updated = download;
-
-        switch (update.type) {
-          case 'progress':
-            updated = download.copyWith(
-              progress: update.progress,
-              speed: update.speed,
-              eta: update.eta,
-            );
-            break;
-
-          case 'status':
-            updated = download.copyWith(
-              status: update.status ?? download.status,
-              progress: update.progress ?? download.progress,
-              speed: update.speed ?? download.speed,
-              eta: update.eta ?? download.eta,
-              videoTitle: update.videoTitle ?? download.videoTitle,
-            );
-            break;
-
-          case 'info':
-            updated = download.copyWith(
-              videoTitle: update.videoTitle ?? download.videoTitle,
-            );
-            break;
-
-          case 'completed':
-            updated = download.copyWith(
-              status: 'completed',
-              progress: 100,
-              filePath: update.filePath,
-            );
-            // Refresh history when download completes
-            ref.invalidate(historyProvider);
-            // Play notification sound if enabled
-            final notificationSettings = ref.read(notificationSettingsProvider);
-            if (notificationSettings.soundEnabled) {
-              ref.read(notificationServiceProvider).playCompletionSound();
-            }
-            break;
-
-          case 'error':
-            updated = download.copyWith(
-              status: 'failed',
-              error: update.error,
-            );
-            // Play error notification sound if enabled
-            final errorNotificationSettings = ref.read(notificationSettingsProvider);
-            if (errorNotificationSettings.soundEnabled) {
-              ref.read(notificationServiceProvider).playErrorSound();
-            }
-            break;
+      case 'error':
+        updated = download.copyWith(
+          status: 'failed',
+          error: update.error,
+        );
+        // Play error notification sound if enabled
+        final errorNotificationSettings =
+            ref.read(notificationSettingsProvider);
+        if (errorNotificationSettings.soundEnabled) {
+          ref.read(notificationServiceProvider).playErrorSound();
         }
+        break;
+    }
 
-        // Update in provider
-        ref.read(downloadsProvider.notifier).updateDownload(downloadId, updated);
+    // Update in provider
+    ref.read(downloadsProvider.notifier).updateDownload(downloadId, updated);
 
-        return update;
-      });
+    return update;
+  });
 });

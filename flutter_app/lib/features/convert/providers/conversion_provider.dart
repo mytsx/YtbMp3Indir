@@ -5,8 +5,11 @@ import '../../../core/providers/providers.dart';
 import '../../../core/models/conversion.dart';
 
 /// Current conversions list provider
-class ConversionsNotifier extends StateNotifier<List<Conversion>> {
-  ConversionsNotifier() : super([]);
+class ConversionsNotifier extends Notifier<List<Conversion>> {
+  @override
+  List<Conversion> build() {
+    return [];
+  }
 
   void addConversion(Conversion conversion) {
     state = [...state, conversion];
@@ -29,9 +32,8 @@ class ConversionsNotifier extends StateNotifier<List<Conversion>> {
 }
 
 final conversionsProvider =
-    StateNotifierProvider<ConversionsNotifier, List<Conversion>>((ref) {
-  return ConversionsNotifier();
-});
+    NotifierProvider<ConversionsNotifier, List<Conversion>>(
+        ConversionsNotifier.new);
 
 /// Start conversion provider
 final startConversionProvider =
@@ -52,7 +54,8 @@ final startConversionProvider =
 
 /// WebSocket progress stream provider for conversion
 final conversionProgressProvider =
-    StreamProvider.family<ConversionProgressUpdate, String>((ref, conversionId) {
+    StreamProvider.family<ConversionProgressUpdate, String>(
+        (ref, conversionId) {
   final port = ref.watch(backendPortProvider);
 
   final wsUrl = 'ws://127.0.0.1:$port/ws/download/$conversionId';
@@ -111,14 +114,17 @@ final conversionProgressProvider =
           error: update.error,
         );
         // Play error notification sound if enabled
-        final errorNotificationSettings = ref.read(notificationSettingsProvider);
+        final errorNotificationSettings =
+            ref.read(notificationSettingsProvider);
         if (errorNotificationSettings.soundEnabled) {
           ref.read(notificationServiceProvider).playErrorSound();
         }
         break;
     }
 
-    ref.read(conversionsProvider.notifier).updateConversion(conversionId, updated);
+    ref
+        .read(conversionsProvider.notifier)
+        .updateConversion(conversionId, updated);
 
     return update;
   });

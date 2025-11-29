@@ -3,39 +3,35 @@ import '../../../core/models/history_item.dart';
 import '../../../core/providers/providers.dart';
 
 /// History list state notifier
-class HistoryNotifier extends StateNotifier<AsyncValue<List<HistoryItem>>> {
-  HistoryNotifier(this.ref) : super(const AsyncValue.loading()) {
-    _loadHistory();
-  }
-
-  final Ref ref;
+class HistoryNotifier extends AsyncNotifier<List<HistoryItem>> {
   int _currentOffset = 0;
   final int _pageSize = 50;
   bool _hasMore = true;
 
+  @override
+  Future<List<HistoryItem>> build() async {
+    return _loadInitialHistory();
+  }
+
   /// Load initial history
-  Future<void> _loadHistory() async {
+  Future<List<HistoryItem>> _loadInitialHistory() async {
     final apiClient = ref.read(apiClientProvider);
+    final response = await apiClient.getHistory(limit: _pageSize, offset: 0);
+    final items = (response['data'] as List)
+        .map((json) => HistoryItem.fromJson(json))
+        .toList();
 
-    try {
-      final response = await apiClient.getHistory(limit: _pageSize, offset: 0);
-      final items = (response['data'] as List)
-          .map((json) => HistoryItem.fromJson(json))
-          .toList();
-
-      _hasMore = items.length == _pageSize;
-      _currentOffset = items.length;
-      state = AsyncValue.data(items);
-    } catch (e, stack) {
-      state = AsyncValue.error(e, stack);
-    }
+    _hasMore = items.length == _pageSize;
+    _currentOffset = items.length;
+    return items;
   }
 
   /// Refresh history
   Future<void> refresh() async {
     _currentOffset = 0;
     _hasMore = true;
-    await _loadHistory();
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _loadInitialHistory());
   }
 
   /// Load more items (pagination)
@@ -85,8 +81,8 @@ class HistoryNotifier extends StateNotifier<AsyncValue<List<HistoryItem>>> {
 
 /// History provider
 final historyProvider =
-    StateNotifierProvider<HistoryNotifier, AsyncValue<List<HistoryItem>>>(
-  (ref) => HistoryNotifier(ref),
+    AsyncNotifierProvider<HistoryNotifier, List<HistoryItem>>(
+  HistoryNotifier.new,
 );
 
 /// Statistics provider
@@ -111,7 +107,8 @@ final searchHistoryProvider =
 });
 
 /// Redownload provider
-final redownloadProvider = FutureProvider.family<void, int>((ref, historyId) async {
+final redownloadProvider =
+    FutureProvider.family<void, int>((ref, historyId) async {
   final apiClient = ref.watch(apiClientProvider);
   await apiClient.redownload(historyId);
 });

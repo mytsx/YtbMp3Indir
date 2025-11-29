@@ -1,0 +1,26 @@
+{
+  "settings": {
+    "audio_quality": {
+      "title": "Ses Kalitesi",
+      "options": {
+        "128": "128 kbps (Daha küçük dosya)",
+        "192": "192 kbps (Önerilen)",
+        "256": "256 kbps (Yüksek kalite)",
+        "320": "320 kbps (En iyi kalite)"
+      }
+    },
+    "appearance": {
+      "title": "Görünüm",
+      "theme": {
+        "label": "Tema",
+        "system": "Sistem",
+        "light": "Açık",
+        "dark": "Koyu"
+      }
+    }
+  },
+  "common": {
+    "language_selection": "Dil Seçimi",
+    "continue": "Devam Et"
+  }
+}

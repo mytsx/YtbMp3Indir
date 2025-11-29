@@ -1,4 +1,5 @@
 // ignore_for_file: deprecated_member_use
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/settings_provider.dart';
@@ -13,10 +14,10 @@ class AudioQualitySection extends ConsumerWidget {
     final theme = Theme.of(context);
 
     final Map<String, String> qualityOptions = {
-      '128': '128 kbps (Smaller file size)',
-      '192': '192 kbps (Recommended)',
-      '256': '256 kbps (High quality)',
-      '320': '320 kbps (Best quality)',
+      '128': 'settings.audio_quality.options.128'.tr(),
+      '192': 'settings.audio_quality.options.192'.tr(),
+      '256': 'settings.audio_quality.options.256'.tr(),
+      '320': 'settings.audio_quality.options.320'.tr(),
     };
 
     return Column(
@@ -25,7 +26,7 @@ class AudioQualitySection extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
-            'Audio Quality',
+            'settings.audio_quality.title'.tr(),
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),

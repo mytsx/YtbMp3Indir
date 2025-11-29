@@ -1,0 +1,26 @@
+{
+  "settings": {
+    "audio_quality": {
+      "title": "Audio Quality",
+      "options": {
+        "128": "128 kbps (Smaller file size)",
+        "192": "192 kbps (Recommended)",
+        "256": "256 kbps (High quality)",
+        "320": "320 kbps (Best quality)"
+      }
+    },
+    "appearance": {
+      "title": "Appearance",
+      "theme": {
+        "label": "Theme",
+        "system": "System",
+        "light": "Light",
+        "dark": "Dark"
+      }
+    }
+  },
+  "common": {
+    "language_selection": "Select Language",
+    "continue": "Continue"
+  }
+}

@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/providers.dart';
@@ -16,7 +17,7 @@ class AppearanceSection extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
-            'Appearance',
+            'settings.appearance.title'.tr(),
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -28,26 +29,26 @@ class AppearanceSection extends ConsumerWidget {
             children: [
               const Icon(Icons.palette_outlined),
               const SizedBox(width: 16),
-              const Expanded(
-                child: Text('Theme'),
+              Expanded(
+                child: Text('settings.appearance.theme.label'.tr()),
               ),
               SegmentedButton<ThemeMode>(
                 key: const ValueKey('theme_mode_selector'),
-                segments: const [
+                segments: [
                   ButtonSegment<ThemeMode>(
                     value: ThemeMode.system,
-                    icon: Icon(Icons.settings_suggest),
-                    label: Text('System'),
+                    icon: const Icon(Icons.settings_suggest),
+                    label: Text('settings.appearance.theme.system'.tr()),
                   ),
                   ButtonSegment<ThemeMode>(
                     value: ThemeMode.light,
-                    icon: Icon(Icons.light_mode),
-                    label: Text('Light'),
+                    icon: const Icon(Icons.light_mode),
+                    label: Text('settings.appearance.theme.light'.tr()),
                   ),
                   ButtonSegment<ThemeMode>(
                     value: ThemeMode.dark,
-                    icon: Icon(Icons.dark_mode),
-                    label: Text('Dark'),
+                    icon: const Icon(Icons.dark_mode),
+                    label: Text('settings.appearance.theme.dark'.tr()),
                   ),
                 ],
                 selected: {currentThemeMode},

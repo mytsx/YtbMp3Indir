@@ -6,12 +6,23 @@ class SettingsService {
   static const String _themeModeKey = 'theme_mode';
   static const String _themeStyleKey = 'theme_style';
   static const String _notificationSoundKey = 'notification_sound';
+  static const String _isFirstRunKey = 'is_first_run';
 
   late final SharedPreferences _prefs;
 
   /// Initialize the service (must be called before using)
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
+  }
+
+  /// Check if this is the first run
+  bool getIsFirstRun() {
+    return _prefs.getBool(_isFirstRunKey) ?? true;
+  }
+
+  /// Mark first run as completed
+  Future<void> setFirstRunCompleted() async {
+    await _prefs.setBool(_isFirstRunKey, false);
   }
 
   /// Get saved theme mode

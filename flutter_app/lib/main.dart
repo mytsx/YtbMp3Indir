@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,7 @@ import 'features/convert/screens/convert_screen.dart';
 import 'features/history/screens/history_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
 import 'features/splash/screens/splash_screen.dart';
+import 'features/onboarding/screens/language_selection_screen.dart';
 import 'shared/widgets/animated_nav_bar.dart';
 import 'shared/widgets/glassmorphic_card.dart';
 import 'shared/widgets/neo_pop_background.dart';
@@ -64,6 +66,7 @@ Future<void> _startBackend() async {
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
+  await EasyLocalization.ensureInitialized();
 
   // Initialize settings service (SharedPreferences)
   _settingsService = SettingsService();
@@ -97,9 +100,14 @@ void main() async {
 
   // Run the app (backend will be started from splash screen)
   runApp(
-    UncontrolledProviderScope(
-      container: _container,
-      child: const MyApp(),
+    EasyLocalization(
+      supportedLocales: const [Locale('en', 'US'), Locale('tr', 'TR')],
+      path: 'assets/translations',
+      fallbackLocale: const Locale('en', 'US'),
+      child: UncontrolledProviderScope(
+        container: _container,
+        child: const MyApp(),
+      ),
     ),
   );
 }
@@ -114,11 +122,13 @@ class MyApp extends ConsumerStatefulWidget {
 class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   static const _windowChannel = MethodChannel('mp3yap/window');
   bool _showSplash = true;
+  bool _isFirstRun = false;
   String _splashMessage = 'Starting backend service...';
 
   @override
   void initState() {
     super.initState();
+    _isFirstRun = _settingsService.getIsFirstRun();
     WidgetsBinding.instance.addObserver(this);
     _initializeApp();
   }
@@ -224,15 +234,26 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     return MaterialApp(
       title: 'MP3 Yap',
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: context.localizationDelegates,
+      supportedLocales: context.supportedLocales,
+      locale: context.locale,
       themeMode: themeMode,
       theme: lightTheme,
       darkTheme: darkTheme,
       // Disable theme animation to prevent TextStyle.lerp errors
       // when switching between theme styles with different inherit values
       themeAnimationDuration: Duration.zero,
-      home: _showSplash
-          ? SplashScreen(message: _splashMessage)
-          : const MainNavigation(),
+      home: _isFirstRun
+          ? LanguageSelectionScreen(
+              onContinue: () {
+                setState(() {
+                  _isFirstRun = false;
+                });
+              },
+            )
+          : (_showSplash
+              ? SplashScreen(message: _splashMessage)
+              : const MainNavigation()),
     );
   }
 }

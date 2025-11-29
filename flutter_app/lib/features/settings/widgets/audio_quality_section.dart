@@ -12,6 +12,13 @@ class AudioQualitySection extends ConsumerWidget {
     final notifier = ref.read(settingsProvider.notifier);
     final theme = Theme.of(context);
 
+    final Map<String, String> qualityOptions = {
+      '128': '128 kbps (Smaller file size)',
+      '192': '192 kbps (Recommended)',
+      '256': '256 kbps (High quality)',
+      '320': '320 kbps (Best quality)',
+    };
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -24,45 +31,35 @@ class AudioQualitySection extends ConsumerWidget {
             ),
           ),
         ),
-        _buildRadioTile(
-          title: '128 kbps (Smaller file size)',
-          value: '128',
-          groupValue: settings.quality,
-          onChanged: (val) => notifier.updateConfig(quality: val),
-        ),
-        _buildRadioTile(
-          title: '192 kbps (Recommended)',
-          value: '192',
-          groupValue: settings.quality,
-          onChanged: (val) => notifier.updateConfig(quality: val),
-        ),
-        _buildRadioTile(
-          title: '256 kbps (High quality)',
-          value: '256',
-          groupValue: settings.quality,
-          onChanged: (val) => notifier.updateConfig(quality: val),
-        ),
-        _buildRadioTile(
-          title: '320 kbps (Best quality)',
-          value: '320',
-          groupValue: settings.quality,
-          onChanged: (val) => notifier.updateConfig(quality: val),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              border: Border.all(color: theme.dividerColor),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: settings.quality,
+                isExpanded: true,
+                icon: const Icon(Icons.arrow_drop_down),
+                items: qualityOptions.entries.map((entry) {
+                  return DropdownMenuItem<String>(
+                    value: entry.key,
+                    child: Text(entry.value),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    notifier.updateConfig(quality: newValue);
+                  }
+                },
+              ),
+            ),
+          ),
         ),
       ],
-    );
-  }
-
-  Widget _buildRadioTile({
-    required String title,
-    required String value,
-    required String groupValue,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return RadioListTile<String>(
-      title: Text(title),
-      value: value,
-      groupValue: groupValue,
-      onChanged: onChanged,
     );
   }
 }

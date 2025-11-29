@@ -56,6 +56,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         : ref.watch(historyProvider);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Download History'),
         actions: [

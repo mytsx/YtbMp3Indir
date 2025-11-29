@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../../core/constants.dart';
 import '../../../core/providers/providers.dart';
 import '../../../core/models/conversion.dart';
+import '../../../core/theme/cyberpunk_colors.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../providers/conversion_provider.dart';
 import '../widgets/conversion_card.dart';
@@ -92,7 +93,7 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Conversion started!'),
-            backgroundColor: Colors.green,
+            backgroundColor: CyberpunkColors.matrixGreen,
           ),
         );
       }
@@ -106,7 +107,7 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: CyberpunkColors.neonPinkGlow,
           ),
         );
       }
@@ -123,6 +124,7 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
     final conversions = ref.watch(conversionsProvider);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -176,15 +178,19 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.orange.shade100,
+                    color: CyberpunkColors.cyberYellow.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: CyberpunkColors.cyberYellow.withValues(alpha: 0.5),
+                      width: 1,
+                    ),
                   ),
                   child: Text(
                     '${conversions.length}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: Colors.orange.shade900,
+                      color: CyberpunkColors.cyberYellow,
                     ),
                   ),
                 ),

@@ -9,9 +9,11 @@ import 'features/history/screens/history_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
 import 'features/splash/screens/splash_screen.dart';
 import 'shared/widgets/animated_nav_bar.dart';
+import 'shared/widgets/glassmorphic_card.dart';
 import 'core/providers/providers.dart';
 import 'core/services/backend_service.dart';
 import 'core/services/settings_service.dart';
+import 'core/theme/cyberpunk_theme.dart';
 
 // Global reference to stop backend on app exit
 late final ProviderContainer _container;
@@ -186,28 +188,39 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
+    final themeStyle = ref.watch(themeStyleProvider);
 
     // Update window appearance when theme changes
     _updateWindowAppearance(themeMode);
+
+    ThemeData lightTheme;
+    ThemeData darkTheme;
+
+    if (themeStyle == 'cyberpunk') {
+      lightTheme = CyberpunkTheme.lightTheme;
+      darkTheme = CyberpunkTheme.darkTheme;
+    } else {
+      // Classic Theme
+      lightTheme = ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+      );
+      darkTheme = ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark,
+        ),
+      );
+    }
 
     return MaterialApp(
       title: 'MP3 Yap',
       debugShowCheckedModeBanner: false,
       themeMode: themeMode,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
+      theme: lightTheme,
+      darkTheme: darkTheme,
       home: _showSplash
           ? SplashScreen(message: _splashMessage)
           : const MainNavigation(),
@@ -216,14 +229,14 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
 }
 
 /// Main navigation with bottom navigation bar
-class MainNavigation extends StatefulWidget {
+class MainNavigation extends ConsumerStatefulWidget {
   const MainNavigation({super.key});
 
   @override
-  State<MainNavigation> createState() => _MainNavigationState();
+  ConsumerState<MainNavigation> createState() => _MainNavigationState();
 }
 
-class _MainNavigationState extends State<MainNavigation> {
+class _MainNavigationState extends ConsumerState<MainNavigation> {
   int _currentIndex = 0;
 
   final List<Widget> _screens = const [
@@ -258,20 +271,64 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
-      bottomNavigationBar: AnimatedNavBar(
-        currentIndex: _currentIndex,
-        items: _navItems,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-      ),
-    );
+    final themeStyle = ref.watch(themeStyleProvider);
+
+    if (themeStyle == 'cyberpunk') {
+      return CyberpunkBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: IndexedStack(
+            index: _currentIndex,
+            children: _screens,
+          ),
+          bottomNavigationBar: AnimatedNavBar(
+            currentIndex: _currentIndex,
+            items: _navItems,
+            onTap: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+          ),
+        ),
+      );
+    } else {
+      return Scaffold(
+        body: IndexedStack(
+          index: _currentIndex,
+          children: _screens,
+        ),
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+          },
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.download_outlined),
+              selectedIcon: Icon(Icons.download),
+              label: 'Download',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.history_outlined),
+              selectedIcon: Icon(Icons.history),
+              label: 'History',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.transform_outlined),
+              selectedIcon: Icon(Icons.transform),
+              label: 'Convert',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+        ),
+      );
+    }
   }
 }

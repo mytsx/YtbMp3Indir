@@ -1,6 +1,8 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:dotted_border/dotted_border.dart';
+import '../../../core/theme/cyberpunk_colors.dart';
 
 class FileSelectionCard extends StatefulWidget {
   final String? selectedFilePath;
@@ -52,57 +54,87 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Drag & Drop Zone
-            DropTarget(
-              onDragEntered: (_) => setState(() => _isDragging = true),
-              onDragExited: (_) => setState(() => _isDragging = false),
-              onDragDone: (details) {
-                setState(() => _isDragging = false);
-                if (details.files.isNotEmpty) {
-                  final file = details.files.first;
-                  if (_isSupported(file.path)) {
-                    widget.onFileDrop?.call(file.path, file.name);
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Unsupported file format'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              },
-              child: DottedBorder(
-                borderType: BorderType.RRect,
-                radius: const Radius.circular(12),
-                dashPattern: const [8, 4],
-                strokeWidth: _isDragging ? 2 : 1.5,
-                color: _isDragging
-                    ? colorScheme.primary
-                    : widget.selectedFilePath != null
-                        ? Colors.green
-                        : colorScheme.outline.withValues(alpha: 0.6),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-                  decoration: BoxDecoration(
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.white.withValues(alpha: 0.08),
+            Colors.white.withValues(alpha: 0.03),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.1),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: CyberpunkColors.hotPink.withValues(alpha: 0.1),
+            blurRadius: 20,
+            spreadRadius: -5,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Drag & Drop Zone
+                DropTarget(
+                  onDragEntered: (_) => setState(() => _isDragging = true),
+                  onDragExited: (_) => setState(() => _isDragging = false),
+                  onDragDone: (details) {
+                    setState(() => _isDragging = false);
+                    if (details.files.isNotEmpty) {
+                      final file = details.files.first;
+                      if (_isSupported(file.path)) {
+                        widget.onFileDrop?.call(file.path, file.name);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Unsupported file format'),
+                            backgroundColor: CyberpunkColors.neonPinkGlow,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  child: DottedBorder(
+                    borderType: BorderType.RRect,
+                    radius: const Radius.circular(12),
+                    dashPattern: const [8, 4],
+                    strokeWidth: _isDragging ? 2 : 1.5,
                     color: _isDragging
-                        ? colorScheme.primaryContainer.withValues(alpha: 0.3)
+                        ? CyberpunkColors.hotPink
                         : widget.selectedFilePath != null
-                            ? Colors.green.withValues(alpha: 0.05)
-                            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
+                            ? CyberpunkColors.matrixGreen
+                            : CyberpunkColors.surfaceBorder,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+                      decoration: BoxDecoration(
+                        color: _isDragging
+                            ? CyberpunkColors.hotPink.withValues(alpha: 0.1)
+                            : widget.selectedFilePath != null
+                                ? CyberpunkColors.matrixGreen.withValues(alpha: 0.05)
+                                : CyberpunkColors.charcoal.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
@@ -113,10 +145,10 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
                               : Icons.cloud_upload_outlined,
                       size: 48,
                       color: _isDragging
-                          ? colorScheme.primary
+                          ? CyberpunkColors.hotPink
                           : widget.selectedFilePath != null
-                              ? Colors.green
-                              : colorScheme.onSurfaceVariant,
+                              ? CyberpunkColors.matrixGreen
+                              : CyberpunkColors.textSecondary,
                     ),
                     const SizedBox(height: 12),
                     Text(
@@ -125,19 +157,19 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
                           : widget.selectedFileName ?? 'Drag and drop your file here',
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: _isDragging
-                            ? colorScheme.primary
+                            ? CyberpunkColors.hotPink
                             : widget.selectedFilePath != null
-                                ? Colors.green.shade700
-                                : colorScheme.onSurfaceVariant,
+                                ? CyberpunkColors.matrixGreen
+                                : CyberpunkColors.textSecondary,
                         fontWeight: FontWeight.w500,
                       ),
                       textAlign: TextAlign.center,
                     ),
                     if (widget.selectedFilePath == null && !_isDragging) ...[
                       const SizedBox(height: 8),
-                      Text(
+                      const Text(
                         'or',
-                        style: TextStyle(color: colorScheme.onSurfaceVariant),
+                        style: TextStyle(color: CyberpunkColors.textSecondary),
                       ),
                       const SizedBox(height: 8),
                       OutlinedButton(
@@ -149,9 +181,9 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
                       const SizedBox(height: 8),
                       Text(
                         widget.selectedFilePath!,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
-                          color: colorScheme.onSurfaceVariant,
+                          color: CyberpunkColors.textSecondary,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -185,7 +217,7 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
               const SizedBox(height: 12),
               Text(
                 widget.errorMessage!,
-                style: const TextStyle(color: Colors.red, fontSize: 13),
+                style: const TextStyle(color: CyberpunkColors.neonPinkGlow, fontSize: 13),
               ),
             ],
 
@@ -214,7 +246,7 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       textStyle: const TextStyle(fontSize: 16),
-                      backgroundColor: Colors.orange,
+                      backgroundColor: CyberpunkColors.hotPink,
                     ),
                   ),
                 ),
@@ -223,7 +255,7 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    border: Border.all(color: colorScheme.outline.withValues(alpha: 0.5)),
+                    border: Border.all(color: CyberpunkColors.surfaceBorder.withValues(alpha: 0.5)),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: DropdownButtonHideUnderline(
@@ -256,15 +288,17 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
 
             // Supported formats
             const SizedBox(height: 12),
-            Text(
+            const Text(
               'Input: MP4, MKV, AVI, MOV, WAV, FLAC, AAC, M4A, and more',
               style: TextStyle(
                 fontSize: 12,
-                color: colorScheme.onSurfaceVariant,
+                color: CyberpunkColors.textSecondary,
               ),
               textAlign: TextAlign.center,
             ),
           ],
+            ),
+          ),
         ),
       ),
     );

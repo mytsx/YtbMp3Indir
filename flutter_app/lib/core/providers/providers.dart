@@ -56,6 +56,26 @@ final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((r
   return ThemeModeNotifier(settingsService);
 });
 
+/// Theme style provider with persistence
+class ThemeStyleNotifier extends StateNotifier<String> {
+  final SettingsService _settingsService;
+
+  ThemeStyleNotifier(this._settingsService) : super('cyberpunk') {
+    // Load saved theme style
+    state = _settingsService.getThemeStyle();
+  }
+
+  void setThemeStyle(String style) {
+    state = style;
+    _settingsService.setThemeStyle(style);
+  }
+}
+
+final themeStyleProvider = StateNotifierProvider<ThemeStyleNotifier, String>((ref) {
+  final settingsService = ref.watch(settingsServiceProvider);
+  return ThemeStyleNotifier(settingsService);
+});
+
 /// Notification settings provider with persistence
 final notificationSettingsProvider =
     StateNotifierProvider<NotificationSettingsNotifier, NotificationSettings>(

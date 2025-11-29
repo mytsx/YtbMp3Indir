@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/theme/cyberpunk_colors.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../providers/download_provider.dart';
 import '../widgets/download_card.dart';
@@ -59,7 +60,7 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Download started!'),
-            backgroundColor: Colors.green,
+            backgroundColor: CyberpunkColors.matrixGreen,
           ),
         );
       }
@@ -73,7 +74,7 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: CyberpunkColors.neonPinkGlow,
           ),
         );
       }
@@ -90,6 +91,7 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
     final downloads = ref.watch(downloadsProvider);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -121,15 +123,19 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade100,
+                    color: CyberpunkColors.neonCyan.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: CyberpunkColors.neonCyan.withValues(alpha: 0.5),
+                      width: 1,
+                    ),
                   ),
                   child: Text(
                     '${downloads.length}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue.shade900,
+                      color: CyberpunkColors.neonCyan,
                     ),
                   ),
                 ),

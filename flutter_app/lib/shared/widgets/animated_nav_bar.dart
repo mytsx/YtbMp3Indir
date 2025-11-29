@@ -1,4 +1,6 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../../core/theme/cyberpunk_colors.dart';
 
 /// Navigation item data
 class NavItem {
@@ -60,38 +62,64 @@ class _AnimatedNavBarState extends State<AnimatedNavBar>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
+        // Glassmorphic background
+        gradient: LinearGradient(
+          colors: [
+            Colors.white.withValues(alpha: 0.08),
+            Colors.white.withValues(alpha: 0.03),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.1),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: CyberpunkColors.hotPink.withValues(alpha: 0.1),
+            blurRadius: 20,
+            spreadRadius: -5,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: List.generate(widget.items.length, (index) {
-            final item = widget.items[index];
-            final isSelected = index == widget.currentIndex;
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(widget.items.length, (index) {
+                final item = widget.items[index];
+                final isSelected = index == widget.currentIndex;
 
-            return _NavBarItem(
-              item: item,
-              isSelected: isSelected,
-              colorScheme: colorScheme,
-              animation: _controller,
-              onTap: () => widget.onTap(index),
-            );
-          }),
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () => widget.onTap(index),
+                    behavior: HitTestBehavior.translucent,
+                    child: Center(
+                      child: _NavBarItem(
+                        item: item,
+                        isSelected: isSelected,
+                        animation: _controller,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
         ),
       ),
     );
@@ -101,35 +129,52 @@ class _AnimatedNavBarState extends State<AnimatedNavBar>
 class _NavBarItem extends StatelessWidget {
   final NavItem item;
   final bool isSelected;
-  final ColorScheme colorScheme;
   final Animation<double> animation;
-  final VoidCallback onTap;
 
   const _NavBarItem({
     required this.item,
     required this.isSelected,
-    required this.colorScheme,
     required this.animation,
-    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOutCubic,
-        padding: EdgeInsets.symmetric(
-          horizontal: isSelected ? 16 : 12,
-          vertical: 8,
-        ),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
+      padding: EdgeInsets.symmetric(
+        horizontal: isSelected ? 16 : 12,
+        vertical: 8,
+      ),
         decoration: BoxDecoration(
-          color: isSelected
-              ? colorScheme.primaryContainer
-              : Colors.transparent,
+          // Neon glow background for selected item
+          gradient: isSelected
+              ? LinearGradient(
+                  colors: [
+                    CyberpunkColors.hotPink.withValues(alpha: 0.3),
+                    CyberpunkColors.electricPurple.withValues(alpha: 0.2),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isSelected ? null : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
+          border: isSelected
+              ? Border.all(
+                  color: CyberpunkColors.hotPink.withValues(alpha: 0.5),
+                  width: 1,
+                )
+              : null,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: CyberpunkColors.hotPink.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    spreadRadius: -2,
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -137,12 +182,25 @@ class _NavBarItem extends StatelessWidget {
             AnimatedScale(
               scale: isSelected ? 1.1 : 1.0,
               duration: const Duration(milliseconds: 200),
-              child: Icon(
-                isSelected ? item.selectedIcon : item.icon,
-                color: isSelected
-                    ? colorScheme.onPrimaryContainer
-                    : colorScheme.onSurfaceVariant,
-                size: 24,
+              child: ShaderMask(
+                shaderCallback: isSelected
+                    ? (bounds) => const LinearGradient(
+                          colors: [
+                            CyberpunkColors.hotPink,
+                            CyberpunkColors.neonCyan,
+                          ],
+                        ).createShader(bounds)
+                    : (bounds) => const LinearGradient(
+                          colors: [
+                            CyberpunkColors.textSecondary,
+                            CyberpunkColors.textSecondary,
+                          ],
+                        ).createShader(bounds),
+                child: Icon(
+                  isSelected ? item.selectedIcon : item.icon,
+                  color: Colors.white,
+                  size: 24,
+                ),
               ),
             ),
             AnimatedSize(
@@ -156,8 +214,8 @@ class _NavBarItem extends StatelessWidget {
                         duration: const Duration(milliseconds: 200),
                         child: Text(
                           item.label,
-                          style: TextStyle(
-                            color: colorScheme.onPrimaryContainer,
+                          style: const TextStyle(
+                            color: CyberpunkColors.textPrimary,
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
                           ),
@@ -168,7 +226,6 @@ class _NavBarItem extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }

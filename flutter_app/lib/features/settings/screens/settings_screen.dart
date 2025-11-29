@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/theme/cyberpunk_colors.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/appearance_section.dart';
 import '../widgets/audio_quality_section.dart';
@@ -22,7 +23,7 @@ class SettingsScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${next.error}'),
-            backgroundColor: Colors.red,
+            backgroundColor: CyberpunkColors.neonPinkGlow,
           ),
         );
       }
@@ -31,13 +32,14 @@ class SettingsScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.successMessage!),
-            backgroundColor: Colors.green,
+            backgroundColor: CyberpunkColors.matrixGreen,
           ),
         );
       }
     });
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Settings'),
         actions: [

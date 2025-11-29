@@ -1,11 +1,10 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:audioplayers/audioplayers.dart';
 import '../../../core/models/download.dart';
 import '../../../core/utils/platform_utils.dart';
+import '../../../shared/widgets/media_item_card.dart';
+import '../../../shared/widgets/play_button.dart';
 import '../providers/download_provider.dart';
-import '../../player/audio_player_provider.dart';
 
 /// Download card showing progress and status
 class DownloadCard extends ConsumerWidget {
@@ -28,58 +27,21 @@ class DownloadCard extends ConsumerWidget {
       orElse: () => download,
     );
 
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     // Completed state - HistoryCard style layout
     if (latestDownload.isCompleted) {
-      return Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            children: [
-              // Left side: Title
-              Expanded(
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.music_note,
-                      color: colorScheme.primary,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        latestDownload.videoTitle ?? 'Download completed',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Right side: Action buttons
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (latestDownload.filePath != null)
-                    _buildPlayButton(context, ref, latestDownload, colorScheme),
-                  if (latestDownload.filePath != null)
-                    IconButton(
-                      onPressed: () => _showInFolder(context, latestDownload.filePath!),
-                      icon: const Icon(Icons.folder_open, size: 20),
-                      tooltip: 'Show in Folder',
-                      visualDensity: VisualDensity.compact,
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
+      return MediaItemCard(
+        title: latestDownload.videoTitle ?? 'Download completed',
+        actions: [
+          if (latestDownload.filePath != null)
+            PlayButton(filePath: latestDownload.filePath!),
+          if (latestDownload.filePath != null)
+            IconButton(
+              onPressed: () => _showInFolder(context, latestDownload.filePath!),
+              icon: const Icon(Icons.folder_open, size: 20),
+              tooltip: 'Show in Folder',
+              visualDensity: VisualDensity.compact,
+            ),
+        ],
       );
     }
 
@@ -256,55 +218,6 @@ class DownloadCard extends ConsumerWidget {
       return Colors.orange;
     }
     return Colors.blue;
-  }
-
-  Widget _buildPlayButton(BuildContext context, WidgetRef ref, Download download, ColorScheme colorScheme) {
-    final player = ref.watch(audioPlayerProvider);
-    final currentlyPlaying = ref.watch(currentlyPlayingProvider);
-    final playerStateAsync = ref.watch(playerStateProvider);
-
-    final isThisPlaying = currentlyPlaying == download.filePath;
-    final isPlaying = playerStateAsync.value == PlayerState.playing && isThisPlaying;
-
-    return IconButton(
-      icon: Icon(
-        isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
-        size: 28,
-      ),
-      color: colorScheme.primary,
-      onPressed: () async {
-        if (download.filePath == null) return;
-
-        if (isThisPlaying && isPlaying) {
-          await player.pause();
-        } else if (isThisPlaying) {
-          await player.resume();
-        } else {
-          String filePath = download.filePath!;
-
-          if (!filePath.startsWith('/')) {
-            final file = File(filePath);
-            filePath = file.absolute.path;
-          }
-
-          if (!await File(filePath).exists()) {
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('File not found: $filePath'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-            return;
-          }
-
-          await player.stop();
-          await player.play(DeviceFileSource(filePath));
-          ref.read(currentlyPlayingProvider.notifier).state = filePath;
-        }
-      },
-    );
   }
 
   Future<void> _showInFolder(BuildContext context, String filePath) async {

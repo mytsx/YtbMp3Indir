@@ -52,7 +52,9 @@ class AppearanceSection extends ConsumerWidget {
                 ],
                 selected: {currentThemeMode},
                 onSelectionChanged: (selected) {
-                  ref.read(themeModeProvider.notifier).setThemeMode(selected.first);
+                  ref
+                      .read(themeModeProvider.notifier)
+                      .setThemeMode(selected.first);
                 },
               ),
             ],
@@ -74,6 +76,10 @@ class AppearanceSection extends ConsumerWidget {
                   DropdownMenuItem(
                     value: 'cyberpunk',
                     child: Text('Cyberpunk'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'neopop',
+                    child: Text('NeoPop'),
                   ),
                   DropdownMenuItem(
                     value: 'classic',

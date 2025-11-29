@@ -71,12 +71,12 @@ class _AnimatedNavBarState extends State<AnimatedNavBar>
         gradient: LinearGradient(
           colors: isDarkMode
               ? [
-                  Colors.white.withOpacity(0.08),
-                  Colors.white.withOpacity(0.03),
+                  Colors.white.withValues(alpha: 0.08),
+                  Colors.white.withValues(alpha: 0.03),
                 ]
               : [
-                  Colors.white.withOpacity(0.9),
-                  Colors.white.withOpacity(0.95),
+                  Colors.white.withValues(alpha: 0.9),
+                  Colors.white.withValues(alpha: 0.95),
                 ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -84,18 +84,19 @@ class _AnimatedNavBarState extends State<AnimatedNavBar>
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: isDarkMode
-              ? Colors.white.withOpacity(0.1)
-              : CyberpunkColors.hotPink.withOpacity(0.3),
+              ? Colors.white.withValues(alpha: 0.1)
+              : CyberpunkColors.hotPink.withValues(alpha: 0.3),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: CyberpunkColors.hotPink.withOpacity(isDarkMode ? 0.1 : 0.15),
+            color: CyberpunkColors.hotPink
+                .withValues(alpha: isDarkMode ? 0.1 : 0.15),
             blurRadius: 20,
             spreadRadius: -5,
           ),
           BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.1),
+            color: Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.1),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -177,12 +178,12 @@ class _NavBarItem extends StatelessWidget {
             ? LinearGradient(
                 colors: isDarkMode
                     ? [
-                        CyberpunkColors.hotPink.withOpacity(0.3),
-                        CyberpunkColors.electricPurple.withOpacity(0.2),
+                        CyberpunkColors.hotPink.withValues(alpha: 0.3),
+                        CyberpunkColors.electricPurple.withValues(alpha: 0.2),
                       ]
                     : [
-                        CyberpunkColors.hotPink.withOpacity(0.15),
-                        CyberpunkColors.electricPurple.withOpacity(0.1),
+                        CyberpunkColors.hotPink.withValues(alpha: 0.15),
+                        CyberpunkColors.electricPurple.withValues(alpha: 0.1),
                       ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -192,8 +193,8 @@ class _NavBarItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: isSelected
             ? Border.all(
-                color:
-                    CyberpunkColors.hotPink.withOpacity(isDarkMode ? 0.5 : 0.4),
+                color: CyberpunkColors.hotPink
+                    .withValues(alpha: isDarkMode ? 0.5 : 0.4),
                 width: 1,
               )
             : null,
@@ -201,7 +202,7 @@ class _NavBarItem extends StatelessWidget {
             ? [
                 BoxShadow(
                   color: CyberpunkColors.hotPink
-                      .withOpacity(isDarkMode ? 0.3 : 0.2),
+                      .withValues(alpha: isDarkMode ? 0.3 : 0.2),
                   blurRadius: 12,
                   spreadRadius: -2,
                 ),

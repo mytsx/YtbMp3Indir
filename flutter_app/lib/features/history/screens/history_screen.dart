@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../../core/providers/providers.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/error_state_widget.dart';
@@ -62,8 +63,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     return Scaffold(
       backgroundColor: (isCyberpunk && isDarkMode) ? Colors.transparent : null,
       appBar: AppBar(
-        backgroundColor: (isCyberpunk && isDarkMode) ? Colors.transparent : null,
-        title: const Text('Download History'),
+        backgroundColor:
+            (isCyberpunk && isDarkMode) ? Colors.transparent : null,
+        title: Text('history.title'.tr()),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -74,7 +76,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 ref.read(historyProvider.notifier).refresh();
               }
             },
-            tooltip: 'Refresh',
+            tooltip: 'history.tooltip_refresh'.tr(),
           ),
         ],
       ),
@@ -87,7 +89,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               controller: _searchController,
               onChanged: _onSearchChanged,
               decoration: InputDecoration(
-                hintText: 'Search downloads...',
+                hintText: 'history.search_hint'.tr(),
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -112,10 +114,12 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 if (items.isEmpty) {
                   return EmptyStateWidget(
                     icon: _isSearching ? Icons.search_off : Icons.history,
-                    title: _isSearching ? 'No results found' : 'No download history',
+                    title: _isSearching
+                        ? 'history.empty_search_title'.tr()
+                        : 'history.empty_title'.tr(),
                     subtitle: _isSearching
-                        ? 'Try a different search query'
-                        : 'Your downloads will appear here',
+                        ? 'history.empty_search_subtitle'.tr()
+                        : 'history.empty_subtitle'.tr(),
                   );
                 }
 

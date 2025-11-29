@@ -1,24 +1,16 @@
-// ignore_for_file: deprecated_member_use
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/settings_provider.dart';
+import '../../../core/services/language_service.dart';
 
-class AudioQualitySection extends ConsumerWidget {
-  const AudioQualitySection({super.key});
+class LanguageSection extends ConsumerWidget {
+  const LanguageSection({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(settingsProvider);
-    final notifier = ref.read(settingsProvider.notifier);
     final theme = Theme.of(context);
-
-    final Map<String, String> qualityOptions = {
-      '128': 'settings.audio_quality.options.128'.tr(),
-      '192': 'settings.audio_quality.options.192'.tr(),
-      '256': 'settings.audio_quality.options.256'.tr(),
-      '320': 'settings.audio_quality.options.320'.tr(),
-    };
+    final currentLocale = context.locale;
+    final languageService = LanguageService();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -26,7 +18,7 @@ class AudioQualitySection extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
-            'settings.audio_quality.title'.tr(),
+            'settings.language.title'.tr(),
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -41,19 +33,19 @@ class AudioQualitySection extends ConsumerWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: settings.quality,
+              child: DropdownButton<Locale>(
+                value: currentLocale,
                 isExpanded: true,
                 icon: const Icon(Icons.arrow_drop_down),
-                items: qualityOptions.entries.map((entry) {
-                  return DropdownMenuItem<String>(
-                    value: entry.key,
-                    child: Text(entry.value),
+                items: context.supportedLocales.map((locale) {
+                  return DropdownMenuItem(
+                    value: locale,
+                    child: Text(languageService.getLanguageName(locale)),
                   );
                 }).toList(),
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    notifier.updateConfig(quality: newValue);
+                onChanged: (Locale? newLocale) {
+                  if (newLocale != null) {
+                    context.setLocale(newLocale);
                   }
                 },
               ),

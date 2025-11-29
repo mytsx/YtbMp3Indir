@@ -1,0 +1,171 @@
+{
+  "meta": {
+    "language_name": "Türkçe"
+  },
+  "settings": {
+    "title": "Ayarlar",
+    "about": "Hakkında",
+    "version": "Sürüm",
+    "language": {
+      "title": "Dil"
+    },
+    "audio_quality": {
+      "title": "Ses Kalitesi",
+      "options": {
+        "128": "128 kbps (Daha küçük dosya)",
+        "192": "192 kbps (Önerilen)",
+        "256": "256 kbps (Yüksek kalite)",
+        "320": "320 kbps (En iyi kalite)"
+      }
+    },
+    "appearance": {
+      "title": "Görünüm",
+      "theme": {
+        "label": "Tema",
+        "system": "Sistem",
+        "light": "Açık",
+        "dark": "Koyu"
+      },
+      "style": {
+        "label": "Stil",
+        "cyberpunk": "Cyberpunk",
+        "neopop": "NeoPop",
+        "classic": "Klasik"
+      }
+    },
+    "download_location": {
+      "title": "İndirme Konumu",
+      "select_dialog_title": "İndirme Klasörünü Seç",
+      "error_select": "Klasör seçilemedi: {}",
+      "label": "İndirme Klasörü",
+      "not_set": "Ayarlanmadı",
+      "auto_open": "Klasörü Otomatik Aç",
+      "auto_open_subtitle": "İndirme tamamlandığında klasörü aç"
+    },
+    "notifications": {
+      "title": "Bildirimler",
+      "sound": "Bildirim sesi",
+      "sound_subtitle": "İndirme tamamlandığında ses çal"
+    },
+    "history_retention": {
+      "title": "Geçmiş Saklama",
+      "section_title": "Geçmiş",
+      "keep_history_for": "Geçmişi Saklama Süresi",
+      "days_suffix": "gün",
+      "forever": "Süresiz",
+      "days_7": "7 gün",
+      "days_30": "30 gün",
+      "days_90": "90 gün",
+      "subtitle_forever": "Tüm geçmişi sakla",
+      "subtitle_days": "{} günden eski geçmişi sil"
+    },
+    "error_prefix": "Hata: {}",
+    "app_description": "Flutter ile YouTube MP3 İndirici"
+  },
+  "common": {
+    "initializing": "Başlatılıyor...",
+    "language_selection": "Dil Seçimi",
+    "continue": "Devam Et",
+    "retry": "Tekrar Dene",
+    "error_title": "Bir şeyler yanlış gitti"
+  },
+  "nav": {
+    "download": "İndir",
+    "history": "Geçmiş",
+    "convert": "Dönüştür",
+    "settings": "Ayarlar"
+  },
+  "queue": {
+    "title": "İndirme Kuyruğu",
+    "empty_title": "Kuyruk Yönetimi",
+    "empty_subtitle": "İndirmeler hemen başlar"
+  },
+  "download": {
+    "title": "İndirmeler",
+    "empty_list": "Henüz indirme yok",
+    "empty_subtitle": "Başlamak için yukarıya bir YouTube bağlantısı girin",
+    "error_empty_url": "Lütfen bir YouTube bağlantısı girin",
+    "error_invalid_url": "Lütfen geçerli bir YouTube bağlantısı girin",
+    "snackbar_started": "İndirme başlatıldı!",
+    "snackbar_error": "Hata: {}",
+    "input_label": "YouTube Bağlantısı",
+    "input_hint": "https://youtube.com/watch?v=...",
+    "btn_start": "İndirmeyi Başlat",
+    "btn_starting": "Başlatılıyor...",
+    "tip": "İpucu: Tekli videoları veya tüm oynatma listelerini indirebilirsiniz"
+  },
+  "history": {
+    "title": "İndirme Geçmişi",
+    "tooltip_refresh": "Yenile",
+    "search_hint": "İndirmelerde ara...",
+    "empty_search_title": "Sonuç bulunamadı",
+    "empty_search_subtitle": "Farklı bir arama terimi deneyin",
+    "empty_title": "İndirme geçmişi yok",
+    "empty_subtitle": "İndirmeleriniz burada görünecek"
+  },
+  "convert": {
+    "title": "Dönüştürmeler",
+    "empty_list": "Henüz dönüştürme yok",
+    "empty_subtitle": "Dönüştürmeye başlamak için yukarıdan bir dosya seçin",
+    "error_pick_file": "Dosya seçilemedi: {}",
+    "error_select_file": "Lütfen önce bir dosya seçin",
+    "error_start": "Dönüştürme başlatılamadı: {}",
+    "snackbar_started": "Dönüştürme başlatıldı!",
+    "snackbar_error": "Hata: {}",
+    "drop_here": "Dosyayı buraya bırakın",
+    "drag_drop_hint": "Dosyanızı buraya sürükleyip bırakın",
+    "or": "veya",
+    "browse_files": "Dosyalara Gözat",
+    "clear": "Temizle",
+    "change": "Değiştir",
+    "btn_converting": "Dönüştürülüyor...",
+    "btn_convert": "Dönüştür",
+    "supported_formats": "Giriş: MP4, MKV, AVI, MOV, WAV, FLAC, AAC, M4A ve daha fazlası",
+    "error_unsupported": "Desteklenmeyen dosya formatı"
+  },
+  "status": {
+    "pending": "Bekliyor...",
+    "downloading": "İndiriliyor...",
+    "converting": "MP3'e dönüştürülüyor...",
+    "completed": "Tamamlandı!",
+    "failed": "Başarısız",
+    "cancelled": "İptal edildi",
+    "unknown_error": "Bilinmeyen hata",
+    "fetching_info": "Bilgiler alınıyor..."
+  },
+  "card": {
+    "show_in_folder": "Klasörde Göster",
+    "delete": "Sil",
+    "open_video": "Videoyu Aç",
+    "download_completed": "İndirme tamamlandı",
+    "converting_progress": "Dönüştürülüyor..."
+  },
+  "dialog": {
+    "download_details": "İndirme Detayları",
+    "delete_history_title": "Geçmişten Sil",
+    "delete_history_confirm": "\"{}\" geçmişten silinsin mi?",
+    "close": "Kapat",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "labels": {
+      "title": "Başlık",
+      "channel": "Kanal",
+      "youtube": "YouTube",
+      "file_name": "Dosya Adı",
+      "file_path": "Dosya Yolu",
+      "format": "Format",
+      "size": "Boyut",
+      "duration": "Süre",
+      "downloaded": "İndirilme Tarihi"
+    }
+  },
+  "messages": {
+    "folder_open_error": "Klasör açılamadı: {}",
+    "url_open_error": "Bağlantı açılamadı: {}",
+    "url_copied": "Bağlantı kopyalandı",
+    "history_deleted": "Geçmişten silindi",
+    "history_delete_failed": "Silinemedi",
+    "conversion_failed": "Dönüştürme başarısız",
+    "file_not_found": "Dosya bulunamadı: {}"
+  }
+}

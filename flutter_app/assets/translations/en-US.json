@@ -1,0 +1,171 @@
+{
+  "meta": {
+    "language_name": "English"
+  },
+  "settings": {
+    "title": "Settings",
+    "about": "About",
+    "version": "Version",
+    "language": {
+      "title": "Language"
+    },
+    "audio_quality": {
+      "title": "Audio Quality",
+      "options": {
+        "128": "128 kbps (Smaller file size)",
+        "192": "192 kbps (Recommended)",
+        "256": "256 kbps (High quality)",
+        "320": "320 kbps (Best quality)"
+      }
+    },
+    "appearance": {
+      "title": "Appearance",
+      "theme": {
+        "label": "Theme",
+        "system": "System",
+        "light": "Light",
+        "dark": "Dark"
+      },
+      "style": {
+        "label": "Style",
+        "cyberpunk": "Cyberpunk",
+        "neopop": "NeoPop",
+        "classic": "Classic"
+      }
+    },
+    "download_location": {
+      "title": "Download Location",
+      "select_dialog_title": "Select Download Folder",
+      "error_select": "Failed to select folder: {}",
+      "label": "Download Folder",
+      "not_set": "Not set",
+      "auto_open": "Auto-open Folder",
+      "auto_open_subtitle": "Open folder after download completes"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "sound": "Notification sound",
+      "sound_subtitle": "Play a sound when download completes"
+    },
+    "history_retention": {
+      "title": "History Retention",
+      "section_title": "History",
+      "keep_history_for": "Keep History For",
+      "days_suffix": "days",
+      "forever": "Forever",
+      "days_7": "7 days",
+      "days_30": "30 days",
+      "days_90": "90 days",
+      "subtitle_forever": "Keep all history",
+      "subtitle_days": "Delete history older than {} days"
+    },
+    "error_prefix": "Error: {}",
+    "app_description": "YouTube MP3 Downloader with Flutter"
+  },
+  "common": {
+    "initializing": "Initializing...",
+    "language_selection": "Select Language",
+    "continue": "Continue",
+    "retry": "Retry",
+    "error_title": "Something went wrong"
+  },
+  "nav": {
+    "download": "Download",
+    "history": "History",
+    "convert": "Convert",
+    "settings": "Settings"
+  },
+  "queue": {
+    "title": "Download Queue",
+    "empty_title": "Queue Management",
+    "empty_subtitle": "Downloads start immediately"
+  },
+  "download": {
+    "title": "Downloads",
+    "empty_list": "No downloads yet",
+    "empty_subtitle": "Enter a YouTube URL above to get started",
+    "error_empty_url": "Please enter a YouTube URL",
+    "error_invalid_url": "Please enter a valid YouTube URL",
+    "snackbar_started": "Download started!",
+    "snackbar_error": "Error: {}",
+    "input_label": "YouTube URL",
+    "input_hint": "https://youtube.com/watch?v=...",
+    "btn_start": "Start Download",
+    "btn_starting": "Starting...",
+    "tip": "Tip: You can download individual videos or entire playlists"
+  },
+  "history": {
+    "title": "Download History",
+    "tooltip_refresh": "Refresh",
+    "search_hint": "Search downloads...",
+    "empty_search_title": "No results found",
+    "empty_search_subtitle": "Try a different search query",
+    "empty_title": "No download history",
+    "empty_subtitle": "Your downloads will appear here"
+  },
+  "convert": {
+    "title": "Conversions",
+    "empty_list": "No conversions yet",
+    "empty_subtitle": "Select a file above to start converting",
+    "error_pick_file": "Failed to pick file: {}",
+    "error_select_file": "Please select a file first",
+    "error_start": "Failed to start conversion: {}",
+    "snackbar_started": "Conversion started!",
+    "snackbar_error": "Error: {}",
+    "drop_here": "Drop file here",
+    "drag_drop_hint": "Drag and drop your file here",
+    "or": "or",
+    "browse_files": "Browse Files",
+    "clear": "Clear",
+    "change": "Change",
+    "btn_converting": "Converting...",
+    "btn_convert": "Convert",
+    "supported_formats": "Input: MP4, MKV, AVI, MOV, WAV, FLAC, AAC, M4A, and more",
+    "error_unsupported": "Unsupported file format"
+  },
+  "status": {
+    "pending": "Pending...",
+    "downloading": "Downloading...",
+    "converting": "Converting to MP3...",
+    "completed": "Completed!",
+    "failed": "Failed",
+    "cancelled": "Cancelled",
+    "unknown_error": "Unknown error",
+    "fetching_info": "Fetching info..."
+  },
+  "card": {
+    "show_in_folder": "Show in Folder",
+    "delete": "Delete",
+    "open_video": "Open Video",
+    "download_completed": "Download completed",
+    "converting_progress": "Converting..."
+  },
+  "dialog": {
+    "download_details": "Download Details",
+    "delete_history_title": "Delete from History",
+    "delete_history_confirm": "Remove \"{}\" from history?",
+    "close": "Close",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "labels": {
+      "title": "Title",
+      "channel": "Channel",
+      "youtube": "YouTube",
+      "file_name": "File Name",
+      "file_path": "File Path",
+      "format": "Format",
+      "size": "Size",
+      "duration": "Duration",
+      "downloaded": "Downloaded"
+    }
+  },
+  "messages": {
+    "folder_open_error": "Could not open folder: {}",
+    "url_open_error": "Error opening URL: {}",
+    "url_copied": "URL copied",
+    "history_deleted": "Deleted from history",
+    "history_delete_failed": "Failed to delete item",
+    "conversion_failed": "Conversion failed",
+    "file_not_found": "File not found: {}"
+  }
+}

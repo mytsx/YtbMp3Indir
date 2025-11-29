@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../../core/models/history_item.dart';
 import '../../../core/utils/platform_utils.dart';
 import '../../../shared/widgets/media_item_card.dart';
@@ -40,21 +41,20 @@ class HistoryCard extends ConsumerWidget {
       ],
       actions: [
         // Play button (if file exists)
-        if (item.filePath != null)
-          PlayButton(filePath: item.filePath!),
+        if (item.filePath != null) PlayButton(filePath: item.filePath!),
         // Show in folder button (if file exists)
         if (item.filePath != null)
           IconButton(
             onPressed: () => _showInFolder(context),
             icon: const Icon(Icons.folder_open, size: 20),
-            tooltip: 'Show in Folder',
+            tooltip: 'card.show_in_folder'.tr(),
             visualDensity: VisualDensity.compact,
           ),
         // Delete button
         IconButton(
           onPressed: () => _confirmDelete(context, ref),
           icon: const Icon(Icons.delete_outline, size: 20),
-          tooltip: 'Delete',
+          tooltip: 'card.delete'.tr(),
           color: colorScheme.error,
           visualDensity: VisualDensity.compact,
         ),
@@ -66,40 +66,47 @@ class HistoryCard extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Download Details'),
+        title: Text('dialog.download_details'.tr()),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildDetailRow(context, 'Title', item.videoTitle),
+              _buildDetailRow(
+                  context, 'dialog.labels.title'.tr(), item.videoTitle),
               if (item.channelName != null)
                 _buildLinkRow(
                   context,
-                  'Channel',
+                  'dialog.labels.channel'.tr(),
                   item.channelName!,
                   item.channelUrl,
                 ),
               _buildLinkRow(
                 context,
-                'YouTube',
-                'Open Video',
+                'dialog.labels.youtube'.tr(),
+                'card.open_video'.tr(),
                 item.url,
               ),
-              _buildDetailRow(context, 'File Name', item.fileName),
+              _buildDetailRow(
+                  context, 'dialog.labels.file_name'.tr(), item.fileName),
               if (item.filePath != null)
-                _buildDetailRow(context, 'File Path', item.filePath!),
-              _buildDetailRow(context, 'Format', item.format.toUpperCase()),
-              _buildDetailRow(context, 'Size', item.formattedSize),
-              _buildDetailRow(context, 'Duration', item.formattedDuration),
-              _buildDetailRow(context, 'Downloaded', item.formattedDate),
+                _buildDetailRow(
+                    context, 'dialog.labels.file_path'.tr(), item.filePath!),
+              _buildDetailRow(context, 'dialog.labels.format'.tr(),
+                  item.format.toUpperCase()),
+              _buildDetailRow(
+                  context, 'dialog.labels.size'.tr(), item.formattedSize),
+              _buildDetailRow(context, 'dialog.labels.duration'.tr(),
+                  item.formattedDuration),
+              _buildDetailRow(
+                  context, 'dialog.labels.downloaded'.tr(), item.formattedDate),
             ],
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+            child: Text('dialog.close'.tr()),
           ),
         ],
       ),
@@ -135,7 +142,8 @@ class HistoryCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildLinkRow(BuildContext context, String label, String text, String? url) {
+  Widget _buildLinkRow(
+      BuildContext context, String label, String text, String? url) {
     final hasUrl = url != null && url.isNotEmpty;
     final theme = Theme.of(context);
 
@@ -209,9 +217,9 @@ class HistoryCard extends ConsumerWidget {
   void _copyToClipboard(BuildContext context, String text) {
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('URL copied'),
-        duration: Duration(seconds: 1),
+      SnackBar(
+        content: Text('messages.url_copied'.tr()),
+        duration: const Duration(seconds: 1),
       ),
     );
   }
@@ -223,7 +231,7 @@ class HistoryCard extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error opening URL: $e'),
+            content: Text('messages.url_open_error'.tr(args: [e.toString()])),
             backgroundColor: Colors.red,
           ),
         );
@@ -240,7 +248,8 @@ class HistoryCard extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not open folder: $e'),
+            content:
+                Text('messages.folder_open_error'.tr(args: [e.toString()])),
             backgroundColor: Colors.red,
           ),
         );
@@ -252,34 +261,36 @@ class HistoryCard extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete from History'),
-        content: Text('Remove "${item.videoTitle}" from history?'),
+        title: Text('dialog.delete_history_title'.tr()),
+        content: Text(
+            'dialog.delete_history_confirm'.tr(args: [item.videoTitle])),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text('dialog.cancel'.tr()),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: const Text('Delete'),
+            child: Text('dialog.delete'.tr()),
           ),
         ],
       ),
     );
 
     if (confirmed == true && context.mounted) {
-      final success = await ref.read(historyProvider.notifier).deleteItem(item.id);
+      final success =
+          await ref.read(historyProvider.notifier).deleteItem(item.id);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               success
-                  ? 'Deleted from history'
-                  : 'Failed to delete item',
+                  ? 'messages.history_deleted'.tr()
+                  : 'messages.history_delete_failed'.tr(),
             ),
             backgroundColor: success ? Colors.green : Colors.red,
           ),

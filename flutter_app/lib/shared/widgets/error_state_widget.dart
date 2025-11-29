@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ErrorStateWidget extends StatelessWidget {
   final String message;
   final VoidCallback? onRetry;
-  final String retryLabel;
+  final String? retryLabel;
 
   const ErrorStateWidget({
     super.key,
     required this.message,
     this.onRetry,
-    this.retryLabel = 'Retry',
+    this.retryLabel,
   });
 
   @override
@@ -28,7 +29,7 @@ class ErrorStateWidget extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Something went wrong',
+            'common.error_title'.tr(),
             style: theme.textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
@@ -47,7 +48,7 @@ class ErrorStateWidget extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: Text(retryLabel),
+              label: Text(retryLabel ?? 'common.retry'.tr()),
             ),
           ],
         ],

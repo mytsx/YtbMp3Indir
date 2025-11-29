@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../../core/constants.dart';
 import '../../../core/providers/providers.dart';
 import '../../../core/models/conversion.dart';
@@ -48,7 +49,7 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Failed to pick file: $e';
+        _errorMessage = 'convert.error_pick_file'.tr(args: [e.toString()]);
       });
     }
   }
@@ -56,7 +57,7 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
   Future<void> _startConversion() async {
     if (_selectedFilePath == null) {
       setState(() {
-        _errorMessage = 'Please select a file first';
+        _errorMessage = 'convert.error_select_file'.tr();
       });
       return;
     }
@@ -91,22 +92,22 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
       // Show success snackbar
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Conversion started!'),
+          SnackBar(
+            content: Text('convert.snackbar_started'.tr()),
             backgroundColor: CyberpunkColors.matrixGreen,
           ),
         );
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Failed to start conversion: $e';
+        _errorMessage = 'convert.error_start'.tr(args: [e.toString()]);
       });
 
       // Show error snackbar
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('convert.snackbar_error'.tr(args: [e.toString()])),
             backgroundColor: CyberpunkColors.neonPinkGlow,
           ),
         );
@@ -170,7 +171,7 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
             Row(
               children: [
                 Text(
-                  'Conversions',
+                  'convert.title'.tr(),
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -188,7 +189,8 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
                     borderRadius: BorderRadius.circular(12),
                     border: isCyberpunk
                         ? Border.all(
-                            color: CyberpunkColors.cyberYellow.withValues(alpha: 0.5),
+                            color: CyberpunkColors.cyberYellow
+                                .withValues(alpha: 0.5),
                             width: 1,
                           )
                         : null,
@@ -212,10 +214,10 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
             // Conversions list
             Expanded(
               child: conversions.isEmpty
-                  ? const EmptyStateWidget(
+                  ? EmptyStateWidget(
                       icon: Icons.transform_outlined,
-                      title: 'No conversions yet',
-                      subtitle: 'Select a file above to start converting',
+                      title: 'convert.empty_list'.tr(),
+                      subtitle: 'convert.empty_subtitle'.tr(),
                       iconSize: 48,
                     )
                   : ListView.builder(

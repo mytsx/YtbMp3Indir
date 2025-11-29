@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../features/player/audio_player_provider.dart';
 
 class PlayButton extends ConsumerWidget {
@@ -55,7 +56,8 @@ class PlayButton extends ConsumerWidget {
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('File not found: $absolutePath'),
+                  content:
+                      Text('messages.file_not_found'.tr(args: [absolutePath])),
                   backgroundColor: Colors.red,
                 ),
               );

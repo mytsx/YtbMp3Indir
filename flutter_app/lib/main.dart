@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +16,7 @@ import 'shared/widgets/neo_pop_nav_bar.dart';
 import 'core/providers/providers.dart';
 import 'core/services/backend_service.dart';
 import 'core/services/settings_service.dart';
+import 'core/services/language_service.dart';
 import 'core/theme/cyberpunk_theme.dart';
 import 'core/theme/neo_pop_theme.dart';
 
@@ -64,10 +66,15 @@ Future<void> _startBackend() async {
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
+  await EasyLocalization.ensureInitialized();
 
   // Initialize settings service (SharedPreferences)
   _settingsService = SettingsService();
   await _settingsService.init();
+
+  // Initialize LanguageService to find available languages
+  final languageService = LanguageService();
+  await languageService.init();
 
   // Create provider container with pre-initialized settings service
   _container = ProviderContainer(
@@ -97,9 +104,14 @@ void main() async {
 
   // Run the app (backend will be started from splash screen)
   runApp(
-    UncontrolledProviderScope(
-      container: _container,
-      child: const MyApp(),
+    EasyLocalization(
+      supportedLocales: languageService.supportedLocales,
+      path: 'assets/translations',
+      fallbackLocale: const Locale('en', 'US'),
+      child: UncontrolledProviderScope(
+        container: _container,
+        child: const MyApp(),
+      ),
     ),
   );
 }
@@ -224,6 +236,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     return MaterialApp(
       title: 'MP3 Yap',
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: context.localizationDelegates,
+      supportedLocales: context.supportedLocales,
+      locale: context.locale,
       themeMode: themeMode,
       theme: lightTheme,
       darkTheme: darkTheme,
@@ -255,28 +270,28 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
     SettingsScreen(),
   ];
 
-  static const _navItems = [
-    NavItem(
-      icon: Icons.download_outlined,
-      selectedIcon: Icons.download,
-      label: 'Download',
-    ),
-    NavItem(
-      icon: Icons.history_outlined,
-      selectedIcon: Icons.history,
-      label: 'History',
-    ),
-    NavItem(
-      icon: Icons.transform_outlined,
-      selectedIcon: Icons.transform,
-      label: 'Convert',
-    ),
-    NavItem(
-      icon: Icons.settings_outlined,
-      selectedIcon: Icons.settings,
-      label: 'Settings',
-    ),
-  ];
+  List<NavItem> get _navItems => [
+        NavItem(
+          icon: Icons.download_outlined,
+          selectedIcon: Icons.download,
+          label: 'nav.download'.tr(),
+        ),
+        NavItem(
+          icon: Icons.history_outlined,
+          selectedIcon: Icons.history,
+          label: 'nav.history'.tr(),
+        ),
+        NavItem(
+          icon: Icons.transform_outlined,
+          selectedIcon: Icons.transform,
+          label: 'nav.convert'.tr(),
+        ),
+        NavItem(
+          icon: Icons.settings_outlined,
+          selectedIcon: Icons.settings,
+          label: 'nav.settings'.tr(),
+        ),
+      ];
 
   @override
   Widget build(BuildContext context) {
@@ -360,26 +375,26 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
               _currentIndex = index;
             });
           },
-          destinations: const [
+          destinations: [
             NavigationDestination(
-              icon: Icon(Icons.download_outlined),
-              selectedIcon: Icon(Icons.download),
-              label: 'Download',
+              icon: const Icon(Icons.download_outlined),
+              selectedIcon: const Icon(Icons.download),
+              label: 'nav.download'.tr(),
             ),
             NavigationDestination(
-              icon: Icon(Icons.history_outlined),
-              selectedIcon: Icon(Icons.history),
-              label: 'History',
+              icon: const Icon(Icons.history_outlined),
+              selectedIcon: const Icon(Icons.history),
+              label: 'nav.history'.tr(),
             ),
             NavigationDestination(
-              icon: Icon(Icons.transform_outlined),
-              selectedIcon: Icon(Icons.transform),
-              label: 'Convert',
+              icon: const Icon(Icons.transform_outlined),
+              selectedIcon: const Icon(Icons.transform),
+              label: 'nav.convert'.tr(),
             ),
             NavigationDestination(
-              icon: Icon(Icons.settings_outlined),
-              selectedIcon: Icon(Icons.settings),
-              label: 'Settings',
+              icon: const Icon(Icons.settings_outlined),
+              selectedIcon: const Icon(Icons.settings),
+              label: 'nav.settings'.tr(),
             ),
           ],
         ),

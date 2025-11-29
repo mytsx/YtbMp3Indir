@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../providers/settings_provider.dart';
 
 class DownloadLocationSection extends ConsumerWidget {
@@ -10,7 +11,7 @@ class DownloadLocationSection extends ConsumerWidget {
       BuildContext context, WidgetRef ref, String currentDir) async {
     try {
       final result = await FilePicker.platform.getDirectoryPath(
-        dialogTitle: 'Select Download Folder',
+        dialogTitle: 'settings.download_location.select_dialog_title'.tr(),
         initialDirectory: currentDir.isNotEmpty ? currentDir : null,
       );
 
@@ -21,7 +22,8 @@ class DownloadLocationSection extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to select folder: $e'),
+            content: Text('settings.download_location.error_select'
+                .tr(args: [e.toString()])),
             backgroundColor: Colors.red,
           ),
         );
@@ -40,7 +42,7 @@ class DownloadLocationSection extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
-            'Download Location',
+            'settings.download_location.title'.tr(),
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -48,9 +50,11 @@ class DownloadLocationSection extends ConsumerWidget {
         ),
         ListTile(
           leading: const Icon(Icons.folder_outlined),
-          title: const Text('Download Folder'),
+          title: Text('settings.download_location.label'.tr()),
           subtitle: Text(
-            settings.outputDir.isNotEmpty ? settings.outputDir : 'Not set',
+            settings.outputDir.isNotEmpty
+                ? settings.outputDir
+                : 'settings.download_location.not_set'.tr(),
             style: TextStyle(
               color: settings.outputDir.isNotEmpty ? null : Colors.grey,
             ),
@@ -62,8 +66,8 @@ class DownloadLocationSection extends ConsumerWidget {
         ),
         SwitchListTile(
           secondary: const Icon(Icons.open_in_new),
-          title: const Text('Auto-open Folder'),
-          subtitle: const Text('Open folder after download completes'),
+          title: Text('settings.download_location.auto_open'.tr()),
+          subtitle: Text('settings.download_location.auto_open_subtitle'.tr()),
           value: settings.autoOpen,
           onChanged: (value) {
             ref.read(settingsProvider.notifier).updateConfig(autoOpen: value);

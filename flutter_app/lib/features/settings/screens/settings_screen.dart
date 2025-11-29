@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../../core/theme/cyberpunk_colors.dart';
 import '../../../core/providers/providers.dart';
 import '../providers/settings_provider.dart';
@@ -7,6 +8,7 @@ import '../widgets/appearance_section.dart';
 import '../widgets/audio_quality_section.dart';
 import '../widgets/download_location_section.dart';
 import '../widgets/history_retention_section.dart';
+import '../widgets/language_section.dart';
 import '../widgets/notifications_section.dart';
 
 /// Settings screen for application configuration
@@ -26,8 +28,9 @@ class SettingsScreen extends ConsumerWidget {
       if (next.error != null && next.error != previous?.error) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${next.error}'),
-            backgroundColor: isCyberpunk ? CyberpunkColors.neonPinkGlow : Colors.red,
+            content: Text('settings.error_prefix'.tr(args: [next.error!])),
+            backgroundColor:
+                isCyberpunk ? CyberpunkColors.neonPinkGlow : Colors.red,
           ),
         );
       }
@@ -36,7 +39,8 @@ class SettingsScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.successMessage!),
-            backgroundColor: isCyberpunk ? CyberpunkColors.matrixGreen : Colors.green,
+            backgroundColor:
+                isCyberpunk ? CyberpunkColors.matrixGreen : Colors.green,
           ),
         );
       }
@@ -45,8 +49,9 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: (isCyberpunk && isDarkMode) ? Colors.transparent : null,
       appBar: AppBar(
-        backgroundColor: (isCyberpunk && isDarkMode) ? Colors.transparent : null,
-        title: const Text('Settings'),
+        backgroundColor:
+            (isCyberpunk && isDarkMode) ? Colors.transparent : null,
+        title: Text('settings.title'.tr()),
         actions: [
           if (settings.isLoading)
             const Center(
@@ -63,6 +68,8 @@ class SettingsScreen extends ConsumerWidget {
       ),
       body: ListView(
         children: [
+          const LanguageSection(),
+          const Divider(),
           const AudioQualitySection(),
           const Divider(),
           const DownloadLocationSection(),
@@ -81,7 +88,7 @@ class SettingsScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'About',
+                  'settings.about'.tr(),
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -93,14 +100,14 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Version 1.0.0',
+                  '${'settings.version'.tr()} 1.0.0',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: Colors.grey[600],
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'YouTube MP3 Downloader with Flutter',
+                  'settings.app_description'.tr(),
                   style: theme.textTheme.bodyMedium,
                 ),
               ],

@@ -64,13 +64,13 @@ class AppThemeBuilder {
     return CardThemeData(
       color: isDark ? colors.surfaceContainer : colors.surface,
       elevation: isDark ? 0 : 2,
-      shadowColor: isDark ? null : colors.primary.withOpacity(0.1),
+      shadowColor: isDark ? null : colors.primary.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: isDark
-              ? colors.outline.withOpacity(0.5)
-              : colors.primary.withOpacity(0.2),
+              ? colors.outline.withValues(alpha: 0.5)
+              : colors.primary.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -134,8 +134,8 @@ class AppThemeBuilder {
   static InputDecorationTheme _buildInputDecorationTheme(ColorScheme colors) {
     final isDark = colors.brightness == Brightness.dark;
     final borderColor = isDark
-        ? colors.outline.withOpacity(0.5)
-        : colors.primary.withOpacity(0.3);
+        ? colors.outline.withValues(alpha: 0.5)
+        : colors.primary.withValues(alpha: 0.3);
     final fillColor = isDark ? colors.surfaceContainerHighest : colors.surface;
 
     return InputDecorationTheme(
@@ -195,7 +195,7 @@ class AppThemeBuilder {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: colors.outline.withOpacity(0.5),
+          color: colors.outline.withValues(alpha: 0.5),
         ),
       ),
       behavior: SnackBarBehavior.floating,
@@ -214,8 +214,8 @@ class AppThemeBuilder {
   static DividerThemeData _buildDividerTheme(ColorScheme colors) {
     return DividerThemeData(
       color: colors.brightness == Brightness.dark
-          ? colors.outline.withOpacity(0.5)
-          : colors.primary.withOpacity(0.2),
+          ? colors.outline.withValues(alpha: 0.5)
+          : colors.primary.withValues(alpha: 0.2),
       thickness: 1,
       space: 24,
     );
@@ -240,8 +240,8 @@ class AppThemeBuilder {
             borderRadius: BorderRadius.circular(12),
             side: BorderSide(
               color: colors.brightness == Brightness.dark
-                  ? colors.outline.withOpacity(0.5)
-                  : colors.primary.withOpacity(0.2),
+                  ? colors.outline.withValues(alpha: 0.5)
+                  : colors.primary.withValues(alpha: 0.2),
             ),
           ),
         ),
@@ -258,7 +258,7 @@ class AppThemeBuilder {
         return colors.onSurfaceVariant;
       }),
       overlayColor: WidgetStateProperty.all(
-        colors.primary.withOpacity(0.1),
+        colors.primary.withValues(alpha: 0.1),
       ),
     );
   }

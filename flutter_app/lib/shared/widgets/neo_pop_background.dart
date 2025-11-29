@@ -12,8 +12,8 @@ class NeoPopBackground extends StatelessWidget {
     final bgColor =
         isDark ? NeoPopColors.darkBackground : NeoPopColors.lightBackground;
     final dotColor = isDark
-        ? NeoPopColors.starkWhite.withOpacity(0.1)
-        : NeoPopColors.starkBlack.withOpacity(0.1);
+        ? NeoPopColors.starkWhite.withValues(alpha: 0.1)
+        : NeoPopColors.starkBlack.withValues(alpha: 0.1);
 
     return Stack(
       children: [
@@ -33,7 +33,7 @@ class NeoPopBackground extends StatelessWidget {
           child: _buildShape(
             width: 200,
             height: 200,
-            color: NeoPopColors.vibrantYellow.withOpacity(0.2),
+            color: NeoPopColors.vibrantYellow.withValues(alpha: 0.2),
             shape: BoxShape.circle,
           ),
         ),
@@ -43,7 +43,7 @@ class NeoPopBackground extends StatelessWidget {
           child: _buildShape(
             width: 150,
             height: 150,
-            color: NeoPopColors.hotPink.withOpacity(0.2),
+            color: NeoPopColors.hotPink.withValues(alpha: 0.2),
             shape: BoxShape.rectangle,
             borderRadius: BorderRadius.circular(20),
           ),

@@ -137,9 +137,17 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
                 setState(() {
                   _selectedFilePath = null;
                   _selectedFileName = null;
+                  _errorMessage = null;
                 });
               },
               onConvert: _startConversion,
+              onFileDrop: (path, name) {
+                setState(() {
+                  _selectedFilePath = path;
+                  _selectedFileName = name;
+                  _errorMessage = null;
+                });
+              },
             ),
 
             const SizedBox(height: 24),

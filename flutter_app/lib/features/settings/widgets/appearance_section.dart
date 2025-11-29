@@ -32,6 +32,7 @@ class AppearanceSection extends ConsumerWidget {
                 child: Text('Theme'),
               ),
               SegmentedButton<ThemeMode>(
+                key: const ValueKey('theme_mode_selector'),
                 segments: const [
                   ButtonSegment<ThemeMode>(
                     value: ThemeMode.system,

@@ -122,9 +122,13 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
   Widget build(BuildContext context) {
     // Watch conversions list
     final conversions = ref.watch(conversionsProvider);
+    final themeStyle = ref.watch(themeStyleProvider);
+    final isCyberpunk = themeStyle == 'cyberpunk';
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: (isCyberpunk && isDarkMode) ? Colors.transparent : null,
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -178,19 +182,25 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: CyberpunkColors.cyberYellow.withValues(alpha: 0.2),
+                    color: isCyberpunk
+                        ? CyberpunkColors.cyberYellow.withValues(alpha: 0.2)
+                        : colorScheme.tertiaryContainer,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: CyberpunkColors.cyberYellow.withValues(alpha: 0.5),
-                      width: 1,
-                    ),
+                    border: isCyberpunk
+                        ? Border.all(
+                            color: CyberpunkColors.cyberYellow.withValues(alpha: 0.5),
+                            width: 1,
+                          )
+                        : null,
                   ),
                   child: Text(
                     '${conversions.length}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: CyberpunkColors.cyberYellow,
+                      color: isCyberpunk
+                          ? CyberpunkColors.cyberYellow
+                          : colorScheme.onTertiaryContainer,
                     ),
                   ),
                 ),

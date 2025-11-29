@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/providers.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/error_state_widget.dart';
 import '../providers/history_provider.dart';
@@ -54,10 +55,14 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     final historyAsync = _isSearching
         ? ref.watch(searchHistoryProvider(_searchQuery))
         : ref.watch(historyProvider);
+    final themeStyle = ref.watch(themeStyleProvider);
+    final isCyberpunk = themeStyle == 'cyberpunk';
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: (isCyberpunk && isDarkMode) ? Colors.transparent : null,
       appBar: AppBar(
+        backgroundColor: (isCyberpunk && isDarkMode) ? Colors.transparent : null,
         title: const Text('Download History'),
         actions: [
           IconButton(

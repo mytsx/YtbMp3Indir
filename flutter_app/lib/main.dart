@@ -221,6 +221,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       themeMode: themeMode,
       theme: lightTheme,
       darkTheme: darkTheme,
+      // Disable theme animation to prevent TextStyle.lerp errors
+      // when switching between theme styles with different inherit values
+      themeAnimationDuration: Duration.zero,
       home: _showSplash
           ? SplashScreen(message: _splashMessage)
           : const MainNavigation(),
@@ -272,24 +275,44 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     final themeStyle = ref.watch(themeStyleProvider);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     if (themeStyle == 'cyberpunk') {
-      return CyberpunkBackground(
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          body: IndexedStack(
-            index: _currentIndex,
-            children: _screens,
+      // Cyberpunk dark mode: use animated background
+      if (isDarkMode) {
+        return CyberpunkBackground(
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            body: IndexedStack(
+              index: _currentIndex,
+              children: _screens,
+            ),
+            bottomNavigationBar: AnimatedNavBar(
+              currentIndex: _currentIndex,
+              items: _navItems,
+              onTap: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+            ),
           ),
-          bottomNavigationBar: AnimatedNavBar(
-            currentIndex: _currentIndex,
-            items: _navItems,
-            onTap: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
-          ),
+        );
+      }
+      // Cyberpunk light mode: use standard scaffold with AnimatedNavBar
+      return Scaffold(
+        body: IndexedStack(
+          index: _currentIndex,
+          children: _screens,
+        ),
+        bottomNavigationBar: AnimatedNavBar(
+          currentIndex: _currentIndex,
+          items: _navItems,
+          onTap: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+          },
         ),
       );
     } else {

@@ -42,13 +42,7 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
     'wav', 'flac', 'aac', 'm4a', 'ogg', 'wma', 'aiff',
   ];
 
-  static const _outputFormats = [
-    {'value': 'mp3', 'label': 'MP3', 'description': 'Most compatible'},
-    {'value': 'wav', 'label': 'WAV', 'description': 'Lossless, large'},
-    {'value': 'flac', 'label': 'FLAC', 'description': 'Lossless, compressed'},
-    {'value': 'aac', 'label': 'AAC', 'description': 'Apple format'},
-    {'value': 'ogg', 'label': 'OGG', 'description': 'Open format'},
-  ];
+  static const _outputFormats = ['mp3', 'wav', 'flac', 'aac', 'ogg'];
 
   bool _isSupported(String path) {
     final ext = path.split('.').last.toLowerCase();
@@ -197,59 +191,11 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
 
             const SizedBox(height: 16),
 
-            // Format selector and Convert button row
+            // Convert button with format selector
             Row(
               children: [
-                // Format dropdown
-                Expanded(
-                  flex: 2,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: colorScheme.outline.withValues(alpha: 0.5)),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: widget.selectedFormat,
-                        isExpanded: true,
-                        icon: const Icon(Icons.arrow_drop_down),
-                        items: _outputFormats.map((format) {
-                          return DropdownMenuItem<String>(
-                            value: format['value'] as String,
-                            child: Row(
-                              children: [
-                                Text(
-                                  format['label'] as String,
-                                  style: const TextStyle(fontWeight: FontWeight.w500),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  format['description'] as String,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: widget.isConverting
-                            ? null
-                            : (value) {
-                                if (value != null) {
-                                  widget.onFormatChanged?.call(value);
-                                }
-                              },
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
                 // Convert button
                 Expanded(
-                  flex: 3,
                   child: FilledButton.icon(
                     onPressed: widget.isConverting || widget.selectedFilePath == null
                         ? null
@@ -264,15 +210,43 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
                             ),
                           )
                         : const Icon(Icons.transform),
-                    label: Text(
-                      widget.isConverting
-                          ? 'Converting...'
-                          : 'Convert to ${widget.selectedFormat.toUpperCase()}',
-                    ),
+                    label: Text(widget.isConverting ? 'Converting...' : 'Convert'),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       textStyle: const TextStyle(fontSize: 16),
                       backgroundColor: Colors.orange,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Small format selector
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: colorScheme.outline.withValues(alpha: 0.5)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: widget.selectedFormat,
+                      icon: const Icon(Icons.arrow_drop_down, size: 20),
+                      isDense: true,
+                      items: _outputFormats.map((format) {
+                        return DropdownMenuItem<String>(
+                          value: format,
+                          child: Text(
+                            format.toUpperCase(),
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: widget.isConverting
+                          ? null
+                          : (value) {
+                              if (value != null) {
+                                widget.onFormatChanged?.call(value);
+                              }
+                            },
                     ),
                   ),
                 ),

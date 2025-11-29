@@ -32,12 +32,13 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 });
 
 /// Theme mode provider with persistence
-class ThemeModeNotifier extends StateNotifier<ThemeMode> {
-  final SettingsService _settingsService;
+class ThemeModeNotifier extends Notifier<ThemeMode> {
+  late SettingsService _settingsService;
 
-  ThemeModeNotifier(this._settingsService) : super(ThemeMode.system) {
-    // Load saved theme mode
-    state = _settingsService.getThemeMode();
+  @override
+  ThemeMode build() {
+    _settingsService = ref.watch(settingsServiceProvider);
+    return _settingsService.getThemeMode();
   }
 
   void setThemeMode(ThemeMode mode) {
@@ -51,18 +52,17 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   }
 }
 
-final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((ref) {
-  final settingsService = ref.watch(settingsServiceProvider);
-  return ThemeModeNotifier(settingsService);
-});
+final themeModeProvider =
+    NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
 
 /// Theme style provider with persistence
-class ThemeStyleNotifier extends StateNotifier<String> {
-  final SettingsService _settingsService;
+class ThemeStyleNotifier extends Notifier<String> {
+  late SettingsService _settingsService;
 
-  ThemeStyleNotifier(this._settingsService) : super('cyberpunk') {
-    // Load saved theme style
-    state = _settingsService.getThemeStyle();
+  @override
+  String build() {
+    _settingsService = ref.watch(settingsServiceProvider);
+    return _settingsService.getThemeStyle();
   }
 
   void setThemeStyle(String style) {
@@ -71,15 +71,32 @@ class ThemeStyleNotifier extends StateNotifier<String> {
   }
 }
 
-final themeStyleProvider = StateNotifierProvider<ThemeStyleNotifier, String>((ref) {
-  final settingsService = ref.watch(settingsServiceProvider);
-  return ThemeStyleNotifier(settingsService);
-});
+final themeStyleProvider =
+    NotifierProvider<ThemeStyleNotifier, String>(ThemeStyleNotifier.new);
+
+/// Notification settings notifier with persistence
+class NotificationSettingsNotifier extends Notifier<NotificationSettings> {
+  late SettingsService _settingsService;
+
+  @override
+  NotificationSettings build() {
+    _settingsService = ref.watch(settingsServiceProvider);
+    return NotificationSettings(
+      soundEnabled: _settingsService.getNotificationSoundEnabled(),
+    );
+  }
+
+  void setSoundEnabled(bool enabled) {
+    state = state.copyWith(soundEnabled: enabled);
+    _settingsService.setNotificationSoundEnabled(enabled);
+  }
+
+  void toggleSound() {
+    setSoundEnabled(!state.soundEnabled);
+  }
+}
 
 /// Notification settings provider with persistence
 final notificationSettingsProvider =
-    StateNotifierProvider<NotificationSettingsNotifier, NotificationSettings>(
-        (ref) {
-  final settingsService = ref.watch(settingsServiceProvider);
-  return NotificationSettingsNotifier(settingsService);
-});
+    NotifierProvider<NotificationSettingsNotifier, NotificationSettings>(
+        NotificationSettingsNotifier.new);

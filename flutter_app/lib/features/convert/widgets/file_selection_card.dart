@@ -62,14 +62,18 @@ class _FileSelectionCardState extends ConsumerState<FileSelectionCard> {
     final isDarkMode = theme.brightness == Brightness.dark;
 
     // Theme-adaptive colors
-    final primaryAccent = isCyberpunk ? CyberpunkColors.hotPink : colorScheme.primary;
-    final successColor = isCyberpunk ? CyberpunkColors.matrixGreen : Colors.green;
+    final primaryAccent =
+        isCyberpunk ? CyberpunkColors.hotPink : colorScheme.primary;
+    final successColor =
+        isCyberpunk ? CyberpunkColors.matrixGreen : Colors.green;
     final errorColor = isCyberpunk ? CyberpunkColors.neonPinkGlow : Colors.red;
     final mutedColor = isCyberpunk
         ? (isDarkMode ? CyberpunkColors.textSecondary : const Color(0xFF45454F))
         : colorScheme.onSurfaceVariant;
     final borderColor = isCyberpunk
-        ? (isDarkMode ? CyberpunkColors.surfaceBorder : CyberpunkColors.hotPink.withValues(alpha: 0.3))
+        ? (isDarkMode
+            ? CyberpunkColors.surfaceBorder
+            : CyberpunkColors.hotPink.withValues(alpha: 0.3))
         : colorScheme.outline;
 
     Widget content = Padding(
@@ -98,19 +102,21 @@ class _FileSelectionCardState extends ConsumerState<FileSelectionCard> {
               }
             },
             child: DottedBorder(
-              borderType: BorderType.RRect,
-              radius: const Radius.circular(12),
-              dashPattern: const [8, 4],
-              strokeWidth: _isDragging ? 2 : 1.5,
-              color: _isDragging
-                  ? primaryAccent
-                  : widget.selectedFilePath != null
-                      ? successColor
-                      : borderColor,
+              options: RoundedRectDottedBorderOptions(
+                radius: const Radius.circular(12),
+                dashPattern: const [8, 4],
+                strokeWidth: _isDragging ? 2 : 1.5,
+                color: _isDragging
+                    ? primaryAccent
+                    : widget.selectedFilePath != null
+                        ? successColor
+                        : borderColor,
+              ),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
                 decoration: BoxDecoration(
                   color: _isDragging
                       ? primaryAccent.withValues(alpha: 0.1)
@@ -118,7 +124,8 @@ class _FileSelectionCardState extends ConsumerState<FileSelectionCard> {
                           ? successColor.withValues(alpha: 0.05)
                           : (isCyberpunk
                               ? CyberpunkColors.charcoal.withValues(alpha: 0.3)
-                              : colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)),
+                              : colorScheme.surfaceContainerHighest
+                                  .withValues(alpha: 0.3)),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -141,7 +148,8 @@ class _FileSelectionCardState extends ConsumerState<FileSelectionCard> {
                     Text(
                       _isDragging
                           ? 'Drop file here'
-                          : widget.selectedFileName ?? 'Drag and drop your file here',
+                          : widget.selectedFileName ??
+                              'Drag and drop your file here',
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: _isDragging
                             ? primaryAccent
@@ -216,9 +224,10 @@ class _FileSelectionCardState extends ConsumerState<FileSelectionCard> {
               // Convert button
               Expanded(
                 child: FilledButton.icon(
-                  onPressed: widget.isConverting || widget.selectedFilePath == null
-                      ? null
-                      : widget.onConvert,
+                  onPressed:
+                      widget.isConverting || widget.selectedFilePath == null
+                          ? null
+                          : widget.onConvert,
                   icon: widget.isConverting
                       ? const SizedBox(
                           width: 20,
@@ -229,18 +238,21 @@ class _FileSelectionCardState extends ConsumerState<FileSelectionCard> {
                           ),
                         )
                       : const Icon(Icons.transform),
-                  label: Text(widget.isConverting ? 'Converting...' : 'Convert'),
+                  label:
+                      Text(widget.isConverting ? 'Converting...' : 'Convert'),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     textStyle: const TextStyle(fontSize: 16),
-                    backgroundColor: isCyberpunk ? CyberpunkColors.hotPink : null,
+                    backgroundColor:
+                        isCyberpunk ? CyberpunkColors.hotPink : null,
                   ),
                 ),
               ),
               const SizedBox(width: 12),
               // Small format selector
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
                   border: Border.all(color: borderColor.withValues(alpha: 0.5)),
                   borderRadius: BorderRadius.circular(8),

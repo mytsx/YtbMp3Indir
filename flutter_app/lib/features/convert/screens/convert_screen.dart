@@ -148,7 +148,7 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
             Row(
               children: [
                 Text(
-                  'Active Conversions',
+                  'Conversions',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),

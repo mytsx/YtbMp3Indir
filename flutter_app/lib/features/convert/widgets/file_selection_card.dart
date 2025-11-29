@@ -86,6 +86,7 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
                         : colorScheme.outline.withValues(alpha: 0.6),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
+                  width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
                   decoration: BoxDecoration(
                     color: _isDragging

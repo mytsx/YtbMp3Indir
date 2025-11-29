@@ -163,9 +163,31 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     _shutdownBackend();
   }
 
+  void _updateWindowAppearance(ThemeMode mode) {
+    if (!Platform.isMacOS) return;
+
+    String appearance;
+    switch (mode) {
+      case ThemeMode.dark:
+        appearance = 'dark';
+        break;
+      case ThemeMode.light:
+        appearance = 'light';
+        break;
+      case ThemeMode.system:
+        appearance = 'system';
+        break;
+    }
+
+    _windowChannel.invokeMethod('setAppearance', appearance);
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
+
+    // Update window appearance when theme changes
+    _updateWindowAppearance(themeMode);
 
     return MaterialApp(
       title: 'MP3 Yap',

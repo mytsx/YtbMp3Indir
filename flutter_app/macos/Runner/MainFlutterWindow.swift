@@ -60,6 +60,20 @@ class MainFlutterWindow: NSWindow {
           }
         }
         result(nil)
+      case "setAppearance":
+        if let appearanceName = call.arguments as? String {
+          DispatchQueue.main.async {
+            guard let self = self else { return }
+            if appearanceName == "dark" {
+              self.appearance = NSAppearance(named: .darkAqua)
+            } else if appearanceName == "light" {
+              self.appearance = NSAppearance(named: .aqua)
+            } else {
+              self.appearance = nil // System default
+            }
+          }
+        }
+        result(nil)
       default:
         result(FlutterMethodNotImplemented)
       }

@@ -72,7 +72,7 @@ class HistoryCard extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildDetailRow('Title', item.videoTitle),
+              _buildDetailRow(context, 'Title', item.videoTitle),
               if (item.channelName != null)
                 _buildLinkRow(
                   context,
@@ -86,13 +86,13 @@ class HistoryCard extends ConsumerWidget {
                 'Open Video',
                 item.url,
               ),
-              _buildDetailRow('File Name', item.fileName),
+              _buildDetailRow(context, 'File Name', item.fileName),
               if (item.filePath != null)
-                _buildDetailRow('File Path', item.filePath!),
-              _buildDetailRow('Format', item.format.toUpperCase()),
-              _buildDetailRow('Size', item.formattedSize),
-              _buildDetailRow('Duration', item.formattedDuration),
-              _buildDetailRow('Downloaded', item.formattedDate),
+                _buildDetailRow(context, 'File Path', item.filePath!),
+              _buildDetailRow(context, 'Format', item.format.toUpperCase()),
+              _buildDetailRow(context, 'Size', item.formattedSize),
+              _buildDetailRow(context, 'Duration', item.formattedDuration),
+              _buildDetailRow(context, 'Downloaded', item.formattedDate),
             ],
           ),
         ),
@@ -106,7 +106,8 @@ class HistoryCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(BuildContext context, String label, String value) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -124,8 +125,8 @@ class HistoryCard extends ConsumerWidget {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                color: Colors.black87,
+              style: TextStyle(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ),
@@ -197,7 +198,7 @@ class HistoryCard extends ConsumerWidget {
                   )
                 : Text(
                     text,
-                    style: const TextStyle(color: Colors.black87),
+                    style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                   ),
           ),
         ],

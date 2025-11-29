@@ -370,26 +370,26 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
               _currentIndex = index;
             });
           },
-          destinations: const [
+          destinations: [
             NavigationDestination(
-              icon: Icon(Icons.download_outlined),
-              selectedIcon: Icon(Icons.download),
-              label: 'Download',
+              icon: const Icon(Icons.download_outlined),
+              selectedIcon: const Icon(Icons.download),
+              label: 'nav.download'.tr(),
             ),
             NavigationDestination(
-              icon: Icon(Icons.history_outlined),
-              selectedIcon: Icon(Icons.history),
-              label: 'History',
+              icon: const Icon(Icons.history_outlined),
+              selectedIcon: const Icon(Icons.history),
+              label: 'nav.history'.tr(),
             ),
             NavigationDestination(
-              icon: Icon(Icons.transform_outlined),
-              selectedIcon: Icon(Icons.transform),
-              label: 'Convert',
+              icon: const Icon(Icons.transform_outlined),
+              selectedIcon: const Icon(Icons.transform),
+              label: 'nav.convert'.tr(),
             ),
             NavigationDestination(
-              icon: Icon(Icons.settings_outlined),
-              selectedIcon: Icon(Icons.settings),
-              label: 'Settings',
+              icon: const Icon(Icons.settings_outlined),
+              selectedIcon: const Icon(Icons.settings),
+              label: 'nav.settings'.tr(),
             ),
           ],
         ),

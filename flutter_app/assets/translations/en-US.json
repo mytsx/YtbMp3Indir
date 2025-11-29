@@ -60,6 +60,7 @@
     "app_description": "YouTube MP3 Downloader with Flutter"
   },
   "common": {
+    "initializing": "Initializing...",
     "language_selection": "Select Language",
     "continue": "Continue",
     "retry": "Retry",

@@ -1,12 +1,13 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 /// Animated splash screen with grid animation
 class SplashScreen extends StatefulWidget {
-  final String message;
+  final String? message;
   const SplashScreen({
     super.key,
-    this.message = 'Initializing...',
+    this.message,
   });
 
   @override
@@ -165,7 +166,7 @@ class _SplashScreenState extends State<SplashScreen>
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
                 child: Text(
-                  widget.message,
+                  widget.message ?? 'common.initializing'.tr(),
                   key: ValueKey(widget.message),
                   style: const TextStyle(
                     color: Colors.white,

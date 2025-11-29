@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../../core/constants.dart';
 import '../../../core/providers/providers.dart';
 import '../../../core/models/conversion.dart';
+import '../../../core/theme/cyberpunk_colors.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../providers/conversion_provider.dart';
 import '../widgets/conversion_card.dart';
@@ -20,6 +21,7 @@ class ConvertScreen extends ConsumerStatefulWidget {
 class _ConvertScreenState extends ConsumerState<ConvertScreen> {
   String? _selectedFilePath;
   String? _selectedFileName;
+  String _selectedFormat = 'mp3';
   bool _isConverting = false;
   String? _errorMessage;
 
@@ -71,6 +73,7 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
       final result = await apiClient.startConversion(
         _selectedFilePath!,
         quality: kDefaultQuality,
+        outputFormat: _selectedFormat,
       );
 
       // Parse response to Conversion model
@@ -90,7 +93,7 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Conversion started!'),
-            backgroundColor: Colors.green,
+            backgroundColor: CyberpunkColors.matrixGreen,
           ),
         );
       }
@@ -104,7 +107,7 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: CyberpunkColors.neonPinkGlow,
           ),
         );
       }
@@ -119,8 +122,13 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
   Widget build(BuildContext context) {
     // Watch conversions list
     final conversions = ref.watch(conversionsProvider);
+    final themeStyle = ref.watch(themeStyleProvider);
+    final isCyberpunk = themeStyle == 'cyberpunk';
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor: (isCyberpunk && isDarkMode) ? Colors.transparent : null,
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -130,6 +138,7 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
             FileSelectionCard(
               selectedFilePath: _selectedFilePath,
               selectedFileName: _selectedFileName,
+              selectedFormat: _selectedFormat,
               errorMessage: _errorMessage,
               isConverting: _isConverting,
               onPickFile: _pickFile,
@@ -146,6 +155,11 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
                   _selectedFilePath = path;
                   _selectedFileName = name;
                   _errorMessage = null;
+                });
+              },
+              onFormatChanged: (format) {
+                setState(() {
+                  _selectedFormat = format;
                 });
               },
             ),
@@ -168,15 +182,25 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.orange.shade100,
+                    color: isCyberpunk
+                        ? CyberpunkColors.cyberYellow.withValues(alpha: 0.2)
+                        : colorScheme.tertiaryContainer,
                     borderRadius: BorderRadius.circular(12),
+                    border: isCyberpunk
+                        ? Border.all(
+                            color: CyberpunkColors.cyberYellow.withValues(alpha: 0.5),
+                            width: 1,
+                          )
+                        : null,
                   ),
                   child: Text(
                     '${conversions.length}',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: Colors.orange.shade900,
+                      color: isCyberpunk
+                          ? CyberpunkColors.cyberYellow
+                          : colorScheme.onTertiaryContainer,
                     ),
                   ),
                 ),

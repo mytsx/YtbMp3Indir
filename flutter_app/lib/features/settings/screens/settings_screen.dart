@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/theme/cyberpunk_colors.dart';
+import '../../../core/providers/providers.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/appearance_section.dart';
 import '../widgets/audio_quality_section.dart';
@@ -15,6 +17,9 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
     final theme = Theme.of(context);
+    final themeStyle = ref.watch(themeStyleProvider);
+    final isCyberpunk = themeStyle == 'cyberpunk';
+    final isDarkMode = theme.brightness == Brightness.dark;
 
     // Show error snackbar if error exists
     ref.listen(settingsProvider, (previous, next) {
@@ -22,7 +27,7 @@ class SettingsScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${next.error}'),
-            backgroundColor: Colors.red,
+            backgroundColor: isCyberpunk ? CyberpunkColors.neonPinkGlow : Colors.red,
           ),
         );
       }
@@ -31,14 +36,16 @@ class SettingsScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.successMessage!),
-            backgroundColor: Colors.green,
+            backgroundColor: isCyberpunk ? CyberpunkColors.matrixGreen : Colors.green,
           ),
         );
       }
     });
 
     return Scaffold(
+      backgroundColor: (isCyberpunk && isDarkMode) ? Colors.transparent : null,
       appBar: AppBar(
+        backgroundColor: (isCyberpunk && isDarkMode) ? Colors.transparent : null,
         title: const Text('Settings'),
         actions: [
           if (settings.isLoading)

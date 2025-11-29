@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Service for persisting app settings locally
 class SettingsService {
   static const String _themeModeKey = 'theme_mode';
+  static const String _themeStyleKey = 'theme_style';
   static const String _notificationSoundKey = 'notification_sound';
 
   late final SharedPreferences _prefs;
@@ -25,6 +26,16 @@ class SettingsService {
   /// Save theme mode
   Future<void> setThemeMode(ThemeMode mode) async {
     await _prefs.setString(_themeModeKey, mode.name);
+  }
+
+  /// Get saved theme style (cyberpunk, classic)
+  String getThemeStyle() {
+    return _prefs.getString(_themeStyleKey) ?? 'cyberpunk';
+  }
+
+  /// Save theme style
+  Future<void> setThemeStyle(String style) async {
+    await _prefs.setString(_themeStyleKey, style);
   }
 
   /// Get notification sound enabled

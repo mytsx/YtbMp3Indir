@@ -29,7 +29,6 @@ class UrlInputCard extends StatelessWidget {
                 labelText: 'YouTube URL',
                 hintText: 'https://youtube.com/watch?v=...',
                 prefixIcon: const Icon(Icons.link),
-                border: const OutlineInputBorder(),
                 errorText: errorMessage,
               ),
               maxLines: 1,

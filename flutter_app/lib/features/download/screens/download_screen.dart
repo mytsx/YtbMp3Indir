@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/theme/cyberpunk_colors.dart';
+import '../../../core/providers/providers.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../providers/download_provider.dart';
 import '../widgets/download_card.dart';
@@ -59,7 +61,7 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Download started!'),
-            backgroundColor: Colors.green,
+            backgroundColor: CyberpunkColors.matrixGreen,
           ),
         );
       }
@@ -73,7 +75,7 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: CyberpunkColors.neonPinkGlow,
           ),
         );
       }
@@ -89,7 +91,13 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
     // Watch downloads list
     final downloads = ref.watch(downloadsProvider);
 
+    final themeStyle = ref.watch(themeStyleProvider);
+    final isCyberpunk = themeStyle == 'cyberpunk';
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor: (isCyberpunk && isDarkMode) ? Colors.transparent : null,
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -121,15 +129,25 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade100,
+                    color: isCyberpunk
+                        ? CyberpunkColors.neonCyan.withValues(alpha: 0.2)
+                        : colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(12),
+                    border: isCyberpunk
+                        ? Border.all(
+                            color: CyberpunkColors.neonCyan.withValues(alpha: 0.5),
+                            width: 1,
+                          )
+                        : null,
                   ),
                   child: Text(
                     '${downloads.length}',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue.shade900,
+                      color: isCyberpunk
+                          ? CyberpunkColors.neonCyan
+                          : colorScheme.onPrimaryContainer,
                     ),
                   ),
                 ),

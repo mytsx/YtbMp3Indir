@@ -8,7 +8,7 @@ import os
 import re
 import tempfile
 import shutil
-from ..models import ApiResponse, ErrorDetail, AudioQuality, DEFAULT_QUALITY
+from ..models import ApiResponse, ErrorDetail, AudioQuality, DEFAULT_QUALITY, OutputFormat, DEFAULT_FORMAT
 from services.conversion_service import get_conversion_service
 from pydantic import BaseModel
 
@@ -42,6 +42,7 @@ class ConversionRequest(BaseModel):
     """Request model for starting a conversion"""
     file_path: str
     quality: AudioQuality = DEFAULT_QUALITY
+    output_format: OutputFormat = DEFAULT_FORMAT
 
 
 @router.post("", response_model=ApiResponse)
@@ -68,7 +69,8 @@ async def create_conversion(request: ConversionRequest):
 
         conversion = await conversion_service.start_conversion(
             request.file_path,
-            request.quality
+            request.quality,
+            request.output_format
         )
         return ApiResponse(success=True, data=conversion.to_dict())
     except FileNotFoundError as e:

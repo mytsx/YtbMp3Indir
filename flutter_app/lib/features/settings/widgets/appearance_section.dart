@@ -32,6 +32,7 @@ class AppearanceSection extends ConsumerWidget {
                 child: Text('Theme'),
               ),
               SegmentedButton<ThemeMode>(
+                key: const ValueKey('theme_mode_selector'),
                 segments: const [
                   ButtonSegment<ThemeMode>(
                     value: ThemeMode.system,
@@ -52,6 +53,37 @@ class AppearanceSection extends ConsumerWidget {
                 selected: {currentThemeMode},
                 onSelectionChanged: (selected) {
                   ref.read(themeModeProvider.notifier).setThemeMode(selected.first);
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              const Icon(Icons.style_outlined),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Text('Style'),
+              ),
+              DropdownButton<String>(
+                value: ref.watch(themeStyleProvider),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'cyberpunk',
+                    child: Text('Cyberpunk'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'classic',
+                    child: Text('Classic'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    ref.read(themeStyleProvider.notifier).setThemeStyle(value);
+                  }
                 },
               ),
             ],

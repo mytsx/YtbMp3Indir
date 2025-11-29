@@ -121,13 +121,11 @@ class MyApp extends ConsumerStatefulWidget {
 class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   static const _windowChannel = MethodChannel('mp3yap/window');
   bool _showSplash = true;
-  bool _isFirstRun = false;
   String _splashMessage = 'Starting backend service...';
 
   @override
   void initState() {
     super.initState();
-    _isFirstRun = _settingsService.getIsFirstRun();
     WidgetsBinding.instance.addObserver(this);
     _initializeApp();
   }

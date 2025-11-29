@@ -263,7 +263,7 @@ class HistoryCard extends ConsumerWidget {
       builder: (context) => AlertDialog(
         title: Text('dialog.delete_history_title'.tr()),
         content: Text(
-            'dialog.delete_history_confirm'.tr(args: [item.videoTitle ?? ''])),
+            'dialog.delete_history_confirm'.tr(args: [item.videoTitle])),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),

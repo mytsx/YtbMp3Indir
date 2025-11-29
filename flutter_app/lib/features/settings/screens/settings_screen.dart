@@ -1,3 +1,7 @@
+// ignore_for_file: deprecated_member_use
+// RadioListTile groupValue/onChanged deprecated in Flutter 3.32+ (RadioGroup pattern)
+// TODO: Migrate to RadioGroup when API stabilizes
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
@@ -27,8 +31,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _loadConfig() async {
     try {
       final apiClient = ref.read(apiClientProvider);
-      if (apiClient == null) return;
-
       final response = await apiClient.getConfig();
 
       setState(() {
@@ -70,8 +72,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     try {
       final apiClient = ref.read(apiClientProvider);
-      if (apiClient == null) return;
-
       await apiClient.updateConfig({
         'quality': _quality,
         'output_dir': _outputDir,
@@ -108,8 +108,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     try {
       final apiClient = ref.read(apiClientProvider);
-      if (apiClient == null) return;
-
       await apiClient.updateConfig({
         'history_retention_days': days,
       });

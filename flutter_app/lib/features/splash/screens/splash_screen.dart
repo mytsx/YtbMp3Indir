@@ -32,7 +32,7 @@ class _SplashScreenState extends State<SplashScreen>
     // Initialize grid colors and opacities
     boxColors = List.generate(
       gridSize,
-      (_) => List.generate(gridSize, (_) => Colors.black.withOpacity(0.3)),
+      (_) => List.generate(gridSize, (_) => Colors.black.withValues(alpha:0.3)),
     );
     boxOpacities = List.generate(
       gridSize,
@@ -112,7 +112,7 @@ class _SplashScreenState extends State<SplashScreen>
             );
           } else {
             // Outside wave - dark
-            boxColors[row][col] = Colors.black.withOpacity(0.3);
+            boxColors[row][col] = Colors.black.withValues(alpha:0.3);
           }
         }
       }
@@ -182,8 +182,8 @@ class _SplashScreenState extends State<SplashScreen>
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               decoration: BoxDecoration(
                 color: isDark
-                    ? Colors.black.withOpacity(0.5)
-                    : Colors.black.withOpacity(0.7),
+                    ? Colors.black.withValues(alpha:0.5)
+                    : Colors.black.withValues(alpha:0.7),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -194,7 +194,7 @@ class _SplashScreenState extends State<SplashScreen>
                     height: 16,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha:0.8),
                     ),
                   ),
                   const SizedBox(width: 12),

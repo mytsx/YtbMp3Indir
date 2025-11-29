@@ -38,10 +38,6 @@ final startConversionProvider =
     FutureProvider.family<Conversion, String>((ref, filePath) async {
   final apiClient = ref.read(apiClientProvider);
 
-  if (apiClient == null) {
-    throw Exception('Backend not ready');
-  }
-
   // Call API to start conversion
   final result = await apiClient.startConversion(filePath);
 

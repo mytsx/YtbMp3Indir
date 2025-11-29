@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'features/download/screens/download_screen.dart';
 import 'features/convert/screens/convert_screen.dart';
@@ -23,35 +22,35 @@ Future<void> _shutdownBackend() async {
   if (_isShuttingDown) return;
   _isShuttingDown = true;
 
-  print('🛑 Shutting down backend...');
+  debugPrint('🛑 Shutting down backend...');
   try {
     await _backendService.stop();
-    print('✅ Backend stopped successfully');
+    debugPrint('✅ Backend stopped successfully');
   } catch (e) {
-    print('❌ Error stopping backend: $e');
+    debugPrint('❌ Error stopping backend: $e');
   }
 
   // Dispose container after backend is stopped
   try {
     _container.dispose();
   } catch (e) {
-    print('Warning: Error disposing container: $e');
+    debugPrint('Warning: Error disposing container: $e');
   }
 }
 
 Future<void> _startBackend() async {
   if (_backendStarted) return;
 
-  print('🚀 Starting backend...');
+  debugPrint('🚀 Starting backend...');
   _backendService = _container.read(backendServiceProvider);
 
   try {
     await _backendService.start();
     _backendStarted = true;
-    print('✅ Backend started successfully');
+    debugPrint('✅ Backend started successfully');
   } catch (e) {
-    print('❌ Failed to start backend: $e');
-    print('⚠️ App will continue but may not work properly');
+    debugPrint('❌ Failed to start backend: $e');
+    debugPrint('⚠️ App will continue but may not work properly');
   }
 }
 
@@ -74,7 +73,7 @@ void main() async {
   if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
     // Handle SIGINT (Ctrl+C)
     ProcessSignal.sigint.watch().listen((_) async {
-      print('Received SIGINT');
+      debugPrint('Received SIGINT');
       await _shutdownBackend();
       exit(0);
     });
@@ -82,7 +81,7 @@ void main() async {
     // Handle SIGTERM (kill command)
     if (!Platform.isWindows) {
       ProcessSignal.sigterm.watch().listen((_) async {
-        print('Received SIGTERM');
+        debugPrint('Received SIGTERM');
         await _shutdownBackend();
         exit(0);
       });
@@ -149,7 +148,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    print('App lifecycle state: $state');
+    debugPrint('App lifecycle state: $state');
 
     // Stop backend when app is detached (closed)
     if (state == AppLifecycleState.detached) {

@@ -1,5 +1,3 @@
-/// Application constants
-
 /// Default audio quality for downloads and conversions (kbps)
 const String kDefaultQuality = '320';
 

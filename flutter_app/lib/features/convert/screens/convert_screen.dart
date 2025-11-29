@@ -58,12 +58,6 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
     }
 
     final apiClient = ref.read(apiClientProvider);
-    if (apiClient == null) {
-      setState(() {
-        _errorMessage = 'Backend not ready. Please wait...';
-      });
-      return;
-    }
 
     setState(() {
       _isConverting = true;

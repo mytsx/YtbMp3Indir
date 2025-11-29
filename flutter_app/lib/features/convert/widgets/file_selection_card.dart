@@ -231,6 +231,7 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
                       value: widget.selectedFormat,
                       icon: const Icon(Icons.arrow_drop_down, size: 20),
                       isDense: true,
+                      focusColor: Colors.transparent,
                       items: _outputFormats.map((format) {
                         return DropdownMenuItem<String>(
                           value: format,

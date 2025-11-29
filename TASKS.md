@@ -32,6 +32,13 @@ PyQt5 uygulamasından Flutter'a geçiş sırasında yapılacak/yapılan işler.
 
 - [x] macOS App Sandbox entitlements (sandbox disabled for Python process spawning)
 
+## Release / Dağıtım
+
+- [ ] macOS DMG paketleme ve Apple Notarization
+  - App Store kullanılamaz (Python backend spawn ettiği için sandbox gerekli)
+  - Doğrudan dağıtım: DMG oluştur + Apple notarization ile imzala
+- [ ] Windows installer (NSIS veya MSI)
+
 ## Notlar
 
 - Eski PyQt5 kodu: `python_desktop/` klasöründe

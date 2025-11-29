@@ -109,7 +109,7 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
             Row(
               children: [
                 Text(
-                  'Active Downloads',
+                  'Downloads',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),

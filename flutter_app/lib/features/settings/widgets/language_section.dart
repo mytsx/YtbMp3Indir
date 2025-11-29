@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/services/language_service.dart';
 
 class LanguageSection extends ConsumerWidget {
   const LanguageSection({super.key});
@@ -9,6 +10,7 @@ class LanguageSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final currentLocale = context.locale;
+    final languageService = LanguageService();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -35,16 +37,12 @@ class LanguageSection extends ConsumerWidget {
                 value: currentLocale,
                 isExpanded: true,
                 icon: const Icon(Icons.arrow_drop_down),
-                items: const [
-                  DropdownMenuItem(
-                    value: Locale('en', 'US'),
-                    child: Text('English'),
-                  ),
-                  DropdownMenuItem(
-                    value: Locale('tr', 'TR'),
-                    child: Text('Türkçe'),
-                  ),
-                ],
+                items: context.supportedLocales.map((locale) {
+                  return DropdownMenuItem(
+                    value: locale,
+                    child: Text(languageService.getLanguageName(locale)),
+                  );
+                }).toList(),
                 onChanged: (Locale? newLocale) {
                   if (newLocale != null) {
                     context.setLocale(newLocale);

@@ -16,6 +16,7 @@ import 'shared/widgets/neo_pop_nav_bar.dart';
 import 'core/providers/providers.dart';
 import 'core/services/backend_service.dart';
 import 'core/services/settings_service.dart';
+import 'core/services/language_service.dart';
 import 'core/theme/cyberpunk_theme.dart';
 import 'core/theme/neo_pop_theme.dart';
 
@@ -71,6 +72,10 @@ void main() async {
   _settingsService = SettingsService();
   await _settingsService.init();
 
+  // Initialize LanguageService to find available languages
+  final languageService = LanguageService();
+  await languageService.init();
+
   // Create provider container with pre-initialized settings service
   _container = ProviderContainer(
     overrides: [
@@ -100,7 +105,7 @@ void main() async {
   // Run the app (backend will be started from splash screen)
   runApp(
     EasyLocalization(
-      supportedLocales: const [Locale('en', 'US'), Locale('tr', 'TR')],
+      supportedLocales: languageService.supportedLocales,
       path: 'assets/translations',
       fallbackLocale: const Locale('en', 'US'),
       child: UncontrolledProviderScope(

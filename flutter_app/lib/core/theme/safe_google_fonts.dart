@@ -42,14 +42,26 @@ class SafeGoogleFonts {
   }
 
   /// Creates an Inter text style (Clean/Readable)
-  static TextStyle inter(
-    double size, {
-    FontWeight weight = FontWeight.normal,
-    Color? color,
-    double? letterSpacing,
-  }) {
+  static TextStyle inter(double fontSize,
+      {FontWeight weight = FontWeight.normal,
+      Color? color,
+      double? letterSpacing}) {
     return GoogleFonts.inter(
-      fontSize: size,
+      fontSize: fontSize,
+      fontWeight: weight,
+      color: color,
+      letterSpacing: letterSpacing,
+      textBaseline: TextBaseline.alphabetic,
+    ).copyWith(inherit: false);
+  }
+
+  /// Space Grotesk - Quirky, modern sans-serif for NeoPop
+  static TextStyle spaceGrotesk(double fontSize,
+      {FontWeight weight = FontWeight.normal,
+      Color? color,
+      double? letterSpacing}) {
+    return GoogleFonts.spaceGrotesk(
+      fontSize: fontSize,
       fontWeight: weight,
       color: color,
       letterSpacing: letterSpacing,

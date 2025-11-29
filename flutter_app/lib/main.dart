@@ -10,10 +10,13 @@ import 'features/settings/screens/settings_screen.dart';
 import 'features/splash/screens/splash_screen.dart';
 import 'shared/widgets/animated_nav_bar.dart';
 import 'shared/widgets/glassmorphic_card.dart';
+import 'shared/widgets/neo_pop_background.dart';
+import 'shared/widgets/neo_pop_nav_bar.dart';
 import 'core/providers/providers.dart';
 import 'core/services/backend_service.dart';
 import 'core/services/settings_service.dart';
 import 'core/theme/cyberpunk_theme.dart';
+import 'core/theme/neo_pop_theme.dart';
 
 // Global reference to stop backend on app exit
 late final ProviderContainer _container;
@@ -199,6 +202,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     if (themeStyle == 'cyberpunk') {
       lightTheme = CyberpunkTheme.lightTheme;
       darkTheme = CyberpunkTheme.darkTheme;
+    } else if (themeStyle == 'neopop') {
+      lightTheme = NeoPopTheme.lightTheme;
+      darkTheme = NeoPopTheme.darkTheme;
     } else {
       // Classic Theme
       lightTheme = ThemeData(
@@ -313,6 +319,32 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
               _currentIndex = index;
             });
           },
+        ),
+      );
+    } else if (themeStyle == 'neopop') {
+      // NeoPop Theme: Custom Background + Custom Floating Nav
+      // Convert AnimatedNavBar items to NeoPop items
+      final neoPopItems = _navItems
+          .map((e) => NavItem(
+              icon: e.icon, selectedIcon: e.selectedIcon, label: e.label))
+          .toList();
+
+      return NeoPopBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: IndexedStack(
+            index: _currentIndex,
+            children: _screens,
+          ),
+          bottomNavigationBar: NeoPopNavBar(
+            currentIndex: _currentIndex,
+            items: neoPopItems,
+            onTap: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+          ),
         ),
       );
     } else {

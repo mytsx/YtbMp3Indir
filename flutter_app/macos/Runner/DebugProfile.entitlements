@@ -2,18 +2,28 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Sandbox disabled for development to allow spawning backend process -->
+	<!-- Sandbox disabled: App spawns Python backend process which is not allowed in sandbox -->
 	<key>com.apple.security.app-sandbox</key>
 	<false/>
+
+	<!-- Allow JIT compilation for debug/profile builds -->
 	<key>com.apple.security.cs.allow-jit</key>
+	<true/>
+
+	<!-- Network access for YouTube API and local backend WebSocket -->
+	<key>com.apple.security.network.client</key>
 	<true/>
 	<key>com.apple.security.network.server</key>
 	<true/>
-	<key>com.apple.security.network.client</key>
-	<true/>
+
+	<!-- File access for file picker and downloads -->
 	<key>com.apple.security.files.user-selected.read-write</key>
 	<true/>
 	<key>com.apple.security.files.downloads.read-write</key>
+	<true/>
+
+	<!-- Persist file access between app launches (security-scoped bookmarks) -->
+	<key>com.apple.security.files.bookmarks.app-scope</key>
 	<true/>
 </dict>
 </plist>

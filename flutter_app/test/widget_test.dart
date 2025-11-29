@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mp3yap/features/download/screens/download_screen.dart';
-import 'package:mp3yap/features/download/providers/download_provider.dart';
 
 void main() {
   group('Download Screen Widget Tests', () {

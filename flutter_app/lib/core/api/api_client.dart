@@ -96,7 +96,7 @@ class ApiClient {
   Future<void> cancelDownload(String id) {
     return _handleResponse(
       _dio.delete('/api/downloads/$id'),
-      (_) => null,
+      (_) {},
     );
   }
 
@@ -149,7 +149,7 @@ class ApiClient {
   Future<void> deleteHistoryItem(int id) {
     return _handleResponse(
       _dio.delete('/api/history/$id'),
-      (_) => null,
+      (_) {},
     );
   }
 
@@ -218,7 +218,7 @@ class ApiClient {
   Future<void> deleteQueueItem(int queueId) {
     return _handleResponse(
       _dio.delete('/api/queue/$queueId'),
-      (_) => null,
+      (_) {},
     );
   }
 
@@ -267,7 +267,7 @@ class ApiClient {
   Future<void> cancelConversion(String id) {
     return _handleResponse(
       _dio.delete('/api/conversions/$id'),
-      (_) => null,
+      (_) {},
     );
   }
 

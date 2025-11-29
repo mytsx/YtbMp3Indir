@@ -16,10 +16,6 @@ class HistoryNotifier extends StateNotifier<AsyncValue<List<HistoryItem>>> {
   /// Load initial history
   Future<void> _loadHistory() async {
     final apiClient = ref.read(apiClientProvider);
-    if (apiClient == null) {
-      state = AsyncValue.error('API client not ready', StackTrace.current);
-      return;
-    }
 
     try {
       final response = await apiClient.getHistory(limit: _pageSize, offset: 0);
@@ -47,8 +43,6 @@ class HistoryNotifier extends StateNotifier<AsyncValue<List<HistoryItem>>> {
     if (!_hasMore || state.isLoading) return;
 
     final apiClient = ref.read(apiClientProvider);
-    if (apiClient == null) return;
-
     final currentItems = state.value ?? [];
 
     try {
@@ -64,16 +58,14 @@ class HistoryNotifier extends StateNotifier<AsyncValue<List<HistoryItem>>> {
       _currentOffset += newItems.length;
 
       state = AsyncValue.data([...currentItems, ...newItems]);
-    } catch (e, stack) {
-      // Keep current state on error
-      print('Error loading more history: $e');
+    } catch (_) {
+      // Keep current state on error, silently ignore pagination errors
     }
   }
 
   /// Delete history item
   Future<bool> deleteItem(int id) async {
     final apiClient = ref.read(apiClientProvider);
-    if (apiClient == null) return false;
 
     try {
       await apiClient.deleteHistoryItem(id);
@@ -85,8 +77,7 @@ class HistoryNotifier extends StateNotifier<AsyncValue<List<HistoryItem>>> {
       );
 
       return true;
-    } catch (e) {
-      print('Error deleting history item: $e');
+    } catch (_) {
       return false;
     }
   }
@@ -101,10 +92,6 @@ final historyProvider =
 /// Statistics provider
 final statsProvider = FutureProvider<DownloadStats>((ref) async {
   final apiClient = ref.watch(apiClientProvider);
-  if (apiClient == null) {
-    throw Exception('API client not ready');
-  }
-
   final response = await apiClient.getStatistics();
   return DownloadStats.fromJson(response['data']);
 });
@@ -117,10 +104,6 @@ final searchHistoryProvider =
   }
 
   final apiClient = ref.watch(apiClientProvider);
-  if (apiClient == null) {
-    throw Exception('API client not ready');
-  }
-
   final response = await apiClient.searchHistory(query);
   return (response['data'] as List)
       .map((json) => HistoryItem.fromJson(json))
@@ -130,16 +113,5 @@ final searchHistoryProvider =
 /// Redownload provider
 final redownloadProvider = FutureProvider.family<void, int>((ref, historyId) async {
   final apiClient = ref.watch(apiClientProvider);
-  if (apiClient == null) {
-    throw Exception('API client not ready');
-  }
-
-  final response = await apiClient.redownload(historyId);
-  final download = (response['data']);
-
-  // Add to downloads list
-  if (download != null) {
-    // Import Download model and add to downloads provider
-    // ref.read(downloadsProvider.notifier).addDownload(Download.fromJson(download));
-  }
+  await apiClient.redownload(historyId);
 });

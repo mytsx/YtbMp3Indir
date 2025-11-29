@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -39,10 +38,6 @@ final downloadsProvider =
 final startDownloadProvider =
     FutureProvider.family<Download, String>((ref, url) async {
   final apiClient = ref.read(apiClientProvider);
-
-  if (apiClient == null) {
-    throw Exception('Backend not ready');
-  }
 
   // Call API to start download
   final result = await apiClient.startDownload(url);

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/download.dart';
+import '../../../core/utils/platform_utils.dart';
+import '../../../shared/widgets/media_item_card.dart';
+import '../../../shared/widgets/play_button.dart';
 import '../providers/download_provider.dart';
 
 /// Download card showing progress and status
@@ -15,7 +18,7 @@ class DownloadCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Watch WebSocket progress updates to trigger rebuilds
-    final progressStream = ref.watch(downloadProgressProvider(download.id));
+    ref.watch(downloadProgressProvider(download.id));
 
     // Get latest download state from provider (updated by WebSocket)
     final downloads = ref.watch(downloadsProvider);
@@ -24,6 +27,25 @@ class DownloadCard extends ConsumerWidget {
       orElse: () => download,
     );
 
+    // Completed state - HistoryCard style layout
+    if (latestDownload.isCompleted) {
+      return MediaItemCard(
+        title: latestDownload.videoTitle ?? 'Download completed',
+        actions: [
+          if (latestDownload.filePath != null)
+            PlayButton(filePath: latestDownload.filePath!),
+          if (latestDownload.filePath != null)
+            IconButton(
+              onPressed: () => _showInFolder(context, latestDownload.filePath!),
+              icon: const Icon(Icons.folder_open, size: 20),
+              tooltip: 'Show in Folder',
+              visualDensity: VisualDensity.compact,
+            ),
+        ],
+      );
+    }
+
+    // Active/Failed state - progress card
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -104,27 +126,6 @@ class DownloadCard extends ConsumerWidget {
                         color: Colors.grey.shade600,
                       ),
                     ),
-                ],
-              ),
-            ],
-
-            if (latestDownload.isCompleted) ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.green, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Saved to: ${latestDownload.filePath ?? 'Unknown'}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade700,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
                 ],
               ),
             ],
@@ -217,5 +218,20 @@ class DownloadCard extends ConsumerWidget {
       return Colors.orange;
     }
     return Colors.blue;
+  }
+
+  Future<void> _showInFolder(BuildContext context, String filePath) async {
+    try {
+      await openInFolder(filePath);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open folder: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

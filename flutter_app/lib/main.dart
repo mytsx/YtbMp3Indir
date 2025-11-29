@@ -23,29 +23,35 @@ Future<void> _shutdownBackend() async {
   if (_isShuttingDown) return;
   _isShuttingDown = true;
 
-  print('🛑 Shutting down backend...');
+  debugPrint('🛑 Shutting down backend...');
   try {
     await _backendService.stop();
-    _container.dispose();
-    print('✅ Backend stopped successfully');
+    debugPrint('✅ Backend stopped successfully');
   } catch (e) {
-    print('❌ Error stopping backend: $e');
+    debugPrint('❌ Error stopping backend: $e');
+  }
+
+  // Dispose container after backend is stopped
+  try {
+    _container.dispose();
+  } catch (e) {
+    debugPrint('Warning: Error disposing container: $e');
   }
 }
 
 Future<void> _startBackend() async {
   if (_backendStarted) return;
 
-  print('🚀 Starting backend...');
+  debugPrint('🚀 Starting backend...');
   _backendService = _container.read(backendServiceProvider);
 
   try {
     await _backendService.start();
     _backendStarted = true;
-    print('✅ Backend started successfully');
+    debugPrint('✅ Backend started successfully');
   } catch (e) {
-    print('❌ Failed to start backend: $e');
-    print('⚠️ App will continue but may not work properly');
+    debugPrint('❌ Failed to start backend: $e');
+    debugPrint('⚠️ App will continue but may not work properly');
   }
 }
 
@@ -68,7 +74,7 @@ void main() async {
   if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
     // Handle SIGINT (Ctrl+C)
     ProcessSignal.sigint.watch().listen((_) async {
-      print('Received SIGINT');
+      debugPrint('Received SIGINT');
       await _shutdownBackend();
       exit(0);
     });
@@ -76,7 +82,7 @@ void main() async {
     // Handle SIGTERM (kill command)
     if (!Platform.isWindows) {
       ProcessSignal.sigterm.watch().listen((_) async {
-        print('Received SIGTERM');
+        debugPrint('Received SIGTERM');
         await _shutdownBackend();
         exit(0);
       });
@@ -100,8 +106,9 @@ class MyApp extends ConsumerStatefulWidget {
 }
 
 class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
+  static const _windowChannel = MethodChannel('mp3yap/window');
   bool _showSplash = true;
-  String _splashStatus = 'Starting...';
+  String _splashMessage = 'Starting backend service...';
 
   @override
   void initState() {
@@ -112,23 +119,24 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
 
   Future<void> _initializeApp() async {
     // Start backend
-    setState(() => _splashStatus = 'Starting backend...');
+    if (mounted) setState(() => _splashMessage = 'Starting backend service...');
     await _startBackend();
 
     // Small delay to show the animation
-    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) setState(() => _splashMessage = 'Initializing application...');
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    if (mounted) setState(() => _splashMessage = 'Ready!');
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    // Make window opaque before hiding splash
+    if (Platform.isMacOS) {
+      await _windowChannel.invokeMethod('setOpaque', true);
+    }
 
     // Hide splash screen
     if (mounted) {
-      setState(() {
-        _splashStatus = 'Ready!';
-      });
-
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      if (mounted) {
-        setState(() => _showSplash = false);
-      }
+      setState(() => _showSplash = false);
     }
   }
 
@@ -143,7 +151,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    print('App lifecycle state: $state');
+    debugPrint('App lifecycle state: $state');
 
     // Stop backend when app is detached (closed)
     if (state == AppLifecycleState.detached) {
@@ -155,9 +163,31 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     _shutdownBackend();
   }
 
+  void _updateWindowAppearance(ThemeMode mode) {
+    if (!Platform.isMacOS) return;
+
+    String appearance;
+    switch (mode) {
+      case ThemeMode.dark:
+        appearance = 'dark';
+        break;
+      case ThemeMode.light:
+        appearance = 'light';
+        break;
+      case ThemeMode.system:
+        appearance = 'system';
+        break;
+    }
+
+    _windowChannel.invokeMethod('setAppearance', appearance);
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
+
+    // Update window appearance when theme changes
+    _updateWindowAppearance(themeMode);
 
     return MaterialApp(
       title: 'MP3 Yap',
@@ -178,7 +208,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
         useMaterial3: true,
       ),
       home: _showSplash
-          ? SplashScreen(statusMessage: _splashStatus)
+          ? SplashScreen(message: _splashMessage)
           : const MainNavigation(),
     );
   }
@@ -197,8 +227,8 @@ class _MainNavigationState extends State<MainNavigation> {
 
   final List<Widget> _screens = const [
     DownloadScreen(),
-    ConvertScreen(),
     HistoryScreen(),
+    ConvertScreen(),
     SettingsScreen(),
   ];
 
@@ -223,14 +253,14 @@ class _MainNavigationState extends State<MainNavigation> {
             label: 'Download',
           ),
           NavigationDestination(
-            icon: Icon(Icons.transform_outlined),
-            selectedIcon: Icon(Icons.transform),
-            label: 'Convert',
-          ),
-          NavigationDestination(
             icon: Icon(Icons.history_outlined),
             selectedIcon: Icon(Icons.history),
             label: 'History',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.transform_outlined),
+            selectedIcon: Icon(Icons.transform),
+            label: 'Convert',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),

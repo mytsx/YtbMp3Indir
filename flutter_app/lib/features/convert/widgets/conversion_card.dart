@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/conversion.dart';
+import '../../../core/utils/platform_utils.dart';
+import '../../../shared/widgets/media_item_card.dart';
+import '../../../shared/widgets/play_button.dart';
 import '../providers/conversion_provider.dart';
 
 /// Conversion card showing progress and status
@@ -17,136 +20,88 @@ class ConversionCard extends ConsumerWidget {
     // Watch WebSocket progress updates to trigger rebuilds
     ref.watch(conversionProgressProvider(conversion.id));
 
-    // Get latest conversion state from provider (updated by WebSocket)
+    // Get latest conversion state from provider
     final conversions = ref.watch(conversionsProvider);
     final latestConversion = conversions.firstWhere(
       (c) => c.id == conversion.id,
       orElse: () => conversion,
     );
 
+    // Completed: Use simplified MediaItemCard style
+    if (latestConversion.isCompleted) {
+      return MediaItemCard(
+        title: latestConversion.fileName,
+        leadingIcon: Icons.check_circle,
+        leadingIconColor: Colors.green,
+        actions: [
+          if (latestConversion.outputPath != null) ...[
+            PlayButton(filePath: latestConversion.outputPath!),
+            IconButton(
+              onPressed: () => _showInFolder(context, latestConversion.outputPath!),
+              icon: const Icon(Icons.folder_open, size: 20),
+              tooltip: 'Show in Folder',
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ],
+      );
+    }
+
+    // Active or Failed: Show progress/error card
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Title row
+            // Title row with status
             Row(
               children: [
-                _getStatusIcon(latestConversion.status),
-                const SizedBox(width: 12),
+                _buildStatusIcon(latestConversion.status),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        latestConversion.fileName,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _getStatusText(latestConversion.status),
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: _getStatusColor(latestConversion.status),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    latestConversion.fileName,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
 
+            // Progress bar for active conversions
             if (latestConversion.isActive) ...[
-              const SizedBox(height: 16),
-
-              // Progress bar
+              const SizedBox(height: 10),
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: latestConversion.progress / 100,
-                  minHeight: 8,
+                  minHeight: 6,
                   backgroundColor: Colors.grey.shade200,
                   valueColor: const AlwaysStoppedAnimation<Color>(Colors.orange),
                 ),
               ),
-
-              const SizedBox(height: 8),
-
-              // Progress details
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '${latestConversion.progress}%',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (latestConversion.duration != null)
-                    Text(
-                      'Duration: ${_formatDuration(latestConversion.duration!)}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                ],
+              const SizedBox(height: 6),
+              Text(
+                '${latestConversion.progress}% - Converting...',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
               ),
             ],
 
-            if (latestConversion.isCompleted) ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.green, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Saved to: ${latestConversion.outputPath ?? 'Unknown'}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade700,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-
+            // Error message for failed conversions
             if (latestConversion.isFailed) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error, color: Colors.red, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        latestConversion.error ?? 'Unknown error',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.red,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 8),
+              Text(
+                latestConversion.error ?? 'Conversion failed',
+                style: const TextStyle(fontSize: 12, color: Colors.red),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ],
@@ -155,61 +110,35 @@ class ConversionCard extends ConsumerWidget {
     );
   }
 
-  Widget _getStatusIcon(String status) {
+  Widget _buildStatusIcon(String status) {
     switch (status) {
       case 'converting':
         return const SizedBox(
-          width: 32,
-          height: 32,
-          child: CircularProgressIndicator(strokeWidth: 2),
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange),
         );
-      case 'completed':
-        return const Icon(Icons.check_circle, color: Colors.green, size: 32);
       case 'failed':
-        return const Icon(Icons.error, color: Colors.red, size: 32);
+        return const Icon(Icons.error, color: Colors.red, size: 20);
       case 'cancelled':
-        return const Icon(Icons.cancel, color: Colors.grey, size: 32);
+        return const Icon(Icons.cancel, color: Colors.grey, size: 20);
       default:
-        return const Icon(Icons.transform, color: Colors.orange, size: 32);
+        return const Icon(Icons.transform, color: Colors.orange, size: 20);
     }
   }
 
-  String _getStatusText(String status) {
-    switch (status) {
-      case 'pending':
-        return 'Pending...';
-      case 'converting':
-        return 'Converting to MP3...';
-      case 'completed':
-        return 'Completed!';
-      case 'failed':
-        return 'Failed';
-      case 'cancelled':
-        return 'Cancelled';
-      default:
-        return status;
+  void _showInFolder(BuildContext context, String filePath) async {
+    try {
+      await openInFolder(filePath);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open folder: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'converting':
-        return Colors.orange;
-      case 'completed':
-        return Colors.green;
-      case 'failed':
-        return Colors.red;
-      case 'cancelled':
-        return Colors.grey;
-      default:
-        return Colors.blue;
-    }
-  }
-
-  String _formatDuration(double seconds) {
-    final duration = Duration(seconds: seconds.toInt());
-    final minutes = duration.inMinutes;
-    final secs = duration.inSeconds % 60;
-    return '${minutes}m ${secs}s';
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 /// Manages the Python backend process lifecycle
 /// Uses TTS-proven pattern: dynamic port via .backend_port file
@@ -14,47 +15,49 @@ class BackendService {
   /// Start the backend process (TTS-proven pattern)
   Future<void> start() async {
     if (isRunning) {
-      print('Backend process already managed by this service');
+      debugPrint('Backend process already managed by this service');
       return;
     }
 
     // Check if backend is already running (TTS pattern - auto-detect)
-    print('🔍 Checking if backend is already running...');
+    debugPrint('🔍 Checking if backend is already running...');
+
+    final projectRoot = await _getProjectRoot();
+
+    // First, clean up any stale PID files from crashed processes
+    await _cleanupStalePid(projectRoot);
 
     // Try to read existing port file
     try {
-      final projectRoot = await _getProjectRoot();
       final portFile = File('$projectRoot/.backend_port');
 
       if (await portFile.exists()) {
         final content = await portFile.readAsString();
         _port = int.parse(content.trim());
-        print('Found .backend_port file with port: $_port');
+        debugPrint('Found .backend_port file with port: $_port');
 
         // Test if backend is actually responsive
         if (await healthCheck()) {
-          print('✅ Backend already running and healthy on port: $_port');
+          debugPrint('✅ Backend already running and healthy on port: $_port');
           // Find and save PID of existing backend for cleanup on exit
           await _findAndSavePid(projectRoot, _port!);
           return;
         } else {
-          print('Port file exists but backend not responsive, will restart...');
+          debugPrint('Port file exists but backend not responsive, will restart...');
           await portFile.delete();
         }
       }
     } catch (e) {
-      print('No existing backend detected: $e');
+      debugPrint('No existing backend detected: $e');
     }
 
-    print('🚀 Starting backend with TTS-proven pattern...');
+    debugPrint('🚀 Starting backend with TTS-proven pattern...');
 
     try {
-      // Get project root
-      final projectRoot = await _getProjectRoot();
       final backendDir = '$projectRoot/backend';
 
-      print('Project root: $projectRoot');
-      print('Backend directory: $backendDir');
+      debugPrint('Project root: $projectRoot');
+      debugPrint('Backend directory: $backendDir');
 
       // Check if backend directory exists
       if (!await Directory(backendDir).exists()) {
@@ -65,7 +68,7 @@ class BackendService {
       final portFile = File('$projectRoot/.backend_port');
       if (await portFile.exists()) {
         await portFile.delete();
-        print('Deleted stale .backend_port file');
+        debugPrint('Deleted stale .backend_port file');
       }
 
       // Start Python backend (TTS pattern: use venv python)
@@ -77,13 +80,15 @@ class BackendService {
           ? venvPython
           : 'python3';
 
-      print('Using Python: $pythonExecutable');
+      debugPrint('Using Python: $pythonExecutable');
 
+      // CRITICAL: Do NOT use runInShell: true!
+      // With shell=true, SIGTERM only kills the shell, leaving Python orphaned.
+      // This was causing "broken pipe" errors and zombie processes.
       _process = await Process.start(
         pythonExecutable,
         ['main.py'],
         workingDirectory: backendDir,
-        runInShell: true,
         environment: {
           'PYTHONUNBUFFERED': '1',  // Force unbuffered output (TTS pattern)
         },
@@ -92,22 +97,22 @@ class BackendService {
       // Capture stdout for logging
       _process!.stdout
           .transform(utf8.decoder)
-          .transform(LineSplitter())
+          .transform(const LineSplitter())
           .listen((line) {
-        print('[Backend] $line');
+        debugPrint('[Backend] $line');
       });
 
       // Capture stderr for error logging
       _process!.stderr
           .transform(utf8.decoder)
-          .transform(LineSplitter())
+          .transform(const LineSplitter())
           .listen((line) {
-        print('[Backend ERROR] $line');
+        debugPrint('[Backend ERROR] $line');
       });
 
       // Monitor process exit
       _process!.exitCode.then((code) {
-        print('Backend process exited with code: $code');
+        debugPrint('Backend process exited with code: $code');
         _process = null;
         _port = null;
       });
@@ -115,7 +120,7 @@ class BackendService {
       // Write PID to file for native cleanup on window close
       final pidFile = File('$projectRoot/.backend_pid');
       await pidFile.writeAsString(_process!.pid.toString());
-      print('Backend PID ${_process!.pid} written to .backend_pid');
+      debugPrint('Backend PID ${_process!.pid} written to .backend_pid');
 
       // READ dynamic port from .backend_port file (TTS pattern - 30s timeout)
       final portRead = await _readBackendPort(projectRoot);
@@ -123,17 +128,17 @@ class BackendService {
         throw Exception('Failed to read backend port from .backend_port file');
       }
 
-      print('✅ Backend port discovered: $_port');
+      debugPrint('✅ Backend port discovered: $_port');
 
       // WAIT for /health endpoint (TTS pattern - 90s timeout for model loading)
       final healthy = await _waitForBackend();
       if (healthy) {
-        print('✅ Backend successfully started and healthy on port: $_port');
+        debugPrint('✅ Backend successfully started and healthy on port: $_port');
       } else {
         throw Exception('Backend started but health check failed after 90s');
       }
     } catch (e) {
-      print('❌ Failed to start backend: $e');
+      debugPrint('❌ Failed to start backend: $e');
       await stop();
       rethrow;
     }
@@ -150,15 +155,15 @@ class BackendService {
         try {
           final content = await portFile.readAsString();
           _port = int.parse(content.trim());
-          print('Read port from .backend_port: $_port');
+          debugPrint('Read port from .backend_port: $_port');
           return true;
         } catch (e) {
-          print('Error reading port file: $e');
+          debugPrint('Error reading port file: $e');
         }
       }
     }
 
-    print('⚠️ Timeout: .backend_port file not found after 30 seconds');
+    debugPrint('⚠️ Timeout: .backend_port file not found after 30 seconds');
     return false;
   }
 
@@ -173,11 +178,58 @@ class BackendService {
         if (pid != null) {
           final pidFile = File('$projectRoot/.backend_pid');
           await pidFile.writeAsString(pid.toString());
-          print('Found existing backend PID: $pid, saved to .backend_pid');
+          debugPrint('Found existing backend PID: $pid, saved to .backend_pid');
         }
       }
     } catch (e) {
-      print('Could not find backend PID: $e');
+      debugPrint('Could not find backend PID: $e');
+    }
+  }
+
+  /// Check if a process with given PID is still running
+  Future<bool> _isProcessRunning(int pid) async {
+    try {
+      if (Platform.isMacOS || Platform.isLinux) {
+        // Send signal 0 to check if process exists
+        final result = await Process.run('kill', ['-0', pid.toString()]);
+        return result.exitCode == 0;
+      } else if (Platform.isWindows) {
+        final result = await Process.run('tasklist', ['/FI', 'PID eq $pid']);
+        return result.stdout.toString().contains(pid.toString());
+      }
+    } catch (e) {
+      // Process doesn't exist
+    }
+    return false;
+  }
+
+  /// Clean up stale PID file if process is no longer running
+  Future<bool> _cleanupStalePid(String projectRoot) async {
+    final pidFile = File('$projectRoot/.backend_pid');
+    if (!await pidFile.exists()) return false;
+
+    try {
+      final pidStr = await pidFile.readAsString();
+      final pid = int.tryParse(pidStr.trim());
+
+      if (pid == null) {
+        await pidFile.delete();
+        debugPrint('Deleted invalid PID file');
+        return true;
+      }
+
+      // Check if process is still running
+      if (!await _isProcessRunning(pid)) {
+        await pidFile.delete();
+        debugPrint('Cleaned up stale PID file (PID $pid no longer running)');
+        return true;
+      }
+
+      debugPrint('Process $pid is still running');
+      return false;
+    } catch (e) {
+      debugPrint('Error checking stale PID: $e');
+      return false;
     }
   }
 
@@ -236,59 +288,107 @@ class BackendService {
     throw Exception('Could not find project root. Set PROJECT_ROOT environment variable.');
   }
 
-  /// Stop the backend process
+  /// Stop the backend process with robust cleanup
   Future<void> stop() async {
-    if (_process != null) {
-      print('Stopping backend...');
+    final pid = _process?.pid;
+    if (_process != null || pid != null) {
+      debugPrint('🛑 Stopping backend (PID: $pid)...');
 
-      // Try graceful shutdown first
-      _process!.kill(ProcessSignal.sigterm);
+      // Try graceful shutdown first with SIGTERM
+      if (_process != null) {
+        _process!.kill(ProcessSignal.sigterm);
+      }
 
       // Wait for process to exit (with timeout)
       try {
-        await _process!.exitCode.timeout(
-          const Duration(seconds: 5),
-          onTimeout: () {
-            print('Backend did not stop gracefully, force killing...');
-            _process!.kill(ProcessSignal.sigkill);
-            return -1;
-          },
-        );
+        if (_process != null) {
+          await _process!.exitCode.timeout(
+            const Duration(seconds: 5),
+            onTimeout: () {
+              debugPrint('Backend did not stop gracefully, force killing...');
+              _process?.kill(ProcessSignal.sigkill);
+              return -1;
+            },
+          );
+        }
       } catch (e) {
-        print('Error stopping backend: $e');
+        debugPrint('Error stopping backend: $e');
+      }
+
+      // Additional cleanup: Kill any child processes (Unix only)
+      // This handles edge cases where child processes might be orphaned
+      if (pid != null && (Platform.isMacOS || Platform.isLinux)) {
+        try {
+          // Kill process group to ensure all children are terminated
+          await Process.run('pkill', ['-TERM', '-P', pid.toString()]);
+        } catch (e) {
+          // pkill may fail if no children exist, that's OK
+        }
       }
 
       _process = null;
-      print('Backend stopped');
+      _port = null;
+      debugPrint('✅ Backend stopped');
+    }
 
-      // Clean up PID file
-      try {
-        final projectRoot = await _getProjectRoot();
-        final pidFile = File('$projectRoot/.backend_pid');
-        if (await pidFile.exists()) {
-          await pidFile.delete();
-        }
-      } catch (e) {
-        // Ignore cleanup errors
+    // Clean up PID and port files
+    await _cleanupFiles();
+  }
+
+  /// Clean up PID and port files
+  Future<void> _cleanupFiles() async {
+    try {
+      final projectRoot = await _getProjectRoot();
+
+      final pidFile = File('$projectRoot/.backend_pid');
+      if (await pidFile.exists()) {
+        await pidFile.delete();
+        debugPrint('Cleaned up .backend_pid');
       }
+
+      final portFile = File('$projectRoot/.backend_port');
+      if (await portFile.exists()) {
+        await portFile.delete();
+        debugPrint('Cleaned up .backend_port');
+      }
+    } catch (e) {
+      debugPrint('Warning: Could not clean up files: $e');
     }
   }
 
-  /// Wait for backend to become healthy (TTS pattern - 90s timeout for model loading)
+  /// Wait for backend to become healthy with exponential backoff
+  /// Uses Fibonacci-like delays: 1, 1, 2, 3, 5, 5, 5... (max 30s total)
   Future<bool> _waitForBackend() async {
-    for (int i = 0; i < 90; i++) {  // 90 seconds max
-      await Future.delayed(const Duration(seconds: 1));
+    // Exponential backoff delays (in seconds)
+    const delays = [1, 1, 2, 3, 5, 5, 5, 5, 5];  // Total: ~32 seconds
+    var totalWait = 0;
+
+    for (var delay in delays) {
+      await Future.delayed(Duration(seconds: delay));
+      totalWait += delay;
 
       if (await healthCheck()) {
+        debugPrint('✅ Backend healthy after ${totalWait}s');
         return true;
       }
 
-      if (i % 10 == 0 && i > 0) {
-        print('Still waiting for backend health check... ${i}s elapsed');
-      }
+      debugPrint('Health check retry... (${totalWait}s elapsed)');
     }
 
-    print('⚠️ Timeout: Backend health check failed after 90 seconds');
+    // If still not ready, continue with fixed 5s intervals up to 60s total
+    while (totalWait < 60) {
+      await Future.delayed(const Duration(seconds: 5));
+      totalWait += 5;
+
+      if (await healthCheck()) {
+        debugPrint('✅ Backend healthy after ${totalWait}s');
+        return true;
+      }
+
+      debugPrint('Health check retry... (${totalWait}s elapsed)');
+    }
+
+    debugPrint('⚠️ Timeout: Backend health check failed after ${totalWait}s');
     return false;
   }
 
@@ -296,11 +396,13 @@ class BackendService {
   Future<bool> healthCheck() async {
     try {
       final httpClient = HttpClient();
-      final request = await httpClient.get('127.0.0.1', port, '/api/config');
+      httpClient.connectionTimeout = const Duration(seconds: 5);
+      final request = await httpClient.get('127.0.0.1', port, '/api/health');
       final response = await request.close();
 
       final success = response.statusCode == 200;
       await response.drain();
+      httpClient.close();
       return success;
     } catch (e) {
       // Don't log every failed attempt during startup polling

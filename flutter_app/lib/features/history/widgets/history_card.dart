@@ -1,11 +1,11 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:audioplayers/audioplayers.dart';
 import '../../../core/models/history_item.dart';
 import '../../../core/utils/platform_utils.dart';
+import '../../../shared/widgets/media_item_card.dart';
+import '../../../shared/widgets/play_button.dart';
 import '../providers/history_provider.dart';
-import '../../player/audio_player_provider.dart';
 
 /// Card widget displaying a single history item
 class HistoryCard extends ConsumerWidget {
@@ -21,173 +21,44 @@ class HistoryCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: InkWell(
-        onTap: () => _showDetailsDialog(context, ref),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            children: [
-              // Left side: Title and metadata
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Title row
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.music_note,
-                          color: colorScheme.primary,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            item.videoTitle,
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    // Metadata row
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 4,
-                      children: [
-                        _buildMetadata(
-                          icon: Icons.access_time,
-                          text: item.formattedDate,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                        _buildMetadata(
-                          icon: Icons.timer,
-                          text: item.formattedDuration,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                        _buildMetadata(
-                          icon: Icons.storage,
-                          text: item.formattedSize,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              // Right side: Action buttons
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Play button (if file exists)
-                  if (item.filePath != null)
-                    _buildPlayButton(context, ref, colorScheme),
-                  // Show in folder button (if file exists)
-                  if (item.filePath != null)
-                    IconButton(
-                      onPressed: () => _showInFolder(context),
-                      icon: const Icon(Icons.folder_open, size: 20),
-                      tooltip: 'Klasörde Göster',
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  // Delete button
-                  IconButton(
-                    onPressed: () => _confirmDelete(context, ref),
-                    icon: const Icon(Icons.delete_outline, size: 20),
-                    tooltip: 'Sil',
-                    color: colorScheme.error,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ],
-              ),
-            ],
-          ),
+    return MediaItemCard(
+      title: item.videoTitle,
+      onTap: () => _showDetailsDialog(context, ref),
+      metadata: [
+        MediaMetadataItem(
+          icon: Icons.access_time,
+          text: item.formattedDate,
         ),
-      ),
-    );
-  }
-
-  Widget _buildMetadata({
-    required IconData icon,
-    required String text,
-    required Color color,
-  }) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: color),
-        const SizedBox(width: 4),
-        Text(
-          text,
-          style: TextStyle(
-            fontSize: 12,
-            color: color,
-          ),
+        MediaMetadataItem(
+          icon: Icons.timer,
+          text: item.formattedDuration,
+        ),
+        MediaMetadataItem(
+          icon: Icons.storage,
+          text: item.formattedSize,
         ),
       ],
-    );
-  }
-
-  Widget _buildPlayButton(BuildContext context, WidgetRef ref, ColorScheme colorScheme) {
-    final player = ref.watch(audioPlayerProvider);
-    final currentlyPlaying = ref.watch(currentlyPlayingProvider);
-    final playerStateAsync = ref.watch(playerStateProvider);
-
-    final isThisPlaying = currentlyPlaying == item.filePath;
-    final isPlaying = playerStateAsync.value == PlayerState.playing && isThisPlaying;
-
-    return IconButton(
-      icon: Icon(
-        isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
-        size: 28,
-      ),
-      color: colorScheme.primary,
-      onPressed: () async {
-        if (item.filePath == null) return;
-
-        if (isThisPlaying && isPlaying) {
-          // Pause
-          await player.pause();
-        } else if (isThisPlaying) {
-          // Resume
-          await player.resume();
-        } else {
-          // Play new file - ensure absolute path (TTS pattern)
-          String filePath = item.filePath!;
-
-          // Convert relative paths to absolute (for legacy database entries)
-          if (!filePath.startsWith('/')) {
-            // Relative path detected - make it absolute
-            final file = File(filePath);
-            filePath = file.absolute.path;
-            print('Converted relative path to absolute: $filePath');
-          }
-
-          // Verify file exists before playing
-          if (!await File(filePath).exists()) {
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('File not found: ${File(filePath).path}'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-            return;
-          }
-
-          await player.stop();
-          await player.play(DeviceFileSource(filePath));
-          ref.read(currentlyPlayingProvider.notifier).state = filePath;
-        }
-      },
+      actions: [
+        // Play button (if file exists)
+        if (item.filePath != null)
+          PlayButton(filePath: item.filePath!),
+        // Show in folder button (if file exists)
+        if (item.filePath != null)
+          IconButton(
+            onPressed: () => _showInFolder(context),
+            icon: const Icon(Icons.folder_open, size: 20),
+            tooltip: 'Show in Folder',
+            visualDensity: VisualDensity.compact,
+          ),
+        // Delete button
+        IconButton(
+          onPressed: () => _confirmDelete(context, ref),
+          icon: const Icon(Icons.delete_outline, size: 20),
+          tooltip: 'Delete',
+          color: colorScheme.error,
+          visualDensity: VisualDensity.compact,
+        ),
+      ],
     );
   }
 
@@ -201,18 +72,27 @@ class HistoryCard extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildDetailRow('Title', item.videoTitle),
+              _buildDetailRow(context, 'Title', item.videoTitle),
               if (item.channelName != null)
-                _buildDetailRow('Channel', item.channelName!),
-              _buildDetailRow('File Name', item.fileName),
+                _buildLinkRow(
+                  context,
+                  'Channel',
+                  item.channelName!,
+                  item.channelUrl,
+                ),
+              _buildLinkRow(
+                context,
+                'YouTube',
+                'Open Video',
+                item.url,
+              ),
+              _buildDetailRow(context, 'File Name', item.fileName),
               if (item.filePath != null)
-                _buildDetailRow('File Path', item.filePath!),
-              _buildDetailRow('Format', item.format.toUpperCase()),
-              _buildDetailRow('Size', item.formattedSize),
-              _buildDetailRow('Duration', item.formattedDuration),
-              _buildDetailRow('Downloaded', item.formattedDate),
-              if (item.videoId != null)
-                _buildDetailRow('Video ID', item.videoId!),
+                _buildDetailRow(context, 'File Path', item.filePath!),
+              _buildDetailRow(context, 'Format', item.format.toUpperCase()),
+              _buildDetailRow(context, 'Size', item.formattedSize),
+              _buildDetailRow(context, 'Duration', item.formattedDuration),
+              _buildDetailRow(context, 'Downloaded', item.formattedDate),
             ],
           ),
         ),
@@ -226,7 +106,8 @@ class HistoryCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(BuildContext context, String label, String value) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -244,14 +125,110 @@ class HistoryCard extends ConsumerWidget {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                color: Colors.black87,
+              style: TextStyle(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildLinkRow(BuildContext context, String label, String text, String? url) {
+    final hasUrl = url != null && url.isNotEmpty;
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: hasUrl
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Open link button
+                      InkWell(
+                        onTap: () => _openUrl(context, url),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              text,
+                              style: TextStyle(
+                                color: theme.colorScheme.primary,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.open_in_new,
+                              size: 14,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Copy button
+                      InkWell(
+                        onTap: () => _copyToClipboard(context, url),
+                        borderRadius: BorderRadius.circular(4),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(
+                            Icons.copy,
+                            size: 16,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Text(
+                    text,
+                    style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _copyToClipboard(BuildContext context, String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('URL copied'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+  }
+
+  Future<void> _openUrl(BuildContext context, String url) async {
+    try {
+      await openUrl(url);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error opening URL: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _showInFolder(BuildContext context) async {
@@ -263,7 +240,7 @@ class HistoryCard extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Klasör açılamadı: $e'),
+            content: Text('Could not open folder: $e'),
             backgroundColor: Colors.red,
           ),
         );

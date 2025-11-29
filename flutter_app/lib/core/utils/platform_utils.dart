@@ -18,3 +18,18 @@ Future<void> openInFolder(String filePath) async {
     throw UnsupportedError('openInFolder is not supported on this platform.');
   }
 }
+
+/// Open URL in default browser
+/// Uses platform-specific commands instead of url_launcher
+/// (url_launcher has issues with macOS sandbox)
+Future<void> openUrl(String url) async {
+  if (Platform.isMacOS) {
+    await Process.run('open', [url]);
+  } else if (Platform.isWindows) {
+    await Process.run('start', [url], runInShell: true);
+  } else if (Platform.isLinux) {
+    await Process.run('xdg-open', [url]);
+  } else {
+    throw UnsupportedError('openUrl is not supported on this platform.');
+  }
+}

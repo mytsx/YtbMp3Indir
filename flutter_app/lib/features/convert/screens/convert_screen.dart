@@ -4,8 +4,10 @@ import 'package:file_picker/file_picker.dart';
 import '../../../core/constants.dart';
 import '../../../core/providers/providers.dart';
 import '../../../core/models/conversion.dart';
+import '../../../shared/widgets/empty_state_widget.dart';
 import '../providers/conversion_provider.dart';
 import '../widgets/conversion_card.dart';
+import '../widgets/file_selection_card.dart';
 
 /// Main convert screen for local file to MP3 conversion
 class ConvertScreen extends ConsumerStatefulWidget {
@@ -58,12 +60,6 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
     }
 
     final apiClient = ref.read(apiClientProvider);
-    if (apiClient == null) {
-      setState(() {
-        _errorMessage = 'Backend not ready. Please wait...';
-      });
-      return;
-    }
 
     setState(() {
       _isConverting = true;
@@ -131,124 +127,27 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // File selection section
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // File picker button
-                    OutlinedButton.icon(
-                      onPressed: _pickFile,
-                      icon: const Icon(Icons.folder_open),
-                      label: Text(
-                        _selectedFileName ?? 'Select a video or audio file',
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 20,
-                          horizontal: 16,
-                        ),
-                        side: BorderSide(
-                          color: _selectedFilePath != null
-                              ? Colors.green
-                              : Colors.grey.shade400,
-                          width: _selectedFilePath != null ? 2 : 1,
-                        ),
-                      ),
-                    ),
-
-                    if (_selectedFilePath != null) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.check_circle,
-                              color: Colors.green.shade700,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _selectedFilePath!,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.green.shade800,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close, size: 18),
-                              onPressed: () {
-                                setState(() {
-                                  _selectedFilePath = null;
-                                  _selectedFileName = null;
-                                });
-                              },
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    if (_errorMessage != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        _errorMessage!,
-                        style: const TextStyle(
-                          color: Colors.red,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: 16),
-
-                    // Convert button
-                    FilledButton.icon(
-                      onPressed: _isConverting || _selectedFilePath == null
-                          ? null
-                          : _startConversion,
-                      icon: _isConverting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.transform),
-                      label: Text(
-                        _isConverting ? 'Converting...' : 'Convert to MP3',
-                      ),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        textStyle: const TextStyle(fontSize: 16),
-                        backgroundColor: Colors.orange,
-                      ),
-                    ),
-
-                    // Tips
-                    const SizedBox(height: 12),
-                    Text(
-                      'Supported: MP4, MKV, AVI, MOV, WAV, FLAC, AAC, and more',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade600,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            FileSelectionCard(
+              selectedFilePath: _selectedFilePath,
+              selectedFileName: _selectedFileName,
+              errorMessage: _errorMessage,
+              isConverting: _isConverting,
+              onPickFile: _pickFile,
+              onClearFile: () {
+                setState(() {
+                  _selectedFilePath = null;
+                  _selectedFileName = null;
+                  _errorMessage = null;
+                });
+              },
+              onConvert: _startConversion,
+              onFileDrop: (path, name) {
+                setState(() {
+                  _selectedFilePath = path;
+                  _selectedFileName = name;
+                  _errorMessage = null;
+                });
+              },
             ),
 
             const SizedBox(height: 24),
@@ -257,7 +156,7 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
             Row(
               children: [
                 Text(
-                  'Active Conversions',
+                  'Conversions',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -289,35 +188,11 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
             // Conversions list
             Expanded(
               child: conversions.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.transform_outlined,
-                            size: 48,
-                            color: Colors.grey.shade300,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No conversions yet',
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.grey.shade600,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Select a file above to convert to MP3',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
-                        ],
-                      ),
+                  ? const EmptyStateWidget(
+                      icon: Icons.transform_outlined,
+                      title: 'No conversions yet',
+                      subtitle: 'Select a file above to start converting',
+                      iconSize: 48,
                     )
                   : ListView.builder(
                       itemCount: conversions.length,

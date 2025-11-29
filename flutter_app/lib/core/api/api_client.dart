@@ -239,12 +239,14 @@ class ApiClient {
 
   Future<Map<String, dynamic>> startConversion(
     String filePath, {
-    String quality = '192',
+    String quality = '320',
+    String outputFormat = 'mp3',
   }) {
     return _handleResponse(
       _dio.post('/api/conversions', data: {
         'file_path': filePath,
         'quality': quality,
+        'output_format': outputFormat,
       }),
       (data) => data as Map<String, dynamic>,
     );

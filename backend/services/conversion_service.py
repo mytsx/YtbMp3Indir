@@ -13,7 +13,7 @@ import subprocess
 import re
 from typing import Dict, Optional
 from datetime import datetime
-from api.models import AudioQuality, DEFAULT_QUALITY
+from api.models import AudioQuality, DEFAULT_QUALITY, OutputFormat, DEFAULT_FORMAT, FORMAT_CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +25,11 @@ _conversion_service_lock = threading.Lock()
 class Conversion:
     """Conversion tracking object"""
 
-    def __init__(self, conversion_id: str, input_path: str, quality: AudioQuality = DEFAULT_QUALITY):
+    def __init__(self, conversion_id: str, input_path: str, quality: AudioQuality = DEFAULT_QUALITY, output_format: OutputFormat = DEFAULT_FORMAT):
         self.id = conversion_id
         self.input_path = input_path
         self.quality = quality
+        self.output_format = output_format
         self.status = "pending"  # pending, converting, completed, failed, cancelled
         self.progress = 0  # 0-100
         self.output_path = None
@@ -46,6 +47,7 @@ class Conversion:
             "input_path": self.input_path,
             "output_path": self.output_path,
             "file_name": self.file_name,
+            "output_format": self.output_format,
             "status": self.status,
             "progress": self.progress,
             "error": self.error,
@@ -122,20 +124,20 @@ class ConversionService:
         if self.websocket_manager:
             await self.websocket_manager.broadcast(conversion_id, message)
 
-    async def start_conversion(self, input_path: str, quality: AudioQuality = DEFAULT_QUALITY) -> Conversion:
+    async def start_conversion(self, input_path: str, quality: AudioQuality = DEFAULT_QUALITY, output_format: OutputFormat = DEFAULT_FORMAT) -> Conversion:
         """Start a new conversion"""
         # Validate input file exists
         if not os.path.exists(input_path):
             raise FileNotFoundError(f"Input file not found: {input_path}")
 
         conversion_id = str(uuid.uuid4())
-        conversion = Conversion(conversion_id, input_path, quality)
+        conversion = Conversion(conversion_id, input_path, quality, output_format)
 
         with self.conversions_lock:
             self.active_conversions[conversion_id] = conversion
 
         self.job_queue.put(conversion)
-        logger.info(f"Queued conversion {conversion_id} for {input_path}")
+        logger.info(f"Queued conversion {conversion_id} for {input_path} -> {output_format}")
         return conversion
 
     async def _conversion_worker(self, conversion: Conversion):
@@ -152,14 +154,18 @@ class ConversionService:
             input_path = conversion.input_path
             file_name = os.path.splitext(os.path.basename(input_path))[0]
 
+            # Get format config
+            format_config = FORMAT_CONFIG.get(conversion.output_format, FORMAT_CONFIG["mp3"])
+            extension = format_config["extension"]
+
             # Sanitize filename
             safe_name = re.sub(r'[<>:"/\\|?*]', '_', file_name)
-            output_path = os.path.join(self.output_dir, f"{safe_name}.mp3")
+            output_path = os.path.join(self.output_dir, f"{safe_name}.{extension}")
 
             # Avoid overwriting - add number suffix if exists
             counter = 1
             while os.path.exists(output_path):
-                output_path = os.path.join(self.output_dir, f"{safe_name}_{counter}.mp3")
+                output_path = os.path.join(self.output_dir, f"{safe_name}_{counter}.{extension}")
                 counter += 1
 
             conversion.output_path = output_path
@@ -218,16 +224,27 @@ class ConversionService:
 
     async def _run_ffmpeg(self, conversion: Conversion, input_path: str, output_path: str):
         """Run FFmpeg with progress tracking"""
+        # Get format config
+        format_config = FORMAT_CONFIG.get(conversion.output_format, FORMAT_CONFIG["mp3"])
+        codec = format_config["codec"]
+
         cmd = [
             'ffmpeg', '-y',  # Overwrite output
             '-i', input_path,
             '-vn',  # No video
-            '-acodec', 'libmp3lame',
-            '-ab', f'{conversion.quality}k',
+            '-acodec', codec,
+        ]
+
+        # Add bitrate for lossy formats (not for wav/flac)
+        if conversion.output_format in ["mp3", "aac", "ogg"]:
+            cmd.extend(['-ab', f'{conversion.quality}k'])
+
+        # Add sample rate and progress
+        cmd.extend([
             '-ar', '44100',
             '-progress', 'pipe:1',  # Progress to stdout
             output_path
-        ]
+        ])
 
         process = await asyncio.create_subprocess_exec(
             *cmd,

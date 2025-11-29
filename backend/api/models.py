@@ -9,6 +9,19 @@ from datetime import datetime
 AudioQuality = Literal["128", "192", "256", "320"]
 DEFAULT_QUALITY: AudioQuality = "320"
 
+# Allowed output formats
+OutputFormat = Literal["mp3", "wav", "flac", "aac", "ogg"]
+DEFAULT_FORMAT: OutputFormat = "mp3"
+
+# Format configurations for FFmpeg
+FORMAT_CONFIG = {
+    "mp3": {"codec": "libmp3lame", "extension": "mp3"},
+    "wav": {"codec": "pcm_s16le", "extension": "wav"},
+    "flac": {"codec": "flac", "extension": "flac"},
+    "aac": {"codec": "aac", "extension": "m4a"},
+    "ogg": {"codec": "libvorbis", "extension": "ogg"},
+}
+
 
 # ============================================================================
 # Response Envelope

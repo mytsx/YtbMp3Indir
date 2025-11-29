@@ -8,6 +8,7 @@ import 'features/convert/screens/convert_screen.dart';
 import 'features/history/screens/history_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
 import 'features/splash/screens/splash_screen.dart';
+import 'shared/widgets/animated_nav_bar.dart';
 import 'core/providers/providers.dart';
 import 'core/services/backend_service.dart';
 import 'core/services/settings_service.dart';
@@ -232,6 +233,29 @@ class _MainNavigationState extends State<MainNavigation> {
     SettingsScreen(),
   ];
 
+  static const _navItems = [
+    NavItem(
+      icon: Icons.download_outlined,
+      selectedIcon: Icons.download,
+      label: 'Download',
+    ),
+    NavItem(
+      icon: Icons.history_outlined,
+      selectedIcon: Icons.history,
+      label: 'History',
+    ),
+    NavItem(
+      icon: Icons.transform_outlined,
+      selectedIcon: Icons.transform,
+      label: 'Convert',
+    ),
+    NavItem(
+      icon: Icons.settings_outlined,
+      selectedIcon: Icons.settings,
+      label: 'Settings',
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -239,35 +263,14 @@ class _MainNavigationState extends State<MainNavigation> {
         index: _currentIndex,
         children: _screens,
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (index) {
+      bottomNavigationBar: AnimatedNavBar(
+        currentIndex: _currentIndex,
+        items: _navItems,
+        onTap: (index) {
           setState(() {
             _currentIndex = index;
           });
         },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.download_outlined),
-            selectedIcon: Icon(Icons.download),
-            label: 'Download',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.history_outlined),
-            selectedIcon: Icon(Icons.history),
-            label: 'History',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.transform_outlined),
-            selectedIcon: Icon(Icons.transform),
-            label: 'Convert',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
       ),
     );
   }

@@ -20,6 +20,7 @@ class ConvertScreen extends ConsumerStatefulWidget {
 class _ConvertScreenState extends ConsumerState<ConvertScreen> {
   String? _selectedFilePath;
   String? _selectedFileName;
+  String _selectedFormat = 'mp3';
   bool _isConverting = false;
   String? _errorMessage;
 
@@ -71,6 +72,7 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
       final result = await apiClient.startConversion(
         _selectedFilePath!,
         quality: kDefaultQuality,
+        outputFormat: _selectedFormat,
       );
 
       // Parse response to Conversion model
@@ -130,6 +132,7 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
             FileSelectionCard(
               selectedFilePath: _selectedFilePath,
               selectedFileName: _selectedFileName,
+              selectedFormat: _selectedFormat,
               errorMessage: _errorMessage,
               isConverting: _isConverting,
               onPickFile: _pickFile,
@@ -146,6 +149,11 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
                   _selectedFilePath = path;
                   _selectedFileName = name;
                   _errorMessage = null;
+                });
+              },
+              onFormatChanged: (format) {
+                setState(() {
+                  _selectedFormat = format;
                 });
               },
             ),

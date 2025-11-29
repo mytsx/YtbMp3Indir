@@ -5,23 +5,27 @@ import 'package:dotted_border/dotted_border.dart';
 class FileSelectionCard extends StatefulWidget {
   final String? selectedFilePath;
   final String? selectedFileName;
+  final String selectedFormat;
   final String? errorMessage;
   final bool isConverting;
   final VoidCallback onPickFile;
   final VoidCallback onClearFile;
   final VoidCallback onConvert;
   final Function(String path, String name)? onFileDrop;
+  final Function(String format)? onFormatChanged;
 
   const FileSelectionCard({
     super.key,
     this.selectedFilePath,
     this.selectedFileName,
+    this.selectedFormat = 'mp3',
     this.errorMessage,
     required this.isConverting,
     required this.onPickFile,
     required this.onClearFile,
     required this.onConvert,
     this.onFileDrop,
+    this.onFormatChanged,
   });
 
   @override
@@ -36,6 +40,14 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
     'mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm', 'm4v',
     // Audio
     'wav', 'flac', 'aac', 'm4a', 'ogg', 'wma', 'aiff',
+  ];
+
+  static const _outputFormats = [
+    {'value': 'mp3', 'label': 'MP3', 'description': 'Most compatible'},
+    {'value': 'wav', 'label': 'WAV', 'description': 'Lossless, large'},
+    {'value': 'flac', 'label': 'FLAC', 'description': 'Lossless, compressed'},
+    {'value': 'aac', 'label': 'AAC', 'description': 'Apple format'},
+    {'value': 'ogg', 'label': 'OGG', 'description': 'Open format'},
   ];
 
   bool _isSupported(String path) {
@@ -185,33 +197,92 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
 
             const SizedBox(height: 16),
 
-            // Convert button
-            FilledButton.icon(
-              onPressed: widget.isConverting || widget.selectedFilePath == null
-                  ? null
-                  : widget.onConvert,
-              icon: widget.isConverting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+            // Format selector and Convert button row
+            Row(
+              children: [
+                // Format dropdown
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: colorScheme.outline.withValues(alpha: 0.5)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: widget.selectedFormat,
+                        isExpanded: true,
+                        icon: const Icon(Icons.arrow_drop_down),
+                        items: _outputFormats.map((format) {
+                          return DropdownMenuItem<String>(
+                            value: format['value'] as String,
+                            child: Row(
+                              children: [
+                                Text(
+                                  format['label'] as String,
+                                  style: const TextStyle(fontWeight: FontWeight.w500),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  format['description'] as String,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: widget.isConverting
+                            ? null
+                            : (value) {
+                                if (value != null) {
+                                  widget.onFormatChanged?.call(value);
+                                }
+                              },
                       ),
-                    )
-                  : const Icon(Icons.transform),
-              label: Text(widget.isConverting ? 'Converting...' : 'Convert to MP3'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                textStyle: const TextStyle(fontSize: 16),
-                backgroundColor: Colors.orange,
-              ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Convert button
+                Expanded(
+                  flex: 3,
+                  child: FilledButton.icon(
+                    onPressed: widget.isConverting || widget.selectedFilePath == null
+                        ? null
+                        : widget.onConvert,
+                    icon: widget.isConverting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.transform),
+                    label: Text(
+                      widget.isConverting
+                          ? 'Converting...'
+                          : 'Convert to ${widget.selectedFormat.toUpperCase()}',
+                    ),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      textStyle: const TextStyle(fontSize: 16),
+                      backgroundColor: Colors.orange,
+                    ),
+                  ),
+                ),
+              ],
             ),
 
             // Supported formats
             const SizedBox(height: 12),
             Text(
-              'Supported: MP4, MKV, AVI, MOV, WAV, FLAC, AAC, M4A, and more',
+              'Input: MP4, MKV, AVI, MOV, WAV, FLAC, AAC, M4A, and more',
               style: TextStyle(
                 fontSize: 12,
                 color: colorScheme.onSurfaceVariant,

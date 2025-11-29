@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../shared/widgets/empty_state_widget.dart';
 import '../providers/download_provider.dart';
 import '../widgets/download_card.dart';
+import '../widgets/url_input_card.dart';
 
 /// Main download screen
 class DownloadScreen extends ConsumerStatefulWidget {
@@ -94,61 +96,11 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // URL Input section
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // URL TextField
-                    TextField(
-                      controller: _urlController,
-                      decoration: InputDecoration(
-                        labelText: 'YouTube URL',
-                        hintText: 'https://youtube.com/watch?v=...',
-                        prefixIcon: const Icon(Icons.link),
-                        border: const OutlineInputBorder(),
-                        errorText: _errorMessage,
-                      ),
-                      maxLines: 1,
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (_) => _startDownload(),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Download button
-                    FilledButton.icon(
-                      onPressed: _isDownloading ? null : _startDownload,
-                      icon: _isDownloading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child:
-                                  CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.download),
-                      label: Text(_isDownloading
-                          ? 'Starting...'
-                          : 'Start Download'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        textStyle: const TextStyle(fontSize: 16),
-                      ),
-                    ),
-
-                    // Tips
-                    const SizedBox(height: 12),
-                    Text(
-                      'Tip: You can download individual videos or entire playlists',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade600,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            UrlInputCard(
+              controller: _urlController,
+              isDownloading: _isDownloading,
+              errorMessage: _errorMessage,
+              onDownloadPressed: _startDownload,
             ),
 
             const SizedBox(height: 24),
@@ -189,35 +141,11 @@ class _DownloadScreenState extends ConsumerState<DownloadScreen> {
             // Downloads list
             Expanded(
               child: downloads.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.download_outlined,
-                            size: 48,
-                            color: Colors.grey.shade300,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No downloads yet',
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.grey.shade600,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Enter a YouTube URL above to get started',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
-                        ],
-                      ),
+                  ? const EmptyStateWidget(
+                      icon: Icons.download_outlined,
+                      title: 'No downloads yet',
+                      subtitle: 'Enter a YouTube URL above to get started',
+                      iconSize: 48,
                     )
                   : ListView.builder(
                       itemCount: downloads.length,

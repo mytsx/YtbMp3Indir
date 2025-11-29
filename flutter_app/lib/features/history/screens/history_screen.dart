@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/history_item.dart';
+import '../../../shared/widgets/empty_state_widget.dart';
+import '../../../shared/widgets/error_state_widget.dart';
 import '../providers/history_provider.dart';
 import '../widgets/history_card.dart';
 
@@ -106,7 +108,13 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             child: historyAsync.when(
               data: (items) {
                 if (items.isEmpty) {
-                  return _buildEmptyState();
+                  return EmptyStateWidget(
+                    icon: _isSearching ? Icons.search_off : Icons.history,
+                    title: _isSearching ? 'No results found' : 'No download history',
+                    subtitle: _isSearching
+                        ? 'Try a different search query'
+                        : 'Your downloads will appear here',
+                  );
                 }
 
                 return RefreshIndicator(
@@ -140,76 +148,16 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               loading: () => const Center(
                 child: CircularProgressIndicator(),
               ),
-              error: (error, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: colorScheme.error,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Failed to load history',
-                      style: theme.textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      error.toString(),
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.error,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      onPressed: () {
-                        if (_isSearching) {
-                          ref.invalidate(searchHistoryProvider(_searchQuery));
-                        } else {
-                          ref.read(historyProvider.notifier).refresh();
-                        }
-                      },
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Retry'),
-                    ),
-                  ],
-                ),
+              error: (error, stack) => ErrorStateWidget(
+                message: error.toString(),
+                onRetry: () {
+                  if (_isSearching) {
+                    ref.invalidate(searchHistoryProvider(_searchQuery));
+                  } else {
+                    ref.read(historyProvider.notifier).refresh();
+                  }
+                },
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            _isSearching ? Icons.search_off : Icons.history,
-            size: 64,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            _isSearching ? 'No results found' : 'No download history',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[600],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _isSearching
-                ? 'Try a different search query'
-                : 'Your downloads will appear here',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
             ),
           ),
         ],
